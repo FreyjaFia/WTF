@@ -8,7 +8,9 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { authInterceptor } from './auth.interceptor';
+import { PlanGateService } from '../services/plan-gate.service';
 import { SubscriptionService } from '../services/subscription.service';
+import { backgroundRequest } from './background-request';
 import { subscriptionInterceptor } from './subscription.interceptor';
 import { timezoneInterceptor } from './timezone.interceptor';
 import { utcDateInterceptor } from './utc-date.interceptor';
@@ -435,41 +437,60 @@ describe('subscriptionInterceptor on a feature outside the plan', () => {
   let ctrl: HttpTestingController;
   let http: HttpClient;
   const subscription = { refresh: vi.fn(), lastOnline: vi.fn() };
-  const router = { url: '/inventory/waste', navigateByUrl: vi.fn() };
+  const gate = { redirectToNotInPlan: vi.fn() };
 
   beforeEach(() => {
     subscription.refresh.mockReset();
-    router.navigateByUrl.mockReset().mockResolvedValue(true);
-    router.url = '/inventory/waste';
+    gate.redirectToNotInPlan.mockReset();
     ({ http, ctrl } = setup(
       [subscriptionInterceptor],
       [
         { provide: SubscriptionService, useValue: subscription },
-        { provide: Router, useValue: router },
+        { provide: PlanGateService, useValue: gate },
       ],
     ));
   });
 
   afterEach(() => ctrl.verify());
 
-  it('checks the plan again and shows the Not in your plan page on a not_in_plan 403', () => {
-    http.get('/api/stock/waste').subscribe({ error: () => undefined });
+  it('checks the plan again and sends a saved screen to Not in your plan with the feature', () => {
+    const error = vi.fn();
+    http.post('/api/roles', {}).subscribe({ error });
     ctrl
-      .expectOne('/api/stock/waste')
-      .flush({ code: 'not_in_plan' }, { status: 403, statusText: 'Forbidden' });
+      .expectOne('/api/roles')
+      .flush({ code: 'not_in_plan', feature: 'customroles' }, { status: 403, statusText: 'Forbidden' });
 
     expect(subscription.refresh).toHaveBeenCalled();
-    expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.NotInPlan);
+    expect(gate.redirectToNotInPlan).toHaveBeenCalledWith('customroles', true);
+    expect(error).not.toHaveBeenCalled();
   });
 
-  it('does not move the person when they are already on that page', () => {
-    router.url = `${AppRoutes.NotInPlan}?feature=inventory`;
+  it('marks a plain load as nothing to save', () => {
     http.get('/api/stock/waste').subscribe({ error: () => undefined });
     ctrl
       .expectOne('/api/stock/waste')
-      .flush({ code: 'not_in_plan' }, { status: 403, statusText: 'Forbidden' });
+      .flush({ code: 'not_in_plan', feature: 'inventory' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(gate.redirectToNotInPlan).toHaveBeenCalledWith('inventory', false);
+  });
+
+  it('redirects without a feature when an older API sends none', () => {
+    http.get('/api/stock/waste').subscribe({ error: () => undefined });
+    ctrl.expectOne('/api/stock/waste').flush({ code: 'not_in_plan' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(gate.redirectToNotInPlan).toHaveBeenCalledWith(null, false);
+  });
+
+  it('only refreshes the plan for a background request and still reports the error', () => {
+    const error = vi.fn();
+    http.get('/api/conversations', { context: backgroundRequest() }).subscribe({ error });
+    ctrl
+      .expectOne('/api/conversations')
+      .flush({ code: 'not_in_plan', feature: 'chat' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(subscription.refresh).toHaveBeenCalled();
+    expect(gate.redirectToNotInPlan).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalled();
   });
 
   it('ignores a 403 that is about the role', () => {
@@ -477,6 +498,6 @@ describe('subscriptionInterceptor on a feature outside the plan', () => {
     ctrl.expectOne('/api/stock/waste').flush({ message: 'no' }, { status: 403, statusText: 'Forbidden' });
 
     expect(subscription.refresh).not.toHaveBeenCalled();
-    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(gate.redirectToNotInPlan).not.toHaveBeenCalled();
   });
 });

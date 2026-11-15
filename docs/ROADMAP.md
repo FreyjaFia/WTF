@@ -15,7 +15,7 @@ update its file and the status in the table below.
 | Multiple Branches, Branding, Multi-tenant | Planned, design decided | [multiple-branches-and-tenants](roadmap/multiple-branches-and-tenants.md) |
 | Role-Based Access Control | In progress (phases 1 to 5 built on branches, not merged) | [role-based-access](roadmap/role-based-access.md) |
 | Block features by subscription plan | Planned, plan written, decisions open | [block-features-by-plan](roadmap/block-features-by-plan.md) |
-| Graceful plan-gating failures | Planned, plan written, decisions open | [graceful-plan-gating](roadmap/graceful-plan-gating.md) |
+| Graceful plan-gating failures | Built on branch `graceful-plan-gating-plan` (not merged); Playwright spec to do | [graceful-plan-gating](roadmap/graceful-plan-gating.md) |
 | Senior Citizen / PWD discount | Built (phases 1-6 of the plan), accountant to confirm the rules | [senior-pwd-discount](roadmap/senior-pwd-discount.md) |
 | Cashless Payments | Planned, needs research | [cashless-payments](roadmap/cashless-payments.md) |
 | Receipt and Kitchen Printing | Planned | [receipt-and-kitchen-printing](roadmap/receipt-and-kitchen-printing.md) |

@@ -1,3 +1,4 @@
+import { backgroundRequest } from '@core/interceptors/background-request';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
@@ -20,9 +21,9 @@ export class ConversationService {
   private readonly baseUrl = environment.apiUrl;
 
   /** Every customer's conversations, ones with unread messages first. */
-  public getConversations(): Observable<ConversationListDto> {
+  public getConversations(background = false): Observable<ConversationListDto> {
     return this.http
-      .get<ConversationListDto>(`${this.baseUrl}/conversations`)
+      .get<ConversationListDto>(`${this.baseUrl}/conversations`, background ? { context: backgroundRequest() } : {})
       .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.Conversation.LoadListFailed)));
   }
 

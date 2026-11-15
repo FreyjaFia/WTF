@@ -3,6 +3,9 @@
     <h1 class="mb-2 text-xl font-semibold text-gray-800" data-testid="not-in-plan-title">
       {{ screenName() }} is not in your plan
     </h1>
+    @if (changesNotSaved) {
+      <p class="mb-2 text-sm text-gray-500" data-testid="not-in-plan-not-saved">Your changes were not saved.</p>
+    }
     @if (availability(); as text) {
       <p class="mb-2 text-sm font-medium text-gray-700" data-testid="not-in-plan-plans">{{ text }}</p>
     }

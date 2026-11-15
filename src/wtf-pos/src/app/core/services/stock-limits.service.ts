@@ -1,3 +1,4 @@
+import { backgroundRequest } from '@core/interceptors/background-request';
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { ConnectivityService } from '@core/services/connectivity.service';
@@ -62,7 +63,7 @@ export class StockLimitsService implements OnDestroy {
   }
 
   public load(): Observable<PosStockLimitsDto> {
-    return this.http.get<PosStockLimitsDto>(this.url).pipe(tap((result) => this._data.set(result)));
+    return this.http.get<PosStockLimitsDto>(this.url, { context: backgroundRequest() }).pipe(tap((result) => this._data.set(result)));
   }
 
   /** Reloads quietly. A failure keeps the last answer: this is a hint and must never raise an error. */

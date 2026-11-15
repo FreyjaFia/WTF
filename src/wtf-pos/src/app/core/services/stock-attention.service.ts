@@ -1,3 +1,4 @@
+import { backgroundRequest } from '@core/interceptors/background-request';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { HttpErrorMessages } from '@core/messages';
@@ -71,8 +72,8 @@ export class StockAttentionService implements OnDestroy {
     this.clearTimers();
   }
 
-  public load(): Observable<StockAttentionDto> {
-    return this.http.get<StockAttentionDto>(this.baseUrl).pipe(
+  public load(background = false): Observable<StockAttentionDto> {
+    return this.http.get<StockAttentionDto>(this.baseUrl, background ? { context: backgroundRequest() } : {}).pipe(
       tap((result) => this._data.set(result)),
       catchError((error) => this.handleError(error, 'Unable to fetch the items that need attention.')),
     );
@@ -80,7 +81,7 @@ export class StockAttentionService implements OnDestroy {
 
   /** Reloads quietly. A failure leaves what is shown: a badge must never raise an error. */
   public refresh(): void {
-    this.load().subscribe({ error: () => undefined });
+    this.load(true).subscribe({ error: () => undefined });
   }
 
   public ngOnDestroy(): void {

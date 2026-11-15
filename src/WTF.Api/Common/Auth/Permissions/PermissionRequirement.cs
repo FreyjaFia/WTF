@@ -18,7 +18,7 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         // The plan decides what exists, so it is answered before the role is asked.
         if (IsOutsidePlan(context.User, requirement.AnyOf))
         {
-            context.Fail(new AuthorizationFailureReason(this, NotInPlanMessage));
+            context.Fail(new NotInPlanReason(this, PermissionCatalog.FeatureOf(requirement.AnyOf[0])));
             return Task.CompletedTask;
         }
 
@@ -42,19 +42,29 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
     }
 }
 
+public sealed class NotInPlanReason(IAuthorizationHandler handler, string feature)
+    : AuthorizationFailureReason(handler, PermissionAuthorizationHandler.NotInPlanMessage)
+{
+    public string Feature { get; } = feature;
+}
+
 public sealed class PlanAwareAuthorizationResultHandler : IAuthorizationMiddlewareResultHandler
 {
     private readonly AuthorizationMiddlewareResultHandler _default = new();
 
     public async Task HandleAsync(RequestDelegate next, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult authorizeResult)
     {
-        var notInPlan = authorizeResult.Forbidden
-            && authorizeResult.AuthorizationFailure?.FailureReasons.Any(r => r.Message == PermissionAuthorizationHandler.NotInPlanMessage) == true;
+        var reason = authorizeResult.Forbidden
+            ? authorizeResult.AuthorizationFailure?.FailureReasons.OfType<NotInPlanReason>().FirstOrDefault()
+            : null;
 
-        if (notInPlan)
+        if (reason is not null)
         {
+            context.RequestServices?.GetService<ILoggerFactory>()?.CreateLogger<PlanAwareAuthorizationResultHandler>()
+                .LogInformation("Refused {Method} {Path}: feature {Feature} is not in the shop plan", context.Request.Method, context.Request.Path, reason.Feature);
+
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new { message = PermissionAuthorizationHandler.NotInPlanMessage, code = "not_in_plan" });
+            await context.Response.WriteAsJsonAsync(new { message = PermissionAuthorizationHandler.NotInPlanMessage, code = "not_in_plan", feature = reason.Feature });
             return;
         }
 

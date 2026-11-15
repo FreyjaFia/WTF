@@ -84,7 +84,7 @@ export class ConversationInboxService implements OnDestroy {
 
   public refresh(): void {
     this._isLoading.set(true);
-    this.conversations.getConversations().subscribe({
+    this.conversations.getConversations(true).subscribe({
       next: (list) => {
         this._items.set(list.items);
         this._unreadConversations.set(list.unreadConversations);
