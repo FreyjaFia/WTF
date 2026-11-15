@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Calculations.Orders;
-using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Common.Orders;
@@ -11,16 +10,14 @@ internal static class DiscountRuleLoader
 {
     internal sealed record Loaded(
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> RulesByProductId,
-        DiscountBudget Budget);
+        DiscountBudget Budget)
+    {
+        public static Loaded None() => new([], new DiscountBudget(new Dictionary<Guid, int>(), new Dictionary<Guid, int>()));
+    }
 
     // The discounted-product rules that are on at that moment (dates, weekdays and hours in the shop's time zone), with
     // how many more items each promotion with a usage limit may still discount. exceptOrderId leaves out the uses of an
     // order that is being saved again.
-    private static Task<bool> HasPromotionsAsync(WTFDbContext db, ITenantFeatures? tenantFeatures, CancellationToken cancellationToken) =>
-        tenantFeatures is null
-            ? TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken)
-            : tenantFeatures.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken);
-
     public static async Task<Loaded> LoadAsync(
         WTFDbContext db,
         DateTime referenceUtc,
@@ -30,9 +27,9 @@ internal static class DiscountRuleLoader
         ITenantFeatures? tenantFeatures = null)
     {
         // A plan without promotions sells at the normal price; the sale still saves.
-        if (!await HasPromotionsAsync(db, tenantFeatures, cancellationToken))
+        if (!await PromotionsGate.IsOnAsync(db, tenantFeatures, cancellationToken))
         {
-            return new Loaded([], new DiscountBudget(new Dictionary<Guid, int>(), new Dictionary<Guid, int>()));
+            return Loaded.None();
         }
 
         var promotions = await db.Promotions

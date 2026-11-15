@@ -31,7 +31,7 @@ public class OrderCustomerNameDatabaseTests
     }
 
     private static CreateOrderHandler Handler(WTFDbContext db, Guid userId, IPushNotificationService? push = null) =>
-        new(db, TestRequest.As(userId, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), push ?? TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        new(db, TestRequest.As(userId, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), push ?? TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
 
     private static CreateOrderCommand Sale(Guid productId, Guid customerId, OrderStatusEnum status = OrderStatusEnum.Completed) => new()
     {

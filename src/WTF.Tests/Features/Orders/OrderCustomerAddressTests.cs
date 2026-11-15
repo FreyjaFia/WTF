@@ -327,6 +327,6 @@ public class OrderCustomerAddressTests
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
-        return new SyncOfflineOrdersHandler(db, sender, accessor);
+        return new SyncOfflineOrdersHandler(db, sender, accessor, TestFakes.Features);
     }
 }

@@ -19,7 +19,7 @@ public record OfflineSyncResultDto(
     string? Error,
     List<string>? StockWarnings = null);
 
-public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpContextAccessor httpContextAccessor)
+public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures)
     : IRequestHandler<SyncOfflineOrdersCommand, List<OfflineSyncResultDto>>
 {
     private const int MaxLocalIdLength = 40;
@@ -66,7 +66,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
 
             // Only a finished sale can meet a catalog that changed afterwards; an open order is priced when it completes.
             var reasons = order.Status == OrderStatusEnum.Completed
-                ? await OfflineOrderReview.FindReasonsAsync(db, order, timeZone, cancellationToken, httpContextAccessor)
+                ? await OfflineOrderReview.FindReasonsAsync(db, order, timeZone, cancellationToken, httpContextAccessor, tenantFeatures)
                 : [];
 
             var saved = await sender.Send(

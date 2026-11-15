@@ -7,6 +7,7 @@ using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Conversations;
@@ -72,7 +73,8 @@ public class UpdateOrderHandler(
     IAuditService auditService,
     IPushNotificationService pushNotifications,
     IConversationNotifier conversationNotifier,
-    IOrderStockService stockService) : IRequestHandler<UpdateOrderCommand, OrderDto?>
+    IOrderStockService stockService,
+    ITenantFeatures tenantFeatures) : IRequestHandler<UpdateOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -145,7 +147,8 @@ public class UpdateOrderHandler(
             RequestTimeZone.ResolveFromRequest(httpContextAccessor),
             request.IsOverride ? order.OrderBundlePromotions.ToDictionary(b => b.PromotionId, b => b.UnitPrice) : null,
             cancellationToken,
-            exceptOrderId: order.Id);
+            exceptOrderId: order.Id,
+            tenantFeatures: tenantFeatures);
 
         OrderInputValidation.EnsureLengths(
             request.SpecialInstructions, request.Note?.Trim(), request.Items, request.OverrideReason?.Trim());
@@ -235,7 +238,8 @@ public class UpdateOrderHandler(
                 DateTime.UtcNow,
                 RequestTimeZone.ResolveFromRequest(httpContextAccessor),
                 order.Id,
-                cancellationToken);
+                cancellationToken,
+                tenantFeatures);
             discountedRulesByProductId = loaded.RulesByProductId;
 
             // Correcting a completed order never takes a use away from, or adds one to, a promotion's limit.
@@ -587,7 +591,7 @@ public class UpdateOrderHandler(
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, [orderWithTotals], cancellationToken);
 
         // A pending order saves no prices yet, so its total (and the change worked out from it) uses the discounts that are on.
-        var previewPrices = await PendingOrderPreview.LoadAsync(db, [orderWithTotals], httpContextAccessor, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, [orderWithTotals], httpContextAccessor, cancellationToken, tenantFeatures);
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices, previewPrices);
 

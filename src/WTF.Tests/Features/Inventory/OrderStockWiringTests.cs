@@ -27,11 +27,11 @@ public class OrderStockWiringTests
 
     private CreateOrderHandler Create() =>
         new(TestDb.Create(_db), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(),
-            TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_db)));
+            TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_db)), TestFakes.Features);
 
     private UpdateOrderHandler Update() =>
         new(TestDb.Create(_db), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(),
-            TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_db)));
+            TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_db)), TestFakes.Features);
 
     private VoidOrderHandler Void() =>
         new(TestDb.Create(_db), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(),
@@ -196,11 +196,11 @@ public class OrderStockWiringTests
         var accessor = TestRequest.As(_userId, AppRoles.Admin);
         var dbContext = TestDb.Create(_db);
         var create = new CreateOrderHandler(
-            dbContext, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(dbContext));
+            dbContext, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(dbContext), TestFakes.Features);
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
-        var sync = new SyncOfflineOrdersHandler(dbContext, sender, accessor);
+        var sync = new SyncOfflineOrdersHandler(dbContext, sender, accessor, TestFakes.Features);
 
         var order = new CreateOrderCommand
         {

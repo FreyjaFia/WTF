@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory;
@@ -96,7 +97,8 @@ public class CreateOrderHandler(
     IAuditService auditService,
     IPushNotificationService pushNotifications,
     IConversationNotifier conversationNotifier,
-    IOrderStockService stockService) : IRequestHandler<CreateOrderCommand, OrderDto>
+    IOrderStockService stockService,
+    ITenantFeatures tenantFeatures) : IRequestHandler<CreateOrderCommand, OrderDto>
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -206,7 +208,8 @@ public class CreateOrderHandler(
                 request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow,
                 RequestTimeZone.ResolveFromRequest(httpContextAccessor),
                 null,
-                cancellationToken);
+                cancellationToken,
+                tenantFeatures: tenantFeatures);
 
         // Several orders can be created inside one transaction (the offline sync batch opens it around them all so
         // a failed order undoes the ones before it). SQL Server does not allow a second transaction on a connection
@@ -266,7 +269,8 @@ public class CreateOrderHandler(
                 request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow,
                 RequestTimeZone.ResolveFromRequest(httpContextAccessor),
                 null,
-                cancellationToken);
+                cancellationToken,
+                tenantFeatures);
             discountedRulesByProductId = loaded.RulesByProductId;
             discountBudget = loaded.Budget;
         }
@@ -457,7 +461,7 @@ public class CreateOrderHandler(
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, [orderWithTotals], cancellationToken);
 
         // A pending order saves no prices yet, so its total (and the change worked out from it) uses the discounts that are on.
-        var previewPrices = await PendingOrderPreview.LoadAsync(db, [orderWithTotals], httpContextAccessor, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, [orderWithTotals], httpContextAccessor, cancellationToken, tenantFeatures);
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices, previewPrices);
 

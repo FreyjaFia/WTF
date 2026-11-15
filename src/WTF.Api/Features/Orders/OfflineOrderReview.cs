@@ -32,7 +32,8 @@ internal static class OfflineOrderReview
         CreateOrderCommand command,
         TimeZoneInfo timeZone,
         CancellationToken cancellationToken,
-        IHttpContextAccessor? httpContextAccessor = null)
+        IHttpContextAccessor? httpContextAccessor = null,
+        ITenantFeatures? tenantFeatures = null)
     {
         var reasons = new List<string>();
         var createdAt = command.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
@@ -64,9 +65,9 @@ internal static class OfflineOrderReview
             }
         }
 
-        await AddBundleReasonsAsync(db, command, createdAt, timeZone, reasons, cancellationToken);
+        await AddBundleReasonsAsync(db, command, createdAt, timeZone, reasons, cancellationToken, tenantFeatures);
         await AddSeniorPwdReasonsAsync(db, command, products, httpContextAccessor, reasons, cancellationToken);
-        await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), createdAt, timeZone, reasons, cancellationToken);
+        await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), createdAt, timeZone, reasons, cancellationToken, tenantFeatures);
 
         return [.. reasons.Distinct()];
     }
@@ -167,7 +168,8 @@ internal static class OfflineOrderReview
         DateTime createdAt,
         TimeZoneInfo timeZone,
         List<string> reasons,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ITenantFeatures? tenantFeatures)
     {
         if (command.BundlePromotions.Count == 0)
         {
@@ -179,7 +181,7 @@ internal static class OfflineOrderReview
         try
         {
             currentPrices = await BundlePromotionResolver.ResolveAsync(
-                db, command.BundlePromotions, command.Items, createdAt, timeZone, null, cancellationToken, problems);
+                db, command.BundlePromotions, command.Items, createdAt, timeZone, null, cancellationToken, problems, tenantFeatures: tenantFeatures);
         }
         catch (InvalidOperationException)
         {
@@ -212,14 +214,15 @@ internal static class OfflineOrderReview
         DateTime createdAt,
         TimeZoneInfo timeZone,
         List<string> reasons,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ITenantFeatures? tenantFeatures)
     {
         var parentIds = command.Items.Select(i => i.ProductId).Distinct().ToList();
         var overridePrices = await db.ProductAddOnPriceOverrides
             .Where(o => o.IsActive && parentIds.Contains(o.ProductId))
             .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
 
-        var loaded = await DiscountRuleLoader.LoadAsync(db, createdAt, timeZone, null, cancellationToken);
+        var loaded = await DiscountRuleLoader.LoadAsync(db, createdAt, timeZone, null, cancellationToken, tenantFeatures);
         var rulesByProductId = loaded.RulesByProductId;
 
         foreach (var item in command.Items)

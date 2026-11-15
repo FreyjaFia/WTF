@@ -25,10 +25,10 @@ public class DiscountReservationTests
     private readonly IHubContext<DashboardHub> _hub = TestFakes.Hub();
 
     private CreateOrderHandler Create() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
     private UpdateOrderHandler Update() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
     private VoidOrderHandler Void() =>
         new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()));

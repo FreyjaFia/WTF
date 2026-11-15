@@ -31,10 +31,10 @@ internal static class TestFakes
     public static IHubContext<DashboardHub> Hub() => Substitute.For<IHubContext<DashboardHub>>();
 
     public static CreateOrderHandler CreateOrderHandler(WTFDbContext db, IHttpContextAccessor accessor, IAuditService? audit = null) =>
-        new(db, accessor, Hub(), audit ?? Audit(), Push(), Conversations(), Stock(db));
+        new(db, accessor, Hub(), audit ?? Audit(), Push(), Conversations(), Stock(db), TestFakes.Features);
 
     public static UpdateOrderHandler UpdateOrderHandler(WTFDbContext db, IHttpContextAccessor accessor, IAuditService? audit = null) =>
-        new(db, accessor, Hub(), audit ?? Audit(), Push(), Conversations(), Stock(db));
+        new(db, accessor, Hub(), audit ?? Audit(), Push(), Conversations(), Stock(db), TestFakes.Features);
 }
 
 /// <summary>Reads the plan from the database every time, so a test that changes the plan sees it at once.</summary>

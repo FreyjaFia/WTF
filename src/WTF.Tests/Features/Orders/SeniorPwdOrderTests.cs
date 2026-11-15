@@ -260,7 +260,7 @@ public class SeniorPwdOrderTests
         }
 
         var editor = Guid.NewGuid();
-        var handler = new UpdateOrderHandler(TestDb.Create(_dbName), TestRequest.As(editor, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
+        var handler = new UpdateOrderHandler(TestDb.Create(_dbName), TestRequest.As(editor, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)), TestFakes.Features);
         var updated = await handler.Handle(
             new UpdateOrderCommand
             {

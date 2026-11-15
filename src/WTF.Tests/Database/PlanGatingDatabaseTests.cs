@@ -50,7 +50,7 @@ public class PlanGatingDatabaseTests
     }
 
     private static CreateOrderHandler Handler(WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        new(db, TestRequest.As(userId, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
 
     private static CreateOrderCommand Sale(Guid productId, int quantity = 1) => new()
     {

@@ -161,7 +161,7 @@ public class WaitingOrderStatusTests
     }
 
     private UpdateOrderHandler UpdateHandler() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
     private static UpdateOrderCommand Update(Guid id, OrderStatusEnum status, Guid productId) => new()
     {
@@ -205,7 +205,7 @@ public class WaitingOrderStatusTests
     {
         var burger = _data.AddProduct("Burger", 100);
         var handler = new CreateOrderHandler(
-            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(
             new CreateOrderCommand
@@ -252,7 +252,7 @@ public class WaitingOrderStatusTests
         var systemUser = Guid.NewGuid();
         var push = TestFakes.Push();
         var handler = new CreateOrderHandler(
-            _data.Open(), TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+            _data.Open(), TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
         await handler.Handle(new CreateOrderCommand
         {
@@ -272,7 +272,7 @@ public class WaitingOrderStatusTests
         var burger = _data.AddProduct("Burger", 100);
         var push = TestFakes.Push();
         var handler = new CreateOrderHandler(
-            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
         await handler.Handle(new CreateOrderCommand
         {

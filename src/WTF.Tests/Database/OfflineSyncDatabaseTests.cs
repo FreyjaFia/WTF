@@ -20,7 +20,7 @@ public class OfflineSyncDatabaseTests
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto>>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle((CreateOrderCommand)call.Arg<IRequest<OrderDto>>(), call.Arg<CancellationToken>()));
-        return new SyncOfflineOrdersHandler(db, sender, accessor);
+        return new SyncOfflineOrdersHandler(db, sender, accessor, TestFakes.Features);
     }
 
     private static CreateOrderCommand Order(string localId, params OrderItemRequestDto[] items) => new()

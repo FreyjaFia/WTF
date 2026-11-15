@@ -17,7 +17,7 @@ public class OrderStatusChatLineTests
     private readonly IConversationNotifier _conversations = TestFakes.Conversations();
 
     private UpdateOrderHandler Update() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), _conversations, TestFakes.Stock(_data.Open()));
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), _conversations, TestFakes.Stock(_data.Open()), TestFakes.Features);
 
     private VoidOrderHandler Void() =>
         new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), _conversations, TestFakes.Stock(_data.Open()));

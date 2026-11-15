@@ -61,9 +61,9 @@ public class OrderGuardsTests
         _data.AllowAddOn(latte, shot);
         var covered = new OrderItemRequestDto(latte, 1, [new OrderItemRequestDto(shot, 1, [], null, null)], null, null, SeniorPwdPersonIndex: 0);
         var create = new CreateOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)), TestFakes.Features);
         var update = new UpdateOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)), TestFakes.Features);
         var created = await create.Handle(
             new CreateOrderCommand { Status = OrderStatusEnum.Pending, Items = [covered], SeniorPwdPersons = [Person()] }, CancellationToken.None);
 

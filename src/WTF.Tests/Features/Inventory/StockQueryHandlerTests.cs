@@ -29,7 +29,7 @@ public class StockQueryHandlerTests
 
         var create = new WTF.Api.Features.Orders.CreateOrderHandler(
             TestDb.Create(_db), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(),
-            TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_db)));
+            TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_db)), TestFakes.Features);
         var order = await create.Handle(new WTF.Api.Features.Orders.CreateOrderCommand
         {
             Status = OrderStatusEnum.Completed,

@@ -22,10 +22,10 @@ public class OrderTotalCheckTests
     private readonly IHubContext<DashboardHub> _hub = TestFakes.Hub();
 
     private CreateOrderHandler Create() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
     private UpdateOrderHandler Update() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"), _hub, _audit, _push, TestFakes.Conversations(), TestFakes.Stock(_data.Open()), TestFakes.Features);
 
     private static OrderItemRequestDto Line(Guid productId, int qty = 1) => new(productId, qty, [], null, null);
 

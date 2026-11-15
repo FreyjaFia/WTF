@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Calculations.Orders;
-using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -21,7 +20,8 @@ internal static class BundlePromotionResolver
         IReadOnlyDictionary<Guid, decimal>? savedUnitPrices,
         CancellationToken cancellationToken,
         List<string>? problems = null,
-        Guid? exceptOrderId = null)
+        Guid? exceptOrderId = null,
+        ITenantFeatures? tenantFeatures = null)
     {
         EnsureStructure(bundles, items);
 
@@ -49,7 +49,7 @@ internal static class BundlePromotionResolver
             return prices;
         }
 
-        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
+        if (!await PromotionsGate.IsOnAsync(db, tenantFeatures, cancellationToken))
         {
             if (problems is null)
             {

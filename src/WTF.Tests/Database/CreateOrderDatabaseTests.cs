@@ -13,7 +13,7 @@ namespace WTF.Tests.Database;
 public class CreateOrderDatabaseTests
 {
     private static CreateOrderHandler Handler(WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        new(db, TestRequest.As(userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
 
     private static CreateOrderCommand Order(params Guid[] productIds) => new()
     {

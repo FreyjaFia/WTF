@@ -1,3 +1,4 @@
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
@@ -15,7 +16,8 @@ internal static class PendingOrderPreview
         WTFDbContext db,
         IEnumerable<Order> orders,
         IHttpContextAccessor? httpContextAccessor,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ITenantFeatures? tenantFeatures = null)
     {
         var unpriced = orders
             .Where(o => o.StatusId is (int)OrderStatusEnum.Pending or (int)OrderStatusEnum.PendingApproval)
@@ -28,7 +30,7 @@ internal static class PendingOrderPreview
         var timeZone = httpContextAccessor is null
             ? TimeZoneInfo.Utc
             : RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-        var loaded = await DiscountRuleLoader.LoadAsync(db, DateTime.UtcNow, timeZone, null, cancellationToken);
+        var loaded = await DiscountRuleLoader.LoadAsync(db, DateTime.UtcNow, timeZone, null, cancellationToken, tenantFeatures);
 
         var prices = new Dictionary<Guid, PreviewDiscount>();
         if (loaded.RulesByProductId.Count == 0)
