@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using WTF.Api.Features.Platform;
@@ -30,6 +31,27 @@ internal static class PlanFeatureInput
         }
 
         return PlanFeatures.Serialize(words);
+    }
+
+    public static string ValidatedName(string? name, decimal monthlyPrice, int? maxUsers)
+    {
+        var trimmed = name?.Trim() ?? string.Empty;
+        if (trimmed.Length is 0 or > 60)
+        {
+            throw new InvalidOperationException("Plan name is required (60 characters at most).");
+        }
+
+        if (monthlyPrice is < 0 or > 10_000_000)
+        {
+            throw new InvalidOperationException("Price must be between 0 and 10,000,000.");
+        }
+
+        if (maxUsers is < 1)
+        {
+            throw new InvalidOperationException("Maximum users must be at least 1, or empty for no limit.");
+        }
+
+        return trimmed;
     }
 
     public static string Diff(string? before, string after)
@@ -69,21 +91,7 @@ public partial class CreatePlanHandler(WTFDbContext db, IPlatformAuditService au
             throw new InvalidOperationException("Plan code is required: 1 to 30 lowercase letters, digits or hyphens.");
         }
 
-        var name = request.Name?.Trim() ?? string.Empty;
-        if (name.Length is 0 or > 60)
-        {
-            throw new InvalidOperationException("Plan name is required (60 characters at most).");
-        }
-
-        if (request.MonthlyPrice is < 0 or > 10_000_000)
-        {
-            throw new InvalidOperationException("Price must be between 0 and 10,000,000.");
-        }
-
-        if (request.MaxUsers is < 1)
-        {
-            throw new InvalidOperationException("Maximum users must be at least 1, or empty for no limit.");
-        }
+        var name = PlanFeatureInput.ValidatedName(request.Name, request.MonthlyPrice, request.MaxUsers);
 
         if (await db.Plans.AnyAsync(p => p.Code == code, cancellationToken))
         {
@@ -104,7 +112,14 @@ public partial class CreatePlanHandler(WTFDbContext db, IPlatformAuditService au
         };
 
         db.Plans.Add(plan);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            throw new InvalidOperationException("A plan with that code already exists.");
+        }
 
         await audit.LogAsync(
             PlatformActions.PlanCreated,

@@ -121,4 +121,8 @@ internal sealed class AllFeatures : WTF.Api.Common.Tenancy.ITenantFeatures
     public void Forget()
     {
     }
+
+    public void Forget(Guid tenantId)
+    {
+    }
 }

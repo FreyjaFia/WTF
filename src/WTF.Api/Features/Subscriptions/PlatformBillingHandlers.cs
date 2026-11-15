@@ -97,21 +97,7 @@ public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit, ITe
         var plan = await db.Plans.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException("Plan not found.");
 
-        var name = request.Name?.Trim() ?? string.Empty;
-        if (name.Length is 0 or > 60)
-        {
-            throw new InvalidOperationException("Plan name is required (60 characters at most).");
-        }
-
-        if (request.MonthlyPrice is < 0 or > 10_000_000)
-        {
-            throw new InvalidOperationException("Price must be between 0 and 10,000,000.");
-        }
-
-        if (request.MaxUsers is < 1)
-        {
-            throw new InvalidOperationException("Maximum users must be at least 1, or empty for no limit.");
-        }
+        var name = PlanFeatureInput.ValidatedName(request.Name, request.MonthlyPrice, request.MaxUsers);
 
         var features = PlanFeatureInput.Clean(request.Features);
         var summary = $"{plan.Name}: {plan.MonthlyPrice:0.00} -> {request.MonthlyPrice:0.00}; {PlanFeatureInput.Diff(plan.Features, features)}; active {plan.IsActive} -> {request.IsActive}";
@@ -121,7 +107,15 @@ public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit, ITe
         plan.MaxUsers = request.MaxUsers;
         plan.IsActive = request.IsActive;
         await db.SaveChangesAsync(cancellationToken);
-        tenantFeatures.Forget();
+
+        var shopIds = await db.TenantSubscriptions.AsNoTracking().IgnoreQueryFilters()
+            .Where(s => s.PlanId == plan.Id)
+            .Select(s => s.TenantId)
+            .ToListAsync(cancellationToken);
+        foreach (var shopId in shopIds)
+        {
+            tenantFeatures.Forget(shopId);
+        }
 
         await audit.LogAsync(PlatformActions.PlanUpdated, null, summary, cancellationToken: cancellationToken);
         return PlatformBilling.ToDto(plan);
@@ -149,7 +143,7 @@ public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService
 {
     public async Task<TenantSubscriptionDto> Handle(SetTenantSubscriptionCommand request, CancellationToken cancellationToken)
     {
-        var sub = await db.TenantSubscriptions.Include(s => s.Plan).FirstOrDefaultAsync(s => s.TenantId == request.TenantId, cancellationToken)
+        var sub = await db.TenantSubscriptions.FirstOrDefaultAsync(s => s.TenantId == request.TenantId, cancellationToken)
             ?? throw new KeyNotFoundException("This shop has no subscription yet.");
 
         var newPlan = await db.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.Id == request.PlanId, cancellationToken)
@@ -183,7 +177,23 @@ public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService
             throw new InvalidOperationException("The period must end after it starts.");
         }
 
-        var summary = $"plan {sub.PlanId} -> {request.PlanId}; period end {sub.CurrentPeriodEnd:yyyy-MM-dd} -> {periodEnd:yyyy-MM-dd}; grace {sub.GraceDays} -> {request.GraceDays}; discount {sub.DiscountPercent} -> {request.DiscountPercent}" + (sub.PlanId == request.PlanId ? string.Empty : "; " + PlanFeatureInput.Diff(sub.Plan.Features, PlanFeatures.Serialize(PlanFeatures.Split(newPlan.Features))));
+        var planChanged = sub.PlanId != request.PlanId;
+        var oldFeatures = planChanged
+            ? await db.Plans.AsNoTracking().Where(p => p.Id == sub.PlanId).Select(p => p.Features).FirstOrDefaultAsync(cancellationToken)
+            : null;
+        var summaryParts = new List<string>
+        {
+            $"plan {sub.PlanId} -> {request.PlanId}",
+            $"period end {sub.CurrentPeriodEnd:yyyy-MM-dd} -> {periodEnd:yyyy-MM-dd}",
+            $"grace {sub.GraceDays} -> {request.GraceDays}",
+            $"discount {sub.DiscountPercent} -> {request.DiscountPercent}"
+        };
+        if (planChanged)
+        {
+            summaryParts.Add(PlanFeatureInput.Diff(oldFeatures, newPlan.Features));
+        }
+
+        var summary = string.Join("; ", summaryParts);
         sub.PlanId = request.PlanId;
         sub.CurrentPeriodEnd = periodEnd;
         sub.GraceDays = request.GraceDays;
@@ -192,7 +202,7 @@ public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService
         sub.UpdatedAt = now;
         await db.SaveChangesAsync(cancellationToken);
         statusCache.Forget(request.TenantId);
-        tenantFeatures.Forget();
+        tenantFeatures.Forget(request.TenantId);
 
         await audit.LogAsync(PlatformActions.SubscriptionUpdated, request.TenantId, summary, cancellationToken: cancellationToken);
         return await PlatformBilling.BuildAsync(db, request.TenantId, now, cancellationToken);
