@@ -217,6 +217,25 @@ describe('route guards', () => {
       expect(router.navigateByUrl).toHaveBeenCalledWith(`${AppRoutes.NotInPlan}?feature=promotions`);
     });
 
+    it('opens the screen after an upgrade since sign-in once the plan and permissions are asked for again', async () => {
+      let upgraded = false;
+      auth['can'] = vi.fn().mockImplementation(() => upgraded);
+      auth['loadPermissions'] = vi.fn().mockImplementation(() => {
+        upgraded = true;
+        return of(true);
+      });
+      const loadPlan = vi.fn().mockImplementation(async () => {
+        TestBed.inject(PlanStore).apply({ managed: true, features: ['promotions'], planName: 'Pro' } as SubscriptionDto);
+        return true;
+      });
+      TestBed.overrideProvider(SubscriptionService, { useValue: { loadPlan } });
+      TestBed.inject(PlanStore).apply({ managed: true, features: ['inventory'], planName: 'Starter' } as SubscriptionDto);
+      const route = { data: { permission: 'promotions.read' } } as unknown as ActivatedRouteSnapshot;
+
+      await expect(run(route)).resolves.toBe(true);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
     it('falls back to the login page when the first redirect is refused', async () => {
       router.navigateByUrl.mockResolvedValueOnce(false);
       auth['canReadOrders'].mockReturnValue(true);

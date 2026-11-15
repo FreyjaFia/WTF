@@ -1,9 +1,10 @@
 import { Injector, inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
 import { AuthService, PlanStore, SubscriptionService, notInPlanPath } from '@core/services';
 import { AppRole } from '@shared/constants/app-roles';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PermissionCatalog, PermissionKey } from '@shared/permissions';
+import { firstValueFrom } from 'rxjs';
 
 function fallbackRouteFor(auth: AuthService): string {
   if (auth.canReadOrders()) {
@@ -67,12 +68,7 @@ async function denied(
   return false;
 }
 
-export const roleGuard: CanActivateFn = (route) => {
-  const auth = inject(AuthService);
-  const router = inject(Router);
-  const plans = inject(PlanStore);
-  const injector = inject(Injector);
-
+function isAllowed(auth: AuthService, plans: PlanStore, route: ActivatedRouteSnapshot): boolean {
   const requiredRoles = (route.data?.['roles'] as AppRole[] | undefined) ?? [];
   const requiredPermission = route.data?.['permission'] as PermissionKey | undefined;
   const anyPermission = route.data?.['anyPermission'] as readonly PermissionKey[] | undefined;
@@ -84,9 +80,48 @@ export const roleGuard: CanActivateFn = (route) => {
   // Permissions saved at sign-in can outlive a plan change, so a known plan is checked as well.
   const planAllows = !plans.isKnown() || missingPlanFeature(plans, requiredPermission, anyPermission) === null;
 
-  if (roleAllowed && permissionAllowed && anyAllowed && planAllows) {
+  return roleAllowed && permissionAllowed && anyAllowed && planAllows;
+}
+
+async function refreshedAllows(
+  auth: AuthService,
+  plans: PlanStore,
+  injector: Injector,
+  route: ActivatedRouteSnapshot,
+): Promise<boolean> {
+  // A stale plan or permission list (an upgrade since sign-in) must not turn a screen away: ask the server once.
+  try {
+    await injector.get(SubscriptionService).loadPlan();
+    await firstValueFrom(auth.loadPermissions());
+  } catch {
+    return false;
+  }
+
+  return isAllowed(auth, plans, route);
+}
+
+async function recheckThenDeny(
+  auth: AuthService,
+  router: Router,
+  plans: PlanStore,
+  injector: Injector,
+  route: ActivatedRouteSnapshot,
+): Promise<boolean> {
+  if (await refreshedAllows(auth, plans, injector, route)) {
     return true;
   }
 
+  const requiredPermission = route.data?.['permission'] as PermissionKey | undefined;
+  const anyPermission = route.data?.['anyPermission'] as readonly PermissionKey[] | undefined;
+
   return denied(auth, router, plans, injector, requiredPermission, anyPermission);
+}
+
+export const roleGuard: CanActivateFn = (route) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const plans = inject(PlanStore);
+  const injector = inject(Injector);
+
+  return isAllowed(auth, plans, route) ? true : recheckThenDeny(auth, router, plans, injector, route);
 };
