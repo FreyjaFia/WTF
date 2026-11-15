@@ -15,7 +15,7 @@ public sealed record GetSeniorPwdReportQuery : IRequest<List<SeniorPwdReportRowD
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
     public OrderSourceEnum? Source { get; init; }
-    public bool IncludeFullIdNumbers { get; init; }
+    public bool? IncludeFullIdNumbers { get; init; }
 }
 
 public sealed class GetSeniorPwdReportHandler(
@@ -62,7 +62,7 @@ public sealed class GetSeniorPwdReportHandler(
                 ReportPeriods.LocalDateTime(r.CreatedAt, timeZone),
                 (SeniorPwdTypeEnum)r.Type == SeniorPwdTypeEnum.Senior ? "Senior" : "PWD",
                 r.CustomerName,
-                request.IncludeFullIdNumbers ? r.IdNumber : SeniorPwdMapping.MaskId(r.IdNumber),
+                request.IncludeFullIdNumbers == true ? r.IdNumber : SeniorPwdMapping.MaskId(r.IdNumber),
                 r.CoveredAmount,
                 r.VatExemptAmount,
                 r.DiscountAmount,

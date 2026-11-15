@@ -28,6 +28,7 @@ interface DailyRow {
   readonly grossSales: number;
   readonly netSales: number;
   readonly discounts: number;
+  readonly seniorPwdDiscounts: number;
 }
 
 interface PromotionRow {
@@ -205,13 +206,13 @@ test.describe('report totals match hand-worked answers @reports', () => {
     expect(row!.revenue).toBe(140);
   });
 
-  test('daily sales: every row satisfies gross - discounts - refunded = net and includes the new sales', async ({ api }) => {
+  test('daily sales: every row satisfies gross - discounts - senior/PWD reduction - refunded = net and includes the new sales', async ({ api }) => {
     await sellAndRefund(api);
 
     const rows = await api.client.json<DailyRow[]>('admin', 'GET', path('daily-sales'));
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      expect(row.grossSales - row.discounts - row.refundedAmount).toBeCloseTo(row.netSales, 2);
+      expect(row.grossSales - row.discounts - row.seniorPwdDiscounts - row.refundedAmount).toBeCloseTo(row.netSales, 2);
     }
 
     const total = rows.reduce(
