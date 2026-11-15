@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
@@ -57,17 +58,14 @@ internal sealed class SeniorPwdOrders
             throw new InvalidOperationException("A covered item points to a Senior/PWD person that is not on the order.");
         }
 
-        var settings = await db.TenantSettings
-            .AsNoTracking()
-            .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
-            .FirstOrDefaultAsync(cancellationToken);
+        var settings = await TenantSettingsLookup.LoadSeniorPwdAsync(db, cancellationToken);
 
         var cleaned = SeniorPwdValidator.Clean(persons, held);
 
         if (!held)
         {
             // An Admin correcting an order that already has the discount can still do so after the shop turned it off.
-            if (!switchMayBeOff && settings is not { SeniorPwdEnabled: true })
+            if (!switchMayBeOff && !settings.Enabled)
             {
                 throw new InvalidOperationException("The Senior/PWD discount is turned off for this shop.");
             }
@@ -80,7 +78,7 @@ internal sealed class SeniorPwdOrders
             SeniorPwdValidator.Validate(cleaned, isCustomerLinkOrder);
         }
 
-        return new SeniorPwdOrders(cleaned, settings?.VatRegistered ?? false, held);
+        return new SeniorPwdOrders(cleaned, settings.VatRegistered, held);
     }
 
     public SeniorPwdAmounts AmountsFor(decimal unitPrice, decimal addOnsPerUnit, int quantity) =>
@@ -93,12 +91,7 @@ internal sealed class SeniorPwdOrders
             return;
         }
 
-        var reason = !productEligible
-            ? "is not food or drink, so it cannot take the Senior/PWD discount"
-            : isBundle
-                ? "is part of a bundle, so it cannot take the Senior/PWD discount"
-                : "already has a promotion price, so it cannot take the Senior/PWD discount";
-        throw new InvalidOperationException($"{productName} {reason}.");
+        throw new InvalidOperationException(SeniorPwdReasons.Ineligible(productName, productEligible, hasPromotion, isBundle));
     }
 
     public List<OrderSeniorPwdDiscount> CreateRows(

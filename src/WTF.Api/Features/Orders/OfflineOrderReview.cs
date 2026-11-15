@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Customers;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
@@ -9,6 +10,8 @@ namespace WTF.Api.Features.Orders;
 
 internal static class OfflineOrderReview
 {
+    private sealed record ReviewedProduct(Guid Id, string Name, decimal Price, bool IsActive, bool IsSeniorPwdEligible);
+
     private const int MaxReasonsLength = 1000;
 
     public static string JoinReasons(IEnumerable<string> reasons)
@@ -41,7 +44,7 @@ internal static class OfflineOrderReview
             .ToList();
         var products = await db.Products
             .Where(p => productIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.Name, p.Price, p.IsActive })
+            .Select(p => new ReviewedProduct(p.Id, p.Name, p.Price, p.IsActive, p.IsSeniorPwdEligible))
             .ToDictionaryAsync(p => p.Id, cancellationToken);
 
         reasons.AddRange(products.Values
@@ -62,7 +65,7 @@ internal static class OfflineOrderReview
         }
 
         await AddBundleReasonsAsync(db, command, createdAt, timeZone, reasons, cancellationToken);
-        await AddSeniorPwdReasonsAsync(db, command, httpContextAccessor, reasons, cancellationToken);
+        await AddSeniorPwdReasonsAsync(db, command, products, httpContextAccessor, reasons, cancellationToken);
         await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), createdAt, timeZone, reasons, cancellationToken);
 
         return [.. reasons.Distinct()];
@@ -71,6 +74,7 @@ internal static class OfflineOrderReview
     private static async Task AddSeniorPwdReasonsAsync(
         WTFDbContext db,
         CreateOrderCommand command,
+        Dictionary<Guid, ReviewedProduct> products,
         IHttpContextAccessor? httpContextAccessor,
         List<string> reasons,
         CancellationToken cancellationToken)
@@ -88,10 +92,10 @@ internal static class OfflineOrderReview
         }
 
         var ids = command.SeniorPwdPersons
-            .Select(p => p.IdNumber?.Trim())
-            .Where(id => !string.IsNullOrEmpty(id))
+            .Select(p => SeniorPwdRules.IdKey(p.IdNumber))
+            .Where(id => id.Length > 0)
             .ToList();
-        if (ids.Count != ids.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        if (ids.Count != ids.Distinct().Count())
         {
             reasons.Add("The same Senior/PWD ID number is used more than once on this order.");
         }
@@ -101,13 +105,10 @@ internal static class OfflineOrderReview
             reasons.Add("A Senior/PWD discount is missing the ID number or the name on the ID.");
         }
 
-        await AddSeniorPwdLineReasonsAsync(db, command, reasons, cancellationToken);
+        AddSeniorPwdLineReasons(command, products, reasons);
 
-        var settings = await db.TenantSettings
-            .AsNoTracking()
-            .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
-            .FirstOrDefaultAsync(cancellationToken);
-        if (settings is not { SeniorPwdEnabled: true })
+        var settings = await TenantSettingsLookup.LoadSeniorPwdAsync(db, cancellationToken);
+        if (!settings.Enabled)
         {
             reasons.Add("The Senior/PWD discount is now turned off for this shop.");
             return;
@@ -139,33 +140,23 @@ internal static class OfflineOrderReview
 
     // A promotion price, a bundle and a product that is not food or drink can never take the discount. The register keeps
     // those lines from being covered, so a covered one here means the promotion or the product changed while it was offline.
-    private static async Task AddSeniorPwdLineReasonsAsync(
-        WTFDbContext db,
+    private static void AddSeniorPwdLineReasons(
         CreateOrderCommand command,
-        List<string> reasons,
-        CancellationToken cancellationToken)
+        Dictionary<Guid, ReviewedProduct> products,
+        List<string> reasons)
     {
-        var coveredItems = command.Items.Where(i => i.SeniorPwdPersonIndex.HasValue).ToList();
-        var coveredIds = coveredItems.Select(i => i.ProductId).Distinct().ToList();
-        var products = await db.Products
-            .Where(p => coveredIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.Name, p.IsSeniorPwdEligible })
-            .ToDictionaryAsync(p => p.Id, cancellationToken);
-
-        foreach (var item in coveredItems)
+        foreach (var item in command.Items.Where(i => i.SeniorPwdPersonIndex.HasValue))
         {
-            var name = products.TryGetValue(item.ProductId, out var product) ? product.Name : "An item";
-            if (product is { IsSeniorPwdEligible: false })
+            products.TryGetValue(item.ProductId, out var product);
+            var hadPromotion = item.QuotedPrice < item.QuotedOriginalPrice || !string.IsNullOrWhiteSpace(item.QuotedPromoLabel);
+            var reason = SeniorPwdReasons.Ineligible(
+                product?.Name ?? "An item",
+                product?.IsSeniorPwdEligible ?? true,
+                hadPromotion,
+                item.BundlePromotionId.HasValue);
+            if (reason is not null)
             {
-                reasons.Add($"{name} is not food or drink, so it cannot take the Senior/PWD discount.");
-            }
-            else if (item.BundlePromotionId.HasValue)
-            {
-                reasons.Add($"{name} is part of a bundle, so it cannot take the Senior/PWD discount.");
-            }
-            else if (item.QuotedPrice < item.QuotedOriginalPrice || !string.IsNullOrWhiteSpace(item.QuotedPromoLabel))
-            {
-                reasons.Add($"{name} had a promotion price, so it cannot take the Senior/PWD discount.");
+                reasons.Add(reason);
             }
         }
     }

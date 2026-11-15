@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Catalog;
 using WTF.Api.Features.Customers.DTOs;
 using WTF.Api.Features.Sync.DTOs;
@@ -21,10 +22,7 @@ public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         var lookups = await CatalogLookupLoader.LoadAsync(db, cancellationToken);
 
-        var settings = await db.TenantSettings
-            .AsNoTracking()
-            .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
-            .FirstOrDefaultAsync(cancellationToken);
+        var settings = await TenantSettingsLookup.LoadSeniorPwdAsync(db, cancellationToken);
 
         return new PosCatalogDto(
             products,
@@ -32,8 +30,8 @@ public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpCont
             customers,
             DateTime.UtcNow,
             lookups,
-            settings?.SeniorPwdEnabled ?? false,
-            settings?.VatRegistered ?? false);
+            settings.Enabled,
+            settings.VatRegistered);
     }
 
     private async Task<List<CustomerDto>> LoadCustomersAsync(CancellationToken cancellationToken)
