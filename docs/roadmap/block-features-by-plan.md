@@ -186,9 +186,10 @@ the rollout checklist (plan features must be set before the first paying shop is
    customer links with chat, expenses; Business = purchasing, Excel export, audit logs (and later white label, branches).
    Which key lands in which plan is only data, so it can be moved at any time on the Plans page.
 3. **No lock icons.** Gated items are simply hidden from the menu; a direct URL shows the "Not in your plan" screen.
-4. **Downgrade over the user cap:** allow the change, only block adding users, and show a warning in the change-plan
-   dialog that the last user over the cap will be blocked (cannot sign in or be re-activated, to be settled in the build:
-   recommended is that existing users keep working and only new or re-activated seats are refused).
+4. **Downgrade over the user cap:** allow the change and warn. Built: the newest active users past the cap are blocked
+   (the Owner and the oldest users keep their seats, `UserCapRules.BlockedUserIds`): sign-in and every authenticated
+   request return 403 with code `plan_user_blocked`. New or re-activated seats are refused too (`plan_user_limit`).
+   Upgrading or deactivating a user restores access within the cache window (20 seconds).
 5. **User cap: undecided, leaning to none.** `MaxUsers` stays optional (empty = no limit). Phase 3 (MaxUsers) is
    skipped unless a cap is wanted; plans can differ on features alone.
 6. **No per-shop exceptions for now.**

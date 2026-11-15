@@ -37,6 +37,7 @@ public class LoginHandler(
         }
 
         await TenantAccess.EnsureActiveAsync(db, user.TenantId, cancellationToken);
+        await UserSeatLookup.EnsureNotBlockedAsync(db, user.TenantId, user.Id, cancellationToken);
 
         db.UseTenant(user.TenantId);
 

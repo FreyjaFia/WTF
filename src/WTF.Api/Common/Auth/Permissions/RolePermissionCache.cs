@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
+using WTF.Api.Common.Tenancy;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Common.Auth.Permissions;
@@ -16,6 +17,7 @@ public sealed class RolePermissionCache(TimeProvider clock)
     public static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(20);
 
     private readonly ConcurrentDictionary<Guid, (UserAccess Access, DateTimeOffset Expires)> _entries = new();
+    private readonly ConcurrentDictionary<Guid, (IReadOnlySet<Guid> Blocked, int? MaxUsers, DateTimeOffset Expires)> _seats = new();
 
     public async Task<UserAccess> GetAsync(WTFDbContext db, Guid userId, CancellationToken cancellationToken)
     {
@@ -30,7 +32,34 @@ public sealed class RolePermissionCache(TimeProvider clock)
         return access;
     }
 
-    public void Forget() => _entries.Clear();
+    public async Task<bool> IsSeatBlockedAsync(WTFDbContext db, Guid tenantId, int? maxUsers, Guid userId, CancellationToken cancellationToken)
+    {
+        if (maxUsers is null)
+        {
+            return false;
+        }
+
+        var now = clock.GetUtcNow();
+        if (!_seats.TryGetValue(tenantId, out var entry) || entry.Expires <= now)
+        {
+            var ids = await UserSeatLookup.BlockedIdsAsync(db, tenantId, maxUsers, cancellationToken);
+            entry = (ids, maxUsers, now.Add(Lifetime));
+            _seats[tenantId] = entry;
+        }
+        else if (entry.MaxUsers != maxUsers)
+        {
+            entry = (await UserSeatLookup.BlockedIdsAsync(db, tenantId, maxUsers, cancellationToken), maxUsers, entry.Expires);
+            _seats[tenantId] = entry;
+        }
+
+        return entry.Blocked.Contains(userId);
+    }
+
+    public void Forget()
+    {
+        _entries.Clear();
+        _seats.Clear();
+    }
 
     public static async Task<UserAccess> LoadAsync(WTFDbContext db, Guid userId, CancellationToken cancellationToken)
     {

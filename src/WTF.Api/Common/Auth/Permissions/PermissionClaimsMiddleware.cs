@@ -29,7 +29,16 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
             var tokenIsCurrent = tokenRole is not null && access.KnownRoleNames.Contains(tokenRole);
 
             identity.AddClaim(new Claim(ResolvedClaim, "1"));
-            var planFeatures = await LoadPlanFeaturesAsync(context, db, tenantFeatures, identity);
+            var plan = await LoadPlanAsync(context, db, tenantFeatures, identity);
+            var planFeatures = plan?.Features;
+            if (access.IsActive && db.StampTenantId is { } seatTenantId && await cache.IsSeatBlockedAsync(db, seatTenantId, plan?.MaxUsers, userId, context.RequestAborted)
+                && !context.Request.Path.StartsWithSegments("/api/auth/logout"))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { message = UserSeatLookup.UserBlockedMessage, code = UserSeatLookup.UserBlockedCode });
+                return;
+            }
+
             if (access.IsActive && tokenIsCurrent)
             {
                 var readOnlySignIn = user.FindFirst(ImpersonationClaims.By) is not null
@@ -54,7 +63,7 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
     // The shop is resolved the way the data layer resolves it (a token from before tenants belongs to the first shop), so a
     // legacy token is gated by that shop's plan. When shops are filtered but this user has none, only the core features
     // apply. A database that does not filter by shop (unit tests) has no plan to read.
-    private static async Task<IReadOnlySet<string>?> LoadPlanFeaturesAsync(HttpContext context, WTFDbContext db, ITenantFeatures tenantFeatures, ClaimsIdentity identity)
+    private static async Task<TenantPlan?> LoadPlanAsync(HttpContext context, WTFDbContext db, ITenantFeatures tenantFeatures, ClaimsIdentity identity)
     {
         var shopId = db.StampTenantId;
         if (shopId is null && !db.TenantFilterEnabled)
@@ -72,6 +81,6 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
             identity.AddClaim(new Claim(PlanFeatureClaim, feature));
         }
 
-        return plan.Features;
+        return plan;
     }
 }
