@@ -138,7 +138,7 @@ public record GetPlanChangePreviewQuery(Guid TenantId, int PlanId) : IRequest<Pl
 
 // What a shop would lose if it moved to another plan: every feature it holds now that the new plan lacks, with how much of
 // the shop's own data sits in it. Nothing is deleted by a downgrade; this is only the warning in the change-plan dialog.
-public class GetPlanChangePreviewHandler(WTFDbContext db) : IRequestHandler<GetPlanChangePreviewQuery, PlanChangePreviewDto>
+public class GetPlanChangePreviewHandler(WTFDbContext db, TimeProvider clock) : IRequestHandler<GetPlanChangePreviewQuery, PlanChangePreviewDto>
 {
     public async Task<PlanChangePreviewDto> Handle(GetPlanChangePreviewQuery request, CancellationToken cancellationToken)
     {
@@ -163,13 +163,21 @@ public class GetPlanChangePreviewHandler(WTFDbContext db) : IRequestHandler<GetP
 
     private async Task<(int Count, string? Label)> CountDataAsync(string feature, Guid tenantId, CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
+        var now = clock.GetUtcNow().UtcDateTime;
         return feature switch
         {
             PlanFeatures.Inventory => (await db.Items.AsNoTracking().IgnoreQueryFilters().CountAsync(i => i.TenantId == tenantId && i.IsActive, cancellationToken), "items"),
+            PlanFeatures.Purchasing => (
+                await db.Suppliers.AsNoTracking().IgnoreQueryFilters().CountAsync(s => s.TenantId == tenantId && s.IsActive, cancellationToken)
+                + await db.PurchaseOrders.AsNoTracking().IgnoreQueryFilters().CountAsync(p => p.TenantId == tenantId, cancellationToken),
+                "suppliers and purchase orders"),
+            PlanFeatures.Expenses => (await db.Expenses.AsNoTracking().IgnoreQueryFilters().CountAsync(e => e.TenantId == tenantId && e.IsActive, cancellationToken), "expenses"),
             PlanFeatures.Promotions => (await db.Promotions.AsNoTracking().IgnoreQueryFilters().CountAsync(p => p.TenantId == tenantId && p.IsActive, cancellationToken), "promotions"),
             PlanFeatures.OrderLinks => (await db.ShortLinks.AsNoTracking().IgnoreQueryFilters()
                 .CountAsync(l => l.TenantId == tenantId && l.RevokedAt == null && (l.ExpiresAt == null || l.ExpiresAt > now), cancellationToken), "active order links"),
+            PlanFeatures.Chat => (await db.Conversations.AsNoTracking().IgnoreQueryFilters().CountAsync(c => c.TenantId == tenantId, cancellationToken), "chat conversations"),
+            PlanFeatures.Audit => (await db.AuditLogs.AsNoTracking().IgnoreQueryFilters().CountAsync(a => a.TenantId == tenantId, cancellationToken), "audit entries"),
+            PlanFeatures.CustomRoles => (await db.UserRoles.AsNoTracking().IgnoreQueryFilters().CountAsync(r => r.TenantId == tenantId && !r.IsSystem, cancellationToken), "custom roles"),
             _ => (0, null)
         };
     }
