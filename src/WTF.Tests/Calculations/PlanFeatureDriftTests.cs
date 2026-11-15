@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using WTF.Api.Features.Subscriptions;
 using WTF.Calculations.Subscriptions;
 
 namespace WTF.Tests.Calculations;
@@ -26,6 +27,18 @@ public partial class PlanFeatureDriftTests
 
     [GeneratedRegex(@"SET Features = '(?<features>[^']*)'")]
     private static partial Regex ProUpdate();
+
+    [Fact]
+    public void EveryCatalogKey_HasLabelDescriptionAndGroupText()
+    {
+        foreach (var key in PlanFeatures.Gateable)
+        {
+            PlanFeatureCatalog.HasText(key).ShouldBeTrue(key);
+        }
+
+        PlanFeatureCatalog.Entries.Select(e => e.Key).ShouldBe(PlanFeatures.Gateable);
+        PlanFeatureCatalog.Entries.ShouldAllBe(e => e.Label != "" && e.Description != "" && e.Group != "");
+    }
 
     [Fact]
     public void TheScriptHeader_ListsTheCatalogKeys()

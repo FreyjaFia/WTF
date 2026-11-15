@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using WTF.Api.Features.Subscriptions;
 using WTF.Calculations.Inventory;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
@@ -394,7 +395,7 @@ public class SharedCasesTests
     public void PlanFeatureCatalog_MatchesTheSharedFile()
     {
         Loaded.Value.PlanFeatureCatalog.Select(f => (f.Key, f.Label, f.Description, f.Group, Needs: string.Join(",", f.Needs)))
-            .ShouldBe(PlanFeatures.Catalog.Select(f => (f.Key, f.Label, f.Description, f.Group, Needs: string.Join(",", f.Needs))));
+            .ShouldBe(PlanFeatureCatalog.Entries.Select(f => (f.Key, f.Label, f.Description, f.Group, Needs: string.Join(",", f.Needs))));
     }
 
     [Theory]

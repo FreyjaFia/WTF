@@ -74,7 +74,7 @@ public record GetPlanFeaturesQuery : IRequest<List<PlanFeatureDto>>;
 public class GetPlanFeaturesHandler : IRequestHandler<GetPlanFeaturesQuery, List<PlanFeatureDto>>
 {
     public Task<List<PlanFeatureDto>> Handle(GetPlanFeaturesQuery request, CancellationToken cancellationToken) =>
-        Task.FromResult(PlanFeatures.Catalog
+        Task.FromResult(PlanFeatureCatalog.Entries
             .Select(f => new PlanFeatureDto(f.Key, f.Label, f.Description, f.Group, [.. f.Needs]))
             .ToList());
 }
@@ -155,7 +155,7 @@ public class GetPlanChangePreviewHandler(WTFDbContext db, TimeProvider clock) : 
         foreach (var feature in PlanFeatures.Catalog.Where(f => current.Contains(f.Key) && !after.Contains(f.Key)))
         {
             var (count, label) = await CountDataAsync(feature.Key, request.TenantId, cancellationToken);
-            lost.Add(new LostFeatureDto(feature.Key, feature.Label, count > 0 ? count : null, count > 0 ? label : null));
+            lost.Add(new LostFeatureDto(feature.Key, PlanFeatureCatalog.LabelOf(feature.Key), count > 0 ? count : null, count > 0 ? label : null));
         }
 
         return new PlanChangePreviewDto(lost);

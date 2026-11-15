@@ -1,10 +1,11 @@
 namespace WTF.Calculations.Subscriptions;
 
-public sealed record PlanFeatureDefinition(string Key, string Label, string Description, string Group, IReadOnlyList<string> Needs);
+public sealed record PlanFeatureDefinition(string Key, IReadOnlyList<string> Needs);
 
 // Which features a plan holds and how that narrows what a role can do. The catalog is the only source of valid feature
 // keys; "core" is in every plan and cannot be switched. Which keys a plan holds is data (Plans.Features, a comma list).
-// Words that are not in the catalog (the older "pos,orders,reports,offline") are ignored when a plan is read.
+// Words that are not in the catalog (the older "pos,orders,reports,offline") are ignored when a plan is read. Display text
+// (label, description, group) lives in the API, in PlanFeatureCatalog.
 public static class PlanFeatures
 {
     public const string Core = "core";
@@ -20,15 +21,15 @@ public static class PlanFeatures
 
     public static readonly IReadOnlyList<PlanFeatureDefinition> Catalog =
     [
-        new(Expenses, "Expenses", "Record and review shop expenses.", "Money", []),
-        new(Inventory, "Inventory", "Items, stock, counts, waste and costs.", "Stock", []),
-        new(Purchasing, "Purchasing", "Suppliers, reorder list, purchase orders and receiving.", "Stock", [Inventory]),
-        new(Promotions, "Promotions", "Discounts and deals on the register.", "Sell more", []),
-        new(OrderLinks, "Order links", "Customer ordering links.", "Customer ordering", []),
-        new(Chat, "Order chat", "Chat with customers about their orders.", "Customer ordering", [OrderLinks]),
-        new(Workbook, "Monthly workbook", "The monthly Excel report workbook.", "Insight", []),
-        new(Audit, "Audit log", "See who changed what.", "Control", []),
-        new(CustomRoles, "Custom roles", "Create your own roles and choose what each can do.", "Control", [])
+        new(Expenses, []),
+        new(Inventory, []),
+        new(Purchasing, [Inventory]),
+        new(Promotions, []),
+        new(OrderLinks, []),
+        new(Chat, [OrderLinks]),
+        new(Workbook, []),
+        new(Audit, []),
+        new(CustomRoles, [])
     ];
 
     public static readonly IReadOnlyList<string> Gateable = [.. Catalog.Select(f => f.Key)];
