@@ -1,6 +1,7 @@
 import { Api } from '@api/index';
 import { expect, test } from '@fixtures/index';
 import { WasteListPage } from '@pages/waste-list.page';
+import { unique } from '@utils/unique';
 
 async function pendingWaste(api: Api, quantity: number = 30) {
   const item = await api.items.create({ startingQuantity: 100, wasteApprovalLimit: 10 });
@@ -99,8 +100,9 @@ test.describe('filtering the waste list @waste', () => {
   });
 
   test('the column headers sort the waste list on a wide screen and are hidden on a phone', async ({ api, signIn }) => {
-    const small = await api.items.create({ startingQuantity: 100 });
-    const large = await api.items.create({ startingQuantity: 100 });
+    const stamp = unique('SortQty');
+    const small = await api.items.create({ name: `${stamp} small`, startingQuantity: 100 });
+    const large = await api.items.create({ name: `${stamp} large`, startingQuantity: 100 });
     const smallWaste = await api.waste.record(small.id, { quantity: 2 });
     const largeWaste = await api.waste.record(large.id, { quantity: 9 });
 
@@ -108,6 +110,9 @@ test.describe('filtering the waste list @waste', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const list = new WasteListPage(page);
     await list.open();
+    await list.search.fill(stamp);
+    await expect(list.entry(smallWaste.id)).toBeVisible();
+    await expect(list.entry(largeWaste.id)).toBeVisible();
     const columns = page.getByTestId('waste-columns');
     await expect(columns).toBeVisible();
     for (const name of ['Item', 'Recorded', 'Quantity', 'Status']) {

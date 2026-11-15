@@ -6,8 +6,6 @@ import { IconComponent } from '@shared/components/icons/icon/icon';
 import { ConnectionErrorComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { StockAttentionItemDto, StockAttentionLevel } from '@shared/models';
-import { ClientPager } from '@shared/utils/client-pager';
-import { PaginationComponent } from '@shared/components/pagination/pagination';
 
 type LevelFilter = 'all' | StockAttentionLevel;
 
@@ -45,7 +43,7 @@ const LEVEL_STYLES: Record<StockAttentionLevel, LevelStyle> = {
 
 @Component({
   selector: 'app-stock-attention',
-  imports: [ConnectionErrorComponent, RouterLink, IconComponent, PaginationComponent],
+  imports: [ConnectionErrorComponent, RouterLink, IconComponent],
   templateUrl: './stock-attention.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -68,7 +66,6 @@ export class StockAttentionComponent implements OnInit, OnDestroy {
     const filter = this.filter();
     return this.attention.items().filter((item) => filter === 'all' || item.status === filter);
   });
-  protected readonly pager = new ClientPager(this.visibleItems, 'inventory:stock-attention', this.filter);
   protected readonly summary = computed(() => {
     const parts: string[] = [];
     if (this.outCount() > 0) {
