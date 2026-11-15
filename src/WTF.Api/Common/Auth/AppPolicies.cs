@@ -45,6 +45,7 @@ public static class AppPolicies
     public const string DashboardRead = "DashboardRead";
     public const string ReportsRead = "ReportsRead";
     public const string ReportsGenerate = "ReportsGenerate";
+    public const string SeniorPwdApply = "SeniorPwdApply";
 
     public static string RequireFeature(string feature)
     {

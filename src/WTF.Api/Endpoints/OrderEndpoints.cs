@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
-using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders;
@@ -60,18 +59,15 @@ public static class OrderEndpoints
             })
             .RequireAuthorization(AppPolicies.OrdersRead);
 
-        // GET /api/orders/senior-pwd/id-check - Has this ID already been given the Senior/PWD discount today? (soft warning)
-        orderGroup.MapGet("/senior-pwd/id-check",
-            async (string idNumber, ISender sender, HttpContext http) =>
-            {
-                if (!PermissionChecks.Has(http.User, SeniorPwdOrders.ApplyPermission))
-                {
-                    return Results.Forbid();
-                }
+        // POST /api/orders/senior-pwd/id-check - Has this ID already been given the Senior/PWD discount today? (soft warning)
+        orderGroup.MapPost("/senior-pwd/id-check",
+            async (SeniorPwdIdCheckQuery query, ISender sender) => Results.Ok(await sender.Send(query)))
+            .RequireAuthorization(AppPolicies.SeniorPwdApply);
 
-                return Results.Ok(await sender.Send(new SeniorPwdIdCheckQuery(idNumber)));
-            })
-            .RequireAuthorization(AppPolicies.OrdersWrite);
+        // GET /api/orders/senior-pwd/id-check - Kept for cached older clients; the ID number belongs in a POST body, not a URL
+        orderGroup.MapGet("/senior-pwd/id-check",
+            async (string idNumber, ISender sender) => Results.Ok(await sender.Send(new SeniorPwdIdCheckQuery(idNumber))))
+            .RequireAuthorization(AppPolicies.SeniorPwdApply);
 
         // GET /api/orders/{id} - Get order by ID
         orderGroup.MapGet("/{id:guid}",

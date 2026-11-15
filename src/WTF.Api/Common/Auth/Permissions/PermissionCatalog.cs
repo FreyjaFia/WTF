@@ -67,6 +67,7 @@ public static class PermissionCatalog
         [AppPolicies.OrdersRead] = ["orders.read"],
         [AppPolicies.OrdersWrite] = ["orders.write"],
         [AppPolicies.OrdersOverride] = ["orders.override"],
+        [AppPolicies.SeniorPwdApply] = ["orders.seniorpwd.apply"],
         [AppPolicies.ChatRead] = ["chat.read"],
         [AppPolicies.ChatWrite] = ["chat.write"],
         [AppPolicies.PurchasingRead] = ["purchasing.read"],
