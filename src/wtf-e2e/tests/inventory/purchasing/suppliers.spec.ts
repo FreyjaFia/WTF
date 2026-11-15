@@ -18,9 +18,8 @@ test.describe('suppliers @inventory @suppliers', () => {
 
     await expect(page.locator('[data-testid="supplier-title"]')).toHaveText(name);
     await suppliers.open();
-    await expect(suppliers.row(name)).toBeVisible();
-
     await suppliers.search.fill(name);
+    await expect(suppliers.row(name)).toBeVisible();
     await expect(suppliers.row(name)).toHaveCount(1);
     await suppliers.search.fill('no such supplier xyz');
     await expect(suppliers.empty).toBeVisible();

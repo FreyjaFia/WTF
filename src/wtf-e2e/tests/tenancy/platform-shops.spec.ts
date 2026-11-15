@@ -35,6 +35,7 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
     await shops.secret.getByRole('button', { name: 'Done' }).click();
     await expect(shops.secret).toHaveCount(0);
 
+    await shops.search.fill(slug);
     await expect(shops.row(slug)).toContainText(name);
     expect((await ShopSession.attempt(request, secret.username, secret.password)).ok()).toBeTruthy();
     expect((await platform.tenants()).map((tenant) => tenant.slug)).toContain(slug);

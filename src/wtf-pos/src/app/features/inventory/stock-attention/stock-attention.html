@@ -78,7 +78,7 @@
     }
 
     <ul class="space-y-2.5">
-      @for (item of pager.rows(); track item.id) {
+      @for (item of visibleItems(); track item.id) {
         <li>
           <div
             class="flex overflow-hidden rounded-xl shadow"
@@ -140,13 +140,5 @@
         </li>
       }
     </ul>
-    <app-pagination
-      label="Stock attention pages"
-      [page]="pager.page()"
-      [pageSize]="pager.pageSize()"
-      [totalCount]="pager.totalCount()"
-      (pageChange)="pager.goTo($event)"
-      (pageSizeChange)="pager.setPageSize($event)"
-    />
   </div>
 </div>
