@@ -21,6 +21,12 @@ internal static class SqlServerAvailability
 
     public static bool IsAvailable => Probe.Value.Available;
 
+    // On CI a missing server must fail the run: a skipped database test looks the same as a passing one.
+    public static bool ShouldSkip => !IsAvailable && !RequiredByCi;
+
+    private static bool RequiredByCi =>
+        Environment.GetEnvironmentVariable("CI") is { Length: > 0 } ci && !ci.Equals("false", StringComparison.OrdinalIgnoreCase);
+
     public static string SkipReason =>
         $"No SQL Server is reachable ({Probe.Value.Reason}). Set {EnvironmentVariable} to a connection string, or install LocalDB.";
 
@@ -58,7 +64,7 @@ internal sealed class SqlFactAttribute : FactAttribute
 {
     public SqlFactAttribute()
     {
-        if (!SqlServerAvailability.IsAvailable)
+        if (SqlServerAvailability.ShouldSkip)
         {
             Skip = SqlServerAvailability.SkipReason;
         }
@@ -70,7 +76,7 @@ internal sealed class SqlTheoryAttribute : TheoryAttribute
 {
     public SqlTheoryAttribute()
     {
-        if (!SqlServerAvailability.IsAvailable)
+        if (SqlServerAvailability.ShouldSkip)
         {
             Skip = SqlServerAvailability.SkipReason;
         }
