@@ -18,6 +18,7 @@ public static class TestTenants
             CreatedAt = DateTime.UtcNow,
         }).GetAwaiter().GetResult();
 
+        services.AddSingleton(TestFakes.Features);
         return services.AddScoped(_ => TestDb.Create(name));
     }
 }

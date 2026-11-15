@@ -16,6 +16,8 @@ public class GetSeniorPwdReportHandlerTests
     private GetSeniorPwdReportHandler Handler(string role = AppRoles.Admin, string? accept = null) =>
         new(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), role, "Asia/Manila", accept));
 
+    private static GetSeniorPwdReportQuery FullIdQuery() => Query() with { IncludeFullIdNumbers = true };
+
     private static GetSeniorPwdReportQuery Query() =>
         new() { FromDate = new DateTime(2026, 3, 10), ToDate = new DateTime(2026, 3, 10) };
 
@@ -97,23 +99,27 @@ public class GetSeniorPwdReportHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ExportByAnAdmin_ShowsTheFullId()
+    public async Task Handle_WhenTheEndpointAsksForFullIds_ShowsTheFullId()
     {
         await SeedAsync();
 
-        var row = (await Handler(accept: "application/pdf").Handle(Query(), default)).ShouldHaveSingleItem();
+        var row = (await Handler().Handle(FullIdQuery(), default)).ShouldHaveSingleItem();
 
         row.IdNumber.ShouldBe("PWD-12345678");
     }
 
-    [Fact]
-    public async Task Handle_ExportByACashier_StaysMasked()
+    [Theory]
+    [InlineData(AppRoles.Admin, "application/pdf")]
+    [InlineData(AppRoles.Owner, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    [InlineData(AppRoles.Cashier, "application/pdf")]
+    public async Task Handle_WithoutTheFlag_NeverUnmasks_WhateverTheCallerOrAcceptHeaderSays(string role, string accept)
     {
         await SeedAsync();
 
-        var row = (await Handler(AppRoles.Cashier, "application/pdf").Handle(Query(), default)).ShouldHaveSingleItem();
+        var row = (await Handler(role, accept).Handle(Query(), default)).ShouldHaveSingleItem();
 
         row.IdNumber.ShouldBe("********5678");
+        System.Text.Json.JsonSerializer.Serialize(row).ShouldNotContain("12345678");
     }
 }
 

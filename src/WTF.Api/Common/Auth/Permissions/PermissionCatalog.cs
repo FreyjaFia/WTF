@@ -4,6 +4,8 @@ namespace WTF.Api.Common.Auth.Permissions;
 
 public static class PermissionCatalog
 {
+    public const string ReportsGenerate = "reports.generate";
+
     public static readonly IReadOnlyList<PermissionDefinition> All =
     [
         new("orders.read", "Orders", "View orders", "See the order list, order details and order chat.", "core", []),
@@ -37,7 +39,7 @@ public static class PermissionCatalog
         new("promotions.write", "Promotions", "Add and edit promotions", "Create and change promotions.", PlanFeatures.Promotions, ["promotions.read"]),
         new("dashboard.read", "Insight", "View the dashboard", "See the live dashboard.", "core", []),
         new("reports.read", "Insight", "View reports", "See sales and stock reports.", "core", []),
-        new("reports.generate", "Insight", "Generate reports", "Generate the monthly report workbook.", PlanFeatures.Workbook, ["reports.read"]),
+        new(ReportsGenerate, "Insight", "Generate reports", "Generate the monthly report workbook.", PlanFeatures.Workbook, ["reports.read"]),
         new("users.read", "People", "View users", "See the user list.", "core", []),
         new("users.write", "People", "Add and edit users", "Create, change and remove users.", "core", ["users.read"]),
         new("roles.manage", "People", "Manage roles", "Create, change and delete custom roles and choose what each can do. Only permissions you hold yourself can be given.", PlanFeatures.CustomRoles, []),

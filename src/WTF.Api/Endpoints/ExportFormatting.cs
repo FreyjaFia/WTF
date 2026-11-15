@@ -4,8 +4,29 @@ using WTF.Api.Common.Time;
 namespace WTF.Api.Endpoints;
 
 /// <summary>Formatting shared by the Excel and PDF exports.</summary>
+public enum ReportFileFormat
+{
+    None,
+    Excel,
+    Pdf
+}
+
 internal static class ExportFormatting
 {
+    public static ReportFileFormat RequestedFormat(HttpContext httpContext)
+    {
+        var accepts = httpContext.Request.Headers.Accept.ToString();
+        if (accepts.Contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase)
+            || accepts.Contains("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase))
+        {
+            return ReportFileFormat.Excel;
+        }
+
+        return accepts.Contains("application/pdf", StringComparison.OrdinalIgnoreCase) ? ReportFileFormat.Pdf : ReportFileFormat.None;
+    }
+
+    public static bool IsFileExport(HttpContext httpContext) => RequestedFormat(httpContext) != ReportFileFormat.None;
+
     public static TimeZoneInfo ResolveTimeZone(HttpContext httpContext)
     {
         return RequestTimeZone.Resolve(httpContext.Request.Headers["X-TimeZone"].ToString());

@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
@@ -16,6 +15,7 @@ public sealed record GetSeniorPwdReportQuery : IRequest<List<SeniorPwdReportRowD
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
     public OrderSourceEnum? Source { get; init; }
+    public bool IncludeFullIdNumbers { get; init; }
 }
 
 public sealed class GetSeniorPwdReportHandler(
@@ -54,8 +54,6 @@ public sealed class GetSeniorPwdReportHandler(
             })
             .ToListAsync(cancellationToken);
 
-        var fullId = WantsFullId();
-
         return rows
             .Select(r => new SeniorPwdReportRowDto(
                 r.Id,
@@ -64,29 +62,12 @@ public sealed class GetSeniorPwdReportHandler(
                 ReportPeriods.LocalDateTime(r.CreatedAt, timeZone),
                 (SeniorPwdTypeEnum)r.Type == SeniorPwdTypeEnum.Senior ? "Senior" : "PWD",
                 r.CustomerName,
-                fullId ? r.IdNumber : SeniorPwdOrders.MaskId(r.IdNumber),
+                request.IncludeFullIdNumbers ? r.IdNumber : SeniorPwdOrders.MaskId(r.IdNumber),
                 r.CoveredAmount,
                 r.VatExemptAmount,
                 r.DiscountAmount,
                 SeniorPwdReportRules.NetAmount(r.CoveredAmount, r.VatExemptAmount, r.DiscountAmount),
                 SeniorPwdReportRules.IsRefunded(r.StatusId) ? "Refunded" : "Sold"))
             .ToList();
-    }
-
-    // The full ID only goes into a downloaded file, and only for someone who may generate reports.
-    private bool WantsFullId()
-    {
-        var context = httpContextAccessor.HttpContext;
-        if (context is null)
-        {
-            return false;
-        }
-
-        var accepts = context.Request.Headers.Accept.ToString();
-        var isExport = accepts.Contains("spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase)
-            || accepts.Contains("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase)
-            || accepts.Contains("application/pdf", StringComparison.OrdinalIgnoreCase);
-
-        return isExport && PermissionChecks.HasAny(context.User, ["reports.generate"]);
     }
 }

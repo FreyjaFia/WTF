@@ -1,8 +1,11 @@
 using MediatR;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Api.Services;
 using WTF.Calculations.Subscriptions;
 
 namespace WTF.Api.Endpoints;
@@ -162,7 +165,19 @@ public static class ReportEndpoints
                     return validationResult;
                 }
 
-                var result = await sender.Send(query);
+                // Never taken from the request: full ID numbers go only into a downloaded file, for someone who may generate reports.
+                var fullIds = ExportFormatting.IsFileExport(httpContext) && PermissionChecks.Has(httpContext.User, PermissionCatalog.ReportsGenerate);
+                var result = await sender.Send(query with { IncludeFullIdNumbers = fullIds });
+                if (fullIds && result.Count is > 0 and <= MaxExportRows)
+                {
+                    await httpContext.RequestServices.GetRequiredService<IAuditService>().LogAsync(
+                        AuditAction.SeniorPwdIdsExported,
+                        AuditEntityType.Report,
+                        "senior-pwd",
+                        newValues: new { query.FromDate, query.ToDate, Rows = result.Count },
+                        cancellationToken: httpContext.RequestAborted);
+                }
+
                 return BuildReportResponse(httpContext, result, ReportTables.SeniorPwd, query.FromDate!.Value, query.ToDate!.Value, query.Source);
             });
 
@@ -418,10 +433,9 @@ public static class ReportEndpoints
         string subtitle,
         string fileSuffix)
     {
-        var accepts = httpContext.Request.Headers.Accept.ToString();
-        var wantsExcel = accepts.Contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase)
-            || accepts.Contains("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase);
-        var wantsPdf = !wantsExcel && accepts.Contains("application/pdf", StringComparison.OrdinalIgnoreCase);
+        var format = ExportFormatting.RequestedFormat(httpContext);
+        var wantsExcel = format == ReportFileFormat.Excel;
+        var wantsPdf = format == ReportFileFormat.Pdf;
 
         if (!wantsExcel && !wantsPdf)
         {
