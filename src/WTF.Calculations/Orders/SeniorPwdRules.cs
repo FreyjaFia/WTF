@@ -13,8 +13,6 @@ public static class SeniorPwdRules
 
     public const decimal VatRate = 0.12m;
 
-    // The covered amount is the VAT-inclusive list price of a row (an item, its add-ons and its quantity). A VAT-registered
-    // shop takes the discount off the price without VAT and does not charge the VAT; any other shop takes 20% off the price.
     public static SeniorPwdAmounts ForRow(decimal covered, bool vatRegistered)
     {
         if (covered <= 0m)
@@ -34,7 +32,6 @@ public static class SeniorPwdRules
     public static SeniorPwdAmounts ForLine(decimal unitPrice, decimal addOnsPerUnit, int quantity, bool vatRegistered) =>
         ForRow(OrderMetrics.LineTotal(unitPrice, addOnsPerUnit, quantity), vatRegistered);
 
-    // A promotion price and a bundle are never covered, and neither is a product the shop marked as not food or drink.
     public static bool IsEligibleLine(bool productEligible, bool hasPromotion, bool isBundle) =>
         productEligible && !hasPromotion && !isBundle;
 

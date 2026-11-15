@@ -28,9 +28,9 @@ public class SeniorPwdIdCheckHandler(WTFDbContext db, IHttpContextAccessor httpC
             return new SeniorPwdIdCheckDto(false, null);
         }
 
-        if (idNumber.Length > SeniorPwdOrders.MaxIdLength)
+        if (idNumber.Length > SeniorPwdValidator.MaxIdLength)
         {
-            throw new InvalidOperationException($"The ID number is not valid ({SeniorPwdOrders.MaxIdLength} characters at most).");
+            throw new InvalidOperationException($"The ID number is not valid ({SeniorPwdValidator.MaxIdLength} characters at most).");
         }
 
         var key = SeniorPwdRules.IdKey(idNumber);

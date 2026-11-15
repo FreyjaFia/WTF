@@ -68,8 +68,6 @@ internal static class OfflineOrderReview
         return [.. reasons.Distinct()];
     }
 
-    // The register worked out the Senior/PWD discount with the shop settings it had. A person without an ID or name, or a
-    // setting that changed while the device was offline, holds the sale for an Admin instead of failing it.
     private static async Task AddSeniorPwdReasonsAsync(
         WTFDbContext db,
         CreateOrderCommand command,

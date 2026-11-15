@@ -62,7 +62,7 @@ public sealed class GetSeniorPwdReportHandler(
                 ReportPeriods.LocalDateTime(r.CreatedAt, timeZone),
                 (SeniorPwdTypeEnum)r.Type == SeniorPwdTypeEnum.Senior ? "Senior" : "PWD",
                 r.CustomerName,
-                request.IncludeFullIdNumbers ? r.IdNumber : SeniorPwdOrders.MaskId(r.IdNumber),
+                request.IncludeFullIdNumbers ? r.IdNumber : SeniorPwdMapping.MaskId(r.IdNumber),
                 r.CoveredAmount,
                 r.VatExemptAmount,
                 r.DiscountAmount,

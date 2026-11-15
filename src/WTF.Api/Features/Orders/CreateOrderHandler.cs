@@ -360,13 +360,11 @@ public class CreateOrderHandler(
                     orderItem.DiscountPromotionId = segment.Discounted ? appliedDiscount?.PromotionId : null;
                 }
 
-                if (seniorPwd is not null && item.SeniorPwdPersonIndex is { } personIndex)
-                {
-                    seniorPwd.Cover(
-                        personIndex,
-                        orderItem,
-                        seniorPwd.AmountsFor(orderItem.Price ?? basePrice, addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity), segment.Quantity));
-                }
+                seniorPwd?.CoverLine(
+                    item,
+                    product,
+                    orderItem,
+                    seniorPwd.AmountsFor(orderItem.Price ?? basePrice, addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity), segment.Quantity));
 
                 db.OrderItems.Add(orderItem);
                 await db.SaveChangesAsync(cancellationToken);
@@ -525,7 +523,7 @@ public class CreateOrderHandler(
 
         if (seniorPwd is not null)
         {
-            await SeniorPwdOrders.LogChangesAsync(auditService, order, [], seniorPwd.Rows, userId, cancellationToken);
+            await SeniorPwdAudit.LogChangesAsync(auditService, order, [], seniorPwd.Rows, userId, cancellationToken);
         }
 
         if (ownTransaction is not null)
@@ -566,35 +564,13 @@ public class CreateOrderHandler(
             }
         }
 
-        return new OrderDto(
-            order.Id,
-            order.OrderNumber,
-            order.CreatedAt,
-            order.CreatedBy,
-            order.UpdatedAt,
-            order.UpdatedBy,
+        return OrderMapping.ToDto(
+            order,
             items,
-            order.CustomerId,
-            (OrderStatusEnum)order.StatusId,
-            order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : null,
-            order.AmountReceived,
-            order.ChangeAmount,
-            order.Tips,
-            order.SpecialInstructions,
-            order.Note,
             totalAmount,
-            null,
             bundlePromotions,
-            Source: request.Source,
-            FulfillmentType: request.FulfillmentType,
-            DeliveryAddress: request.DeliveryAddress,
-            ContactNumber: request.ContactNumber,
-            ReviewReasons: order.ReviewReasons,
-            QuotedTotal: order.QuotedTotal,
-            OfflineLocalId: order.OfflineLocalId,
-            StockWarnings: stock.Warnings,
-            SeniorPwdPersons: seniorPwd is null ? null : SeniorPwdOrders.ToDtos(seniorPwd.Rows, false),
-            CustomerAddress: order.CustomerAddress
-        );
+            seniorPwd?.Rows ?? [],
+            maskIds: !SeniorPwdMapping.CanSeeFullId(httpContextAccessor),
+            stockWarnings: stock.Warnings);
     }
 }

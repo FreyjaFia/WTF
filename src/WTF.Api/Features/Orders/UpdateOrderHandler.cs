@@ -269,7 +269,7 @@ public class UpdateOrderHandler(
             var discountedPrice = appliedDiscount?.Price;
             if (seniorPwd is not null && item.SeniorPwdPersonIndex.HasValue)
             {
-                // A correction keeps the price paid, so a promotion is judged on the saved line further down.
+                // A correction keeps the price paid, so a promotion is judged on the saved line (CoverLine).
                 seniorPwd.EnsureLineAllowed(product.Name, product.IsSeniorPwdEligible, !isOverride && appliedDiscount is not null, item.BundlePromotionId.HasValue);
             }
 
@@ -385,7 +385,7 @@ public class UpdateOrderHandler(
             : null;
 
         // Update items: remove old, add new
-        var seniorPwdBefore = SeniorPwdOrders.Snapshot(order.OrderSeniorPwdDiscounts);
+        var seniorPwdBefore = SeniorPwdAudit.Snapshot(order.OrderSeniorPwdDiscounts);
         db.OrderItems.RemoveRange(order.OrderItems);
         db.OrderBundlePromotions.RemoveRange(order.OrderBundlePromotions);
         var seniorPwdRemoved = seniorPwd?.CreateRows(order.Id, actorUserId, order.CreatedAt, order.OrderSeniorPwdDiscounts)
@@ -485,13 +485,8 @@ public class UpdateOrderHandler(
                     db.OrderItems.Add(addOnItem);
                 }
 
-                if (seniorPwd is not null && item.SeniorPwdPersonIndex is { } personIndex)
+                if (seniorPwd is not null && item.SeniorPwdPersonIndex.HasValue)
                 {
-                    if (isOverride && newItem.DiscountPromotionId.HasValue)
-                    {
-                        seniorPwd.EnsureLineAllowed(product.Name, true, true, false);
-                    }
-
                     var amounts = coveredAmounts.TryGetValue(itemIndex, out var checkedAmounts)
                         ? checkedAmounts
                         : seniorPwd.AmountsFor(
@@ -501,7 +496,7 @@ public class UpdateOrderHandler(
                                     ? paid
                                     : addOn.Price)),
                             segment.Quantity);
-                    seniorPwd.Cover(personIndex, newItem, amounts);
+                    seniorPwd.CoverLine(item, product, newItem, amounts);
                 }
             }
         }
@@ -622,7 +617,7 @@ public class UpdateOrderHandler(
                 isOverride);
         }
 
-        await SeniorPwdOrders.LogChangesAsync(
+        await SeniorPwdAudit.LogChangesAsync(
             auditService,
             order,
             seniorPwdBefore,
@@ -671,31 +666,14 @@ public class UpdateOrderHandler(
                 cancellationToken: cancellationToken);
         }
 
-        return new OrderDto(
-            order.Id,
-            order.OrderNumber,
-            order.CreatedAt,
-            order.CreatedBy,
-            order.UpdatedAt,
-            order.UpdatedBy,
+        return OrderMapping.ToDto(
+            order,
             items,
-            order.CustomerId,
-            (OrderStatusEnum)order.StatusId,
-            order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : null,
-            order.AmountReceived,
-            order.ChangeAmount,
-            order.Tips,
-            order.SpecialInstructions,
-            order.Note,
             totalAmount,
-            null,
             bundlePromotions,
-            order.OverrideReason,
-            order.OverriddenAt,
-            StockWarnings: stock.Warnings,
-            SeniorPwdPersons: seniorPwd is null ? null : SeniorPwdOrders.ToDtos(seniorPwd.Rows, false),
-            CustomerAddress: order.CustomerAddress
-        );
+            seniorPwd?.Rows ?? [],
+            maskIds: !SeniorPwdMapping.CanSeeFullId(httpContextAccessor),
+            stockWarnings: stock.Warnings);
     }
 
     private static object DescribeItem(OrderItemDto item)

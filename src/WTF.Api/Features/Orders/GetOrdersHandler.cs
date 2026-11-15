@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
-using WTF.Api.Features.Customers;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
@@ -29,7 +28,8 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
             .Include(o => o.OrderBundlePromotions)
                 .ThenInclude(obp => obp.Promotion)
             .Include(o => o.OrderSeniorPwdDiscounts)
-            .AsQueryable();
+            .AsNoTrackingWithIdentityResolution()
+            .AsSplitQuery();
 
         if (request.CustomerId.HasValue)
         {
@@ -63,98 +63,13 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
 
         var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
 
-        return [.. orders.Select(o =>
-        {
-            var items = o.OrderItems
-                .Where(oi => oi.ParentOrderItemId == null)
-                .OrderBy(oi => oi.SortOrder)
-                .ThenBy(oi => oi.Id)
-                .Select(oi =>
-                {
-                    var addOns = oi.InverseParentOrderItem
-                        .OrderBy(child => child.SortOrder)
-                        .ThenBy(child => child.Id)
-                        .Select(child =>
-                        {
-                            var childEffectivePrice = child.Price
-                                ?? (overridePrices.TryGetValue((oi.ProductId, child.ProductId), out var op) ? op : child.Product.Price);
-
-                            return new OrderItemDto(
-                                child.Id,
-                                child.ProductId,
-                                child.Product.Name,
-                                child.Quantity,
-                                childEffectivePrice,
-                                [],
-                                child.SpecialInstructions,
-                                child.BundlePromotionId
-                            );
-                        })
-                        .ToList();
-
-                    return new OrderItemDto(
-                        oi.Id,
-                        oi.ProductId,
-                        oi.Product.Name,
-                        oi.Quantity,
-                        oi.Price ?? oi.Product.Price,
-                        addOns,
-                        oi.SpecialInstructions,
-                        oi.BundlePromotionId,
-                        oi.OriginalPrice,
-                        oi.PromoLabel,
-                oi.DiscountPromotionId,
-                oi.SeniorPwdDiscountId,
-                oi.SeniorPwdVatExempt,
-                oi.SeniorPwdDiscount
-                    );
-                })
-                .ToList();
-
-            var bundlePromotions = o.OrderBundlePromotions
-                .Select(obp => new OrderBundlePromotionDto(
-                    obp.PromotionId,
-                    obp.Promotion.Name,
-                    obp.Quantity,
-                    obp.UnitPrice))
-                .ToList();
-
-            var totalAmount = OrderMetrics.ComputeOrderTotal(o, overridePrices, previewPrices);
-
-            return new OrderDto(
-                o.Id,
-                o.OrderNumber,
-                o.CreatedAt,
-                o.CreatedBy,
-                o.UpdatedAt,
-                o.UpdatedBy,
-                items,
-                o.CustomerId,
-                (OrderStatusEnum)o.StatusId,
-                o.PaymentMethodId.HasValue ? (PaymentMethodEnum)o.PaymentMethodId.Value : null,
-                o.AmountReceived,
-                o.ChangeAmount,
-                o.Tips,
-                o.SpecialInstructions,
-                o.Note,
-                totalAmount,
-                o.Customer == null ? null : CustomerName.Join(o.Customer.FirstName, o.Customer.LastName),
-                bundlePromotions,
-                o.OverrideReason,
-                o.OverriddenAt,
-                (OrderSourceEnum)o.Source,
-                o.FulfillmentType.HasValue ? (FulfillmentTypeEnum)o.FulfillmentType.Value : null,
-                o.DeliveryAddress,
-                o.ContactNumber,
-                o.RejectionReason,
-                o.AcceptedAt,
-                o.ReadyAt,
-                o.ReviewReasons,
-                o.QuotedTotal,
-                o.OfflineLocalId,
-                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true),
-                CustomerAddress: o.CustomerAddress
-            );
-        })];
+        return [.. orders.Select(o => OrderMapping.ToDto(
+            o,
+            OrderMapping.ToItemDtos(o.OrderItems.Where(oi => oi.ParentOrderItemId == null), overridePrices),
+            OrderMetrics.ComputeOrderTotal(o, overridePrices, previewPrices),
+            OrderMapping.ToBundleDtos(o),
+            o.OrderSeniorPwdDiscounts,
+            maskIds: true,
+            includeCustomerName: true))];
     }
 }

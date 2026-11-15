@@ -32,6 +32,7 @@ public class VoidOrderHandler(
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
+            .Include(o => o.OrderSeniorPwdDiscounts)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -229,31 +230,12 @@ public class VoidOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return new OrderDto(
-            order.Id,
-            order.OrderNumber,
-            order.CreatedAt,
-            order.CreatedBy,
-            order.UpdatedAt,
-            order.UpdatedBy,
+        return OrderMapping.ToDto(
+            order,
             items,
-            order.CustomerId,
-            (OrderStatusEnum)order.StatusId,
-            order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : null,
-            order.AmountReceived,
-            order.ChangeAmount,
-            order.Tips,
-            order.SpecialInstructions,
-            order.Note,
             totalAmount,
-            null,
             bundlePromotions,
-            order.OverrideReason,
-            order.OverriddenAt,
-            SeniorPwdPersons: SeniorPwdOrders.ToDtos(
-                await db.OrderSeniorPwdDiscounts.AsNoTracking().Where(s => s.OrderId == order.Id).ToListAsync(cancellationToken),
-                true),
-            CustomerAddress: order.CustomerAddress
-        );
+            order.OrderSeniorPwdDiscounts,
+            maskIds: !SeniorPwdMapping.CanSeeFullId(httpContextAccessor));
     }
 }

@@ -1,10 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
-using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
-using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Services;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -31,8 +28,8 @@ internal sealed class SeniorPwdOrders
 
     public List<OrderSeniorPwdDiscount> Rows { get; private set; } = [];
 
-    // Null when the order has no Senior/PWD person. A held offline order records what was sold at the till, so its rules
-    // (switch, permission, eligibility) are not judged again; an Admin reviews it instead.
+    // A held offline order records what was sold at the till, so its rules (switch, permission, eligibility) are not
+    // judged again; an Admin reviews it instead.
     public static async Task<SeniorPwdOrders?> LoadAsync(
         WTFDbContext db,
         IHttpContextAccessor httpContextAccessor,
@@ -65,7 +62,7 @@ internal sealed class SeniorPwdOrders
             .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
             .FirstOrDefaultAsync(cancellationToken);
 
-        var cleaned = persons.Select(person => Clean(person, held)).ToList();
+        var cleaned = SeniorPwdValidator.Clean(persons, held);
 
         if (!held)
         {
@@ -80,98 +77,10 @@ internal sealed class SeniorPwdOrders
                 throw new ForbiddenActionException("You are not allowed to apply the Senior/PWD discount.");
             }
 
-            foreach (var person in cleaned)
-            {
-                Validate(person, isCustomerLinkOrder);
-            }
-
-            if (cleaned.Select(p => SeniorPwdRules.IdKey(p.IdNumber)).Distinct().Count() != cleaned.Count)
-            {
-                throw new InvalidOperationException("The same ID number cannot be used twice on one order.");
-            }
+            SeniorPwdValidator.Validate(cleaned, isCustomerLinkOrder);
         }
 
         return new SeniorPwdOrders(cleaned, settings?.VatRegistered ?? false, held);
-    }
-
-    public static string MaskId(string idNumber)
-    {
-        var visible = Math.Min(4, Math.Max(0, idNumber.Length - 4));
-        return new string('*', idNumber.Length - visible) + idNumber[^visible..];
-    }
-
-    public static List<OrderSeniorPwdDto>? ToDtos(IEnumerable<OrderSeniorPwdDiscount> rows, bool mask)
-    {
-        var list = rows
-            .OrderBy(r => r.CreatedAt)
-            .ThenBy(r => r.Id)
-            .Select(r => new OrderSeniorPwdDto(
-                r.Id,
-                (SeniorPwdTypeEnum)r.Type,
-                mask ? MaskId(r.IdNumber) : r.IdNumber,
-                r.CustomerName,
-                r.CoveredAmount,
-                r.VatExemptAmount,
-                r.DiscountAmount))
-            .ToList();
-        return list.Count == 0 ? null : list;
-    }
-
-    public static bool CanSeeFullId(IHttpContextAccessor? httpContextAccessor)
-    {
-        var user = httpContextAccessor?.HttpContext?.User;
-        return PermissionChecks.HasAny(user, [PermissionKeys.OrdersSeniorPwdApply, PermissionKeys.OrdersOverride]);
-    }
-
-    public static object AuditValues(OrderSeniorPwdDiscount row) => new
-    {
-        Type = (SeniorPwdTypeEnum)row.Type,
-        Id = MaskId(row.IdNumber),
-        row.CustomerName,
-        row.CoveredAmount,
-        row.VatExemptAmount,
-        row.DiscountAmount
-    };
-
-    public static string Signature(IEnumerable<OrderSeniorPwdDiscount> rows) =>
-        string.Join("|", rows
-            .Select(r => $"{r.Type}:{r.IdNumber}:{r.CustomerName}:{r.CoveredAmount}:{r.VatExemptAmount}:{r.DiscountAmount}")
-            .Order());
-
-    public static async Task LogChangesAsync(
-        IAuditService auditService,
-        Order order,
-        IReadOnlyCollection<OrderSeniorPwdDiscount> before,
-        IReadOnlyCollection<OrderSeniorPwdDiscount> after,
-        Guid userId,
-        CancellationToken cancellationToken)
-    {
-        if (Signature(before) == Signature(after))
-        {
-            return;
-        }
-
-        foreach (var row in before)
-        {
-            await auditService.LogAsync(
-                AuditAction.SeniorPwdDiscountRemoved,
-                AuditEntityType.Order,
-                order.Id.ToString(),
-                oldValues: new { order.OrderNumber, Person = AuditValues(row) },
-                userId: userId,
-                cancellationToken: cancellationToken);
-        }
-
-        foreach (var row in after)
-        {
-            await auditService.LogAsync(
-                AuditAction.SeniorPwdDiscountApplied,
-                AuditEntityType.Order,
-                order.Id.ToString(),
-                newValues: new { order.OrderNumber, Person = AuditValues(row) },
-                userId: userId,
-                cancellationToken: cancellationToken);
-        }
     }
 
     public SeniorPwdAmounts AmountsFor(decimal unitPrice, decimal addOnsPerUnit, int quantity) =>
@@ -231,22 +140,18 @@ internal sealed class SeniorPwdOrders
         return unused;
     }
 
-    public static List<OrderSeniorPwdDiscount> Snapshot(IEnumerable<OrderSeniorPwdDiscount> rows) =>
-        rows.Select(row => new OrderSeniorPwdDiscount
+    public void CoverLine(OrderItemRequestDto item, Product product, OrderItem saved, SeniorPwdAmounts amounts)
+    {
+        if (item.SeniorPwdPersonIndex is not { } personIndex)
         {
-            Id = row.Id,
-            OrderId = row.OrderId,
-            Type = row.Type,
-            IdNumber = row.IdNumber,
-            CustomerName = row.CustomerName,
-            CoveredAmount = row.CoveredAmount,
-            VatExemptAmount = row.VatExemptAmount,
-            DiscountAmount = row.DiscountAmount,
-            RecordedBy = row.RecordedBy,
-            CreatedAt = row.CreatedAt
-        }).ToList();
+            return;
+        }
 
-    public void Cover(int personIndex, OrderItem parent, SeniorPwdAmounts amounts)
+        EnsureLineAllowed(product.Name, product.IsSeniorPwdEligible, saved.DiscountPromotionId.HasValue, item.BundlePromotionId.HasValue);
+        Cover(personIndex, saved, amounts);
+    }
+
+    private void Cover(int personIndex, OrderItem parent, SeniorPwdAmounts amounts)
     {
         var row = Rows[personIndex];
         _covered.Add((parent, personIndex));
@@ -257,7 +162,6 @@ internal sealed class SeniorPwdOrders
         row.DiscountAmount += amounts.Discount;
     }
 
-    // The person rows are saved with their final amounts, then the covered lines point at them.
     public void Complete(WTFDbContext db)
     {
         db.OrderSeniorPwdDiscounts.AddRange(Rows.Where(row => db.Entry(row).State == EntityState.Detached));
@@ -283,44 +187,5 @@ internal sealed class SeniorPwdOrders
         }
     }
 
-    private static SeniorPwdPersonRequestDto Clean(SeniorPwdPersonRequestDto person, bool held)
-    {
-        var idNumber = SeniorPwdRules.NormalizeIdNumber(person.IdNumber);
-        var name = (person.CustomerName ?? string.Empty).Trim();
-        if (held)
-        {
-            idNumber = idNumber.Length > MaxIdLength ? idNumber[..MaxIdLength] : idNumber;
-            name = name.Length > MaxNameLength ? name[..MaxNameLength] : name;
-        }
 
-        return person with { IdNumber = idNumber, CustomerName = name };
-    }
-
-    private static void Validate(SeniorPwdPersonRequestDto person, bool requireIdChecked)
-    {
-        if (!Enum.IsDefined(person.Type))
-        {
-            throw new InvalidOperationException("Pick Senior or PWD for the discount.");
-        }
-
-        if (person.IdNumber.Length == 0 || person.CustomerName.Length == 0)
-        {
-            throw new InvalidOperationException("The Senior/PWD discount needs the ID number and the name on the ID.");
-        }
-
-        if (person.IdNumber.Length > MaxIdLength || person.IdNumber.Any(char.IsControl))
-        {
-            throw new InvalidOperationException($"The ID number is not valid ({MaxIdLength} characters at most).");
-        }
-
-        if (person.CustomerName.Length > MaxNameLength || person.CustomerName.Any(char.IsControl))
-        {
-            throw new InvalidOperationException($"The name on the ID is not valid ({MaxNameLength} characters at most).");
-        }
-
-        if (requireIdChecked && !person.IdChecked)
-        {
-            throw new InvalidOperationException("Check the ID before applying the Senior/PWD discount to an online order.");
-        }
-    }
 }

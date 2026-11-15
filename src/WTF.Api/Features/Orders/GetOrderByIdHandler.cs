@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
-using WTF.Api.Features.Customers;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
@@ -26,6 +25,8 @@ public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpCont
             .Include(o => o.OrderBundlePromotions)
                 .ThenInclude(obp => obp.Promotion)
             .Include(o => o.OrderSeniorPwdDiscounts)
+            .AsNoTrackingWithIdentityResolution()
+            .AsSplitQuery()
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -42,96 +43,19 @@ public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpCont
         var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(db, parentItems, cancellationToken);
         var previewPrices = await PendingOrderPreview.LoadAsync(db, [order], httpContextAccessor, cancellationToken);
 
-        var items = parentItems
-            .Select(oi =>
-            {
-                var addOns = oi.InverseParentOrderItem
-                    .OrderBy(child => child.SortOrder)
-                    .ThenBy(child => child.Id)
-                    .Select(child =>
-                    {
-                        var childEffectivePrice = child.Price
-                            ?? (overridePrices.TryGetValue((oi.ProductId, child.ProductId), out var op) ? op : child.Product.Price);
-
-                        return new OrderItemDto(
-                            child.Id,
-                            child.ProductId,
-                            child.Product.Name,
-                            child.Quantity,
-                            childEffectivePrice,
-                            [],
-                            child.SpecialInstructions,
-                            child.BundlePromotionId
-                        );
-                    })
-                    .ToList();
-
-                return new OrderItemDto(
-                    oi.Id,
-                    oi.ProductId,
-                    oi.Product.Name,
-                    oi.Quantity,
-                    oi.Price ?? oi.Product.Price,
-                    addOns,
-                    oi.SpecialInstructions,
-                    oi.BundlePromotionId,
-                    oi.OriginalPrice,
-                    oi.PromoLabel,
-                oi.DiscountPromotionId,
-                oi.SeniorPwdDiscountId,
-                oi.SeniorPwdVatExempt,
-                oi.SeniorPwdDiscount
-                );
-            })
-            .ToList();
-
-        var bundlePromotions = order.OrderBundlePromotions
-            .Select(obp => new OrderBundlePromotionDto(
-                obp.PromotionId,
-                obp.Promotion.Name,
-                obp.Quantity,
-                obp.UnitPrice))
-            .ToList();
-
+        var items = OrderMapping.ToItemDtos(parentItems, overridePrices);
         var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices, previewPrices);
-
         var stockLineIds = await LoadStockLineIdsAsync(order, parentItems, cancellationToken);
 
-        return new OrderDto(
-            order.Id,
-            order.OrderNumber,
-            order.CreatedAt,
-            order.CreatedBy,
-            order.UpdatedAt,
-            order.UpdatedBy,
+        return OrderMapping.ToDto(
+            order,
             items,
-            order.CustomerId,
-            (OrderStatusEnum)order.StatusId,
-            order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : null,
-            order.AmountReceived,
-            order.ChangeAmount,
-            order.Tips,
-            order.SpecialInstructions,
-            order.Note,
             totalAmount,
-            order.Customer == null ? null : CustomerName.Join(order.Customer.FirstName, order.Customer.LastName),
-            bundlePromotions,
-            order.OverrideReason,
-            order.OverriddenAt,
-            (OrderSourceEnum)order.Source,
-            order.FulfillmentType.HasValue ? (FulfillmentTypeEnum)order.FulfillmentType.Value : null,
-            order.DeliveryAddress,
-            order.ContactNumber,
-            order.RejectionReason,
-            order.AcceptedAt,
-            order.ReadyAt,
-            order.ReviewReasons,
-            order.QuotedTotal,
-            order.OfflineLocalId,
-            StockLineIds: stockLineIds,
-            SeniorPwdPersons: SeniorPwdOrders.ToDtos(order.OrderSeniorPwdDiscounts, !SeniorPwdOrders.CanSeeFullId(httpContextAccessor)),
-            CustomerAddress: order.CustomerAddress
-        );
+            OrderMapping.ToBundleDtos(order),
+            order.OrderSeniorPwdDiscounts,
+            maskIds: !SeniorPwdMapping.CanSeeFullId(httpContextAccessor),
+            includeCustomerName: true,
+            stockLineIds: stockLineIds);
     }
 
     // The lines whose product (or one of its add-ons) took stock when the sale completed, so a refund only asks about those.
