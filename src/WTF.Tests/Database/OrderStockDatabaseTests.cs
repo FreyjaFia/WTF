@@ -76,7 +76,7 @@ public class OrderStockDatabaseTests
             var sender = Substitute.For<MediatR.ISender>();
             sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
                 .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
-            var sync = new SyncOfflineOrdersHandler(db, sender, accessor);
+            var sync = new SyncOfflineOrdersHandler(db, sender, accessor, TestFakes.Features);
 
             CreateOrderCommand Offline(string id, decimal quoted) => new()
             {
@@ -105,7 +105,7 @@ public class OrderStockDatabaseTests
 
             var getSender = Substitute.For<MediatR.ISender>();
             getSender.Send(Arg.Any<MediatR.IRequest<OrderDto?>>(), Arg.Any<CancellationToken>())
-                .Returns(call => new GetOrderByIdHandler(db)
+                .Returns(call => new GetOrderByIdHandler(db, TestFakes.Features)
                     .Handle((GetOrderByIdQuery)call.Arg<MediatR.IRequest<OrderDto?>>(), call.Arg<CancellationToken>()));
             var reject = new RejectHeldOrderHandler(
                 db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Conversations(), getSender, TestFakes.Stock(db));

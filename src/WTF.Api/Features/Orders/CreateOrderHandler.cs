@@ -318,7 +318,7 @@ public class CreateOrderHandler(
             }
 
             honoredRules ??= await DiscountRuleLoader.LoadAsync(
-                db, request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow, RequestTimeZone.ResolveFromRequest(httpContextAccessor), null, cancellationToken);
+                db, request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow, RequestTimeZone.ResolveFromRequest(httpContextAccessor), null, cancellationToken, tenantFeatures);
             return PromotionPricing.GetDiscountedUnitPrice(
                 original,
                 line.ProductId,

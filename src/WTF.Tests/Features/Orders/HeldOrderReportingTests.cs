@@ -101,9 +101,9 @@ public class HeldOrderReportingTests
         SeedHeld(product, DateTime.UtcNow.AddDays(-4), 120m);
         SeedHeld(product, DateTime.UtcNow.AddHours(-3), 30m);
 
-        var asAdmin = await new GetDashboardHandler(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), AppRoles.Admin, "Asia/Manila"))
+        var asAdmin = await new GetDashboardHandler(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), AppRoles.Admin, "Asia/Manila"), TestFakes.Features)
             .Handle(new GetDashboardQuery("last30days", null, null), default);
-        var asCashier = await new GetDashboardHandler(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), AppRoles.Cashier, "Asia/Manila"))
+        var asCashier = await new GetDashboardHandler(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), AppRoles.Cashier, "Asia/Manila"), TestFakes.Features)
             .Handle(new GetDashboardQuery("last30days", null, null), default);
 
         var held = asAdmin.Insights!.HeldOrders!;
@@ -122,7 +122,7 @@ public class HeldOrderReportingTests
         var product = SeedBasicsAndSale(200m);
         SeedHeld(product, DateTime.UtcNow.AddHours(-3), 30m);
 
-        var dto = await new GetDashboardHandler(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), AppRoles.Admin, "Asia/Manila"))
+        var dto = await new GetDashboardHandler(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), AppRoles.Admin, "Asia/Manila"), TestFakes.Features)
             .Handle(new GetDashboardQuery("today", null, null), default);
 
         dto.Insights!.HeldOrders!.Count.ShouldBe(1);

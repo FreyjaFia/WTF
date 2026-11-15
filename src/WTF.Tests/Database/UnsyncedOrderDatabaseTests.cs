@@ -30,11 +30,11 @@ public class UnsyncedOrderDatabaseTests
     private static SyncOfflineOrdersHandler SyncHandler(WTFDbContext db, Guid userId)
     {
         var accessor = TestRequest.As(userId, AppRoles.Cashier);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto>>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle((CreateOrderCommand)call.Arg<IRequest<OrderDto>>(), call.Arg<CancellationToken>()));
-        return new SyncOfflineOrdersHandler(db, sender, accessor);
+        return new SyncOfflineOrdersHandler(db, sender, accessor, TestFakes.Features);
     }
 
     private static async Task SeedTenantsAsync(SqlTestDatabase database)

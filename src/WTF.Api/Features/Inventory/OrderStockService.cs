@@ -69,7 +69,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         var now = DateTime.UtcNow;
         var tick = 0;
         var shortfalls = new List<StockShortfallNote>();
-        var noteShortfalls = !options.BlockWhenShort;
+        var noteShortfalls = !options.BlockWhenShort && await InventoryInPlanAsync(cancellationToken);
 
         foreach (var itemChanges in changes.GroupBy(c => c.ItemId).OrderBy(group => group.Key))
         {
@@ -314,6 +314,13 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         var required = StockRules.Requirements(lines, links, sizeAmounts).Where(r => !inactiveItemIds.Contains(r.ItemId)).ToList();
 
         return (required, skipped);
+    }
+
+    // A shop whose plan has no inventory gets no stock notes at all (offline sync is never gated, so it never fails either).
+    private async Task<bool> InventoryInPlanAsync(CancellationToken cancellationToken)
+    {
+        var plan = await tenantFeatures.GetAsync(db, db.StampTenantId ?? Guid.Empty, cancellationToken);
+        return PlanFeatures.IsAllowed(PlanFeatures.Inventory, plan.Features);
     }
 
     private async Task<List<StockLine>> LoadLinesAsync(Guid orderId, CancellationToken cancellationToken)

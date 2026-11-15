@@ -45,11 +45,11 @@ public class OfflineStockNoteTests
     {
         var db = TestDb.Create(_db);
         var accessor = TestRequest.As(_userId, AppRoles.Admin);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db, features));
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db, features), features ?? TestFakes.Features);
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
-        return new SyncOfflineOrdersHandler(db, sender, accessor);
+        return new SyncOfflineOrdersHandler(db, sender, accessor, features ?? TestFakes.Features);
     }
 
     private static CreateOrderCommand Offline(string localId, Guid productId, int qty, decimal quoted) => new()
@@ -69,7 +69,7 @@ public class OfflineStockNoteTests
     {
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto?>>(), Arg.Any<CancellationToken>())
-            .Returns(call => new GetOrderByIdHandler(TestDb.Create(_db))
+            .Returns(call => new GetOrderByIdHandler(TestDb.Create(_db), TestFakes.Features)
                 .Handle((GetOrderByIdQuery)call.Arg<IRequest<OrderDto?>>(), call.Arg<CancellationToken>()));
         return sender;
     }
@@ -89,7 +89,7 @@ public class OfflineStockNoteTests
     private IOrderStockService StockWithSharedAudit()
     {
         var db = TestDb.Create(_db);
-        return new OrderStockService(db, _audit, TestFakes.Alerts(db));
+        return new OrderStockService(db, _audit, TestFakes.Alerts(db), TestFakes.Features);
     }
 
     private async Task<List<OrderReviewReason>> ReasonRowsAsync(Guid orderId)

@@ -117,9 +117,9 @@ internal static class UnsyncedOrderRecorder
         return text.Length <= max ? text : text[..max];
     }
 
-    private static QuotedLine ToQuotedLine(DTOs.OrderItemRequestDto line)
+    private static QuotedOrderLine ToQuotedLine(DTOs.OrderItemRequestDto line)
     {
-        return new QuotedLine(line.Quantity, line.QuotedPrice, [.. line.AddOns.Select(ToQuotedLine)]);
+        return new QuotedOrderLine(line.Quantity, line.QuotedPrice, [.. line.AddOns.Select(ToQuotedLine)]);
     }
 
     private static string CodeFor(Exception failure)

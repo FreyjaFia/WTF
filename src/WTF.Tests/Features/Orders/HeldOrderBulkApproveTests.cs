@@ -356,7 +356,7 @@ public class HeldOrderBulkApproveTests
         var old = SeedHeld(120m, hoursOld: 80);
         var fresh = SeedHeld(30m, hoursOld: 5);
 
-        var page = await new GetPagedOrdersHandler(TestDb.Create(_dbName), TestRequest.As(_adminId))
+        var page = await new GetPagedOrdersHandler(TestDb.Create(_dbName), TestFakes.Features, TestRequest.As(_adminId))
             .Handle(new GetPagedOrdersQuery(OrderStatusEnum.PendingReview), default);
 
         page.Items.Single(o => o.Id == old).IsAged.ShouldBeTrue();

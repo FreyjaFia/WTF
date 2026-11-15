@@ -7,8 +7,8 @@ public class QuotedOrderTotalTests
     [Fact]
     public void OfLines_MultipliesEachLineAndItsAddOnsByTheQuantity()
     {
-        var latte = new QuotedLine(2, 100m, [new QuotedLine(3, 10m, [])]);
-        var cake = new QuotedLine(1, 55.5m, []);
+        var latte = new QuotedOrderLine(2, 100m, [new QuotedOrderLine(3, 10m, [])]);
+        var cake = new QuotedOrderLine(1, 55.5m, []);
 
         QuotedOrderTotal.OfLines([latte, cake], []).ShouldBe(2 * (100m + 3 * 10m) + 55.5m);
     }
@@ -16,13 +16,13 @@ public class QuotedOrderTotalTests
     [Fact]
     public void OfLines_CountsBundlesAtTheirQuotedUnitPrice()
     {
-        QuotedOrderTotal.OfLines([new QuotedLine(1, 40m, [])], [(2, 75m)]).ShouldBe(190m);
+        QuotedOrderTotal.OfLines([new QuotedOrderLine(1, 40m, [])], [(2, 75m)]).ShouldBe(190m);
     }
 
     [Fact]
     public void OfLines_ALineWithoutAQuotedPriceCountsAsZero()
     {
-        QuotedOrderTotal.OfLines([new QuotedLine(2, null, [])], [(1, null)]).ShouldBe(0m);
+        QuotedOrderTotal.OfLines([new QuotedOrderLine(2, null, [])], [(1, null)]).ShouldBe(0m);
     }
 
     [Fact]

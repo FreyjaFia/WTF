@@ -25,11 +25,11 @@ public class UnsyncedOrderTests
     {
         var db = TestDb.Create(_dbName);
         var accessor = TestRequest.As(actingUserId, role);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto>>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle((CreateOrderCommand)call.Arg<IRequest<OrderDto>>(), call.Arg<CancellationToken>()));
-        var sync = new SyncOfflineOrdersHandler(db, sender, accessor);
+        var sync = new SyncOfflineOrdersHandler(db, sender, accessor, TestFakes.Features);
         sender.Send(Arg.Any<IRequest<List<OfflineSyncResultDto>>>(), Arg.Any<CancellationToken>())
             .Returns(call => sync.Handle((SyncOfflineOrdersCommand)call.Arg<IRequest<List<OfflineSyncResultDto>>>(), call.Arg<CancellationToken>()));
         return sender;
@@ -189,7 +189,7 @@ public class UnsyncedOrderTests
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto>>(), Arg.Any<CancellationToken>())
             .Returns<OrderDto>(_ => throw new InvalidOperationException("One or more selected products/add-ons were not found."));
-        var handler = new SyncOfflineOrdersHandler(db, sender, TestRequest.None());
+        var handler = new SyncOfflineOrdersHandler(db, sender, TestRequest.None(), TestFakes.Features);
 
         var results = await handler.Handle(new SyncOfflineOrdersCommand([Order("OFF-1-aaaa", Line(Guid.NewGuid(), 1, 50m))]), CancellationToken.None);
 

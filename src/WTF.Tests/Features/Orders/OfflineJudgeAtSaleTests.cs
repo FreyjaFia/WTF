@@ -219,11 +219,11 @@ public class OfflineJudgeAtSaleTests
     {
         var db = TestDb.Create(_dbName, _tenant);
         var accessor = TestRequest.As(_userId, role);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
-        var results = await new SyncOfflineOrdersHandler(db, sender, accessor).Handle(new SyncOfflineOrdersCommand([order]), CancellationToken.None);
+        var results = await new SyncOfflineOrdersHandler(db, sender, accessor, TestFakes.Features).Handle(new SyncOfflineOrdersCommand([order]), CancellationToken.None);
         return results.Single();
     }
 

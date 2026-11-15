@@ -338,7 +338,7 @@ public class OfflineSyncTests
         var latte = await SeedProduct("Latte", 150m);
         await using var db = TestDb.Create(_dbName);
         var accessor = TestRequest.As(_userId, AppRoles.Admin);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
         var command = Order("OFF-21-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)) with
         {
             ReviewFindings = [OfflineReason.Note("Test", "Only for your information.")],
