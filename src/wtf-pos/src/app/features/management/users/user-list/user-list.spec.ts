@@ -1,7 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AlertService, AuthService, ListStateService, UserService } from '@core/services';
-import { UserDto, UserRoleEnum } from '@shared/models';
+import {
+  AlertService,
+  AuthService,
+  ListStateService,
+  RoleService,
+  UserService,
+} from '@core/services';
+import { PagedResultDto, UserDto, UserRoleEnum } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -39,6 +45,13 @@ const DATA = [BOB, ALICE, CARL, ROOT];
 
 const ids = (list: UserDto[]) => list.map((x) => x.id);
 
+const paged = (
+  items: UserDto[],
+  page = 1,
+  totalCount = items.length,
+  facets?: Record<string, number>,
+): PagedResultDto<UserDto> => ({ items, page, pageSize: 25, totalCount, facets });
+
 describe('UserListComponent', () => {
   let fixture: ComponentFixture<UserListComponent>;
   let c: Internals;
@@ -46,13 +59,15 @@ describe('UserListComponent', () => {
   let service: Record<string, ReturnType<typeof vi.fn>>;
   let listState: ReturnType<typeof fakeListState>;
   let router: Router;
+  const lastQuery = () => service['getUsersPaged'].mock.lastCall![0];
 
   function setup(
     opts: {
       saved?: unknown;
       canWrite?: boolean;
       owner?: boolean;
-      getUsers?: ReturnType<typeof vi.fn>;
+      getUsersPaged?: ReturnType<typeof vi.fn>;
+      roles?: { id: number; name: string }[];
     } = {},
   ) {
     alert = fakeAlert();
@@ -62,7 +77,9 @@ describe('UserListComponent', () => {
       isOwner: vi.fn(() => opts.owner ?? false),
     };
     service = {
-      getUsers: opts.getUsers ?? vi.fn(() => of(DATA)),
+      getUsersPaged:
+        opts.getUsersPaged ??
+        vi.fn(() => of(paged([ALICE, BOB, ROOT], 1, 3, { active: 3, inactive: 1, 'role:1': 2, 'role:2': 1, 'role:4': 1 }))),
       deleteUser: vi.fn(() => of(void 0)),
       restoreUser: vi.fn(() => of(void 0)),
     };
@@ -70,6 +87,7 @@ describe('UserListComponent', () => {
       providers: [
         provideRouter([]),
         { provide: UserService, useValue: service },
+        { provide: RoleService, useValue: { getRoles: vi.fn(() => of(opts.roles ?? [])) } },
         { provide: AlertService, useValue: alert },
         { provide: AuthService, useValue: auth },
         { provide: ListStateService, useValue: listState },
@@ -77,6 +95,7 @@ describe('UserListComponent', () => {
     });
     router = TestBed.inject(Router);
     vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(UserListComponent);
     c = internals(fixture.componentInstance);
     fixture.detectChanges();
@@ -92,18 +111,31 @@ describe('UserListComponent', () => {
     vi.useRealTimers();
   });
 
-  it('adds a filter option for each custom role found among the users', () => {
-    setup({ getUsers: vi.fn(() => of([...DATA, { ...BOB, id: '9', roleId: 100, roleName: 'Shift Lead' }])) });
+  it('adds a filter option for each custom role the server counts, named from the roles list', () => {
+    setup({
+      getUsersPaged: vi.fn(() => of(paged([BOB], 1, 1, { active: 1, inactive: 0, 'role:2': 1, 'role:100': 4 }))),
+      roles: [{ id: 100, name: 'Shift Lead' }],
+    });
     const options = c.roleOptions() as { id: number; label: string; count: number }[];
-    expect(options.slice(-1)).toEqual([{ id: 100, label: 'Shift Lead', count: 1 }]);
+    expect(options.slice(-1)).toEqual([{ id: 100, label: 'Shift Lead', count: 4 }]);
     expect(options).toHaveLength(7);
     expect(c.getRoleLabel({ ...BOB, roleId: 100, roleName: 'Shift Lead' })).toBe('Shift Lead');
   });
 
-  it('loads users, shows active ones sorted by name, and computes counts', () => {
+  it('loads the first page of active users sorted by name, with counts from the server', () => {
     setup();
-    expect(service['getUsers']).toHaveBeenCalledTimes(1);
-    expect(ids(c.sortedUsers())).toEqual(['2', '1', '4']);
+    expect(service['getUsersPaged']).toHaveBeenCalledTimes(1);
+    expect(lastQuery()).toEqual(
+      expect.objectContaining({
+        page: 1,
+        pageSize: 25,
+        isActive: true,
+        roleIds: [],
+        sortBy: 'name',
+        sortDirection: 'asc',
+      }),
+    );
+    expect(ids(c.users())).toEqual(['2', '1', '4']);
     expect(c.statusCounts()).toEqual({ active: 3, inactive: 1 });
     expect(c.roleCounts()[UserRoleEnum.Admin]).toBe(2);
     expect(c.roleCounts()[UserRoleEnum.Cashier]).toBe(1);
@@ -112,10 +144,11 @@ describe('UserListComponent', () => {
     expect(c.statusOptions().map((o: { count: number }) => o.count)).toEqual([3, 1]);
   });
 
-  it('renders rows and the Add button', () => {
+  it('renders rows, the Add button and the pagination bar', () => {
     setup();
     expect(text()).toContain('Alice Smith');
     expect(text()).toContain('Add User');
+    expect(text()).toContain('1 – 3 of 3');
     expect(text()).not.toContain('Carl Gone');
   });
 
@@ -126,20 +159,20 @@ describe('UserListComponent', () => {
   });
 
   it('shows the empty state', () => {
-    setup({ getUsers: vi.fn(() => of([])) });
+    setup({ getUsersPaged: vi.fn(() => of(paged([]))) });
     expect(text()).toContain('No users found');
   });
 
   it('alerts on load error and resets flags', () => {
-    setup({ getUsers: vi.fn(() => throwError(() => new Error('boom'))) });
+    setup({ getUsersPaged: vi.fn(() => throwError(() => new Error('boom'))) });
     expect(alert.error).toHaveBeenCalledWith('boom');
     expect(c.isLoading()).toBe(false);
     expect(c.isRefreshing()).toBe(false);
   });
 
   it('shows the spinner while loading', () => {
-    const subject = new Subject<UserDto[]>();
-    setup({ getUsers: vi.fn(() => subject) });
+    const subject = new Subject<PagedResultDto<UserDto>>();
+    setup({ getUsersPaged: vi.fn(() => subject) });
     expect(c.isLoading()).toBe(true);
     expect(fixture.nativeElement.querySelector('.loading-spinner')).not.toBeNull();
   });
@@ -147,11 +180,11 @@ describe('UserListComponent', () => {
   it('refresh reloads', () => {
     setup();
     c.refresh();
-    expect(service['getUsers']).toHaveBeenCalledTimes(2);
+    expect(service['getUsersPaged']).toHaveBeenCalledTimes(2);
     expect(c.isRefreshing()).toBe(false);
   });
 
-  it('restores persisted state', () => {
+  it('restores persisted state, including the rows per page', () => {
     setup({
       saved: {
         searchTerm: 'x',
@@ -159,6 +192,7 @@ describe('UserListComponent', () => {
         selectedStatuses: ['inactive'],
         sortColumn: 'role',
         sortDirection: 'desc',
+        pageSize: 100,
       },
     });
     expect(c.filterForm.controls.searchTerm.value).toBe('x');
@@ -166,63 +200,82 @@ describe('UserListComponent', () => {
     expect(c.selectedStatuses()).toEqual(['inactive']);
     expect(c.sortColumn()).toBe('role');
     expect(c.sortDirection()).toBe('desc');
+    expect(lastQuery()).toEqual(
+      expect.objectContaining({ pageSize: 100, isActive: false, roleIds: [UserRoleEnum.Admin] }),
+    );
+  });
+
+  describe('paging', () => {
+    it('goes to a page and writes it to the address', () => {
+      setup({ getUsersPaged: vi.fn((q: { page: number }) => of(paged(DATA, q.page, 120))) });
+      c.goToPage(4);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 4 }));
+      expect(vi.mocked(router.navigate).mock.lastCall![1]!.queryParams).toEqual({ page: 4 });
+    });
+
+    it('a new page size, role, status, sort or search returns to page one', () => {
+      setup({ getUsersPaged: vi.fn((q: { page: number }) => of(paged(DATA, q.page, 120))) });
+      c.goToPage(3);
+      c.changePageSize(10);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, pageSize: 10 }));
+      c.goToPage(3);
+      c.toggleRoleSelection(UserRoleEnum.Admin);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, roleIds: [UserRoleEnum.Admin] }));
+      c.goToPage(3);
+      c.toggleStatusSelection('inactive');
+      expect(lastQuery().page).toBe(1);
+      c.goToPage(3);
+      c.toggleSort('role');
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, sortBy: 'role' }));
+    });
   });
 
   describe('filtering', () => {
-    it('search is debounced, case-insensitive and persists state', () => {
+    it('search is debounced and persists state', () => {
       setup();
+      service['getUsersPaged'].mockClear();
       c.filterForm.controls.searchTerm.setValue('ALICE s');
       fixture.destroy();
       fixture.detectChanges();
       vi.advanceTimersByTime(299);
-      expect(c.users().length).toBe(3);
+      expect(service['getUsersPaged']).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1);
-      expect(ids(c.users())).toEqual(['2']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ searchTerm: 'ALICE s', page: 1 }));
       expect(listState.save).toHaveBeenCalledWith(
         'management:user-list',
         expect.objectContaining({ searchTerm: 'ALICE s' }),
       );
     });
 
-    it('whitespace search does not filter', () => {
-      setup();
-      c.filterForm.controls.searchTerm.setValue('  ');
-      fixture.destroy();
-      fixture.detectChanges();
-      vi.advanceTimersByTime(300);
-      expect(c.users().length).toBe(3);
-    });
-
-    it('filters by role and combines with status', () => {
+    it('asks the server for the picked roles and statuses', () => {
       setup();
       c.toggleRoleSelection(UserRoleEnum.Admin);
-      expect(ids(c.users())).toEqual(['2']);
+      expect(lastQuery().roleIds).toEqual([UserRoleEnum.Admin]);
       expect(c.isRoleSelected(UserRoleEnum.Admin)).toBe(true);
       c.toggleStatusSelection('inactive');
-      expect(ids(c.users())).toEqual(['2', '3']);
+      expect(lastQuery().isActive).toBeUndefined();
       c.toggleRoleSelection(UserRoleEnum.Admin);
       expect(c.isRoleSelected(UserRoleEnum.Admin)).toBe(false);
-      expect(c.users().length).toBe(4);
       expect(listState.save).toHaveBeenLastCalledWith(
         'management:user-list',
         expect.objectContaining({ selectedRoles: [], selectedStatuses: ['active', 'inactive'] }),
       );
     });
 
-    it('clear/reset/change handlers update selections', () => {
+    it('clear/reset/change handlers update selections and reload', () => {
       setup();
       c.onRoleFilterChange([UserRoleEnum.Cashier]);
-      expect(ids(c.users())).toEqual(['1']);
+      expect(lastQuery().roleIds).toEqual([UserRoleEnum.Cashier]);
       c.onRoleFilterReset();
       expect(c.selectedRoles()).toEqual([]);
       c.toggleRoleSelection(UserRoleEnum.Cashier);
       c.clearRoleSelections();
-      expect(c.selectedRoles()).toEqual([]);
+      expect(lastQuery().roleIds).toEqual([]);
 
       c.onStatusFilterChange(['inactive']);
-      expect(ids(c.users())).toEqual(['3']);
+      expect(lastQuery().isActive).toBe(false);
       c.onStatusFilterReset();
-      expect(c.users().length).toBe(4);
+      expect(lastQuery().isActive).toBeUndefined();
       c.toggleStatusSelection('active');
       c.clearStatusSelections();
       expect(c.selectedStatuses()).toEqual([]);
@@ -239,24 +292,17 @@ describe('UserListComponent', () => {
   });
 
   describe('sorting and role labels', () => {
-    it('toggles direction then switches column', () => {
+    it('toggles direction then switches column, on the server', () => {
       setup();
       c.toggleSort('name');
       expect(c.sortDirection()).toBe('desc');
-      expect(ids(c.sortedUsers())).toEqual(['4', '1', '2']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'name', sortDirection: 'desc' }));
       c.toggleSort('role');
       expect(c.sortColumn()).toBe('role');
       expect(c.sortDirection()).toBe('asc');
-      // Admin, Cashier, Owner
-      expect(ids(c.sortedUsers())).toEqual(['2', '1', '4']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'role', sortDirection: 'asc' }));
       c.toggleSort('role');
-      expect(ids(c.sortedUsers())).toEqual(['4', '1', '2']);
-    });
-
-    it('does not sort without a column', () => {
-      setup();
-      c.sortColumn.set(null);
-      expect(ids(c.sortedUsers())).toEqual(['1', '2', '4']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'role', sortDirection: 'desc' }));
     });
 
     it('formats role labels with spaces and falls back to Unknown', () => {
@@ -318,7 +364,7 @@ describe('UserListComponent', () => {
       c.confirmDelete();
       expect(service['deleteUser']).toHaveBeenCalledWith('1');
       expect(c.showDeleteModal()).toBe(false);
-      expect(service['getUsers']).toHaveBeenCalledTimes(2);
+      expect(service['getUsersPaged']).toHaveBeenCalledTimes(2);
     });
 
     it('no-ops without a selection', () => {
@@ -368,7 +414,7 @@ describe('UserListComponent', () => {
       expect(service['restoreUser']).toHaveBeenCalledWith('3');
       expect(alert.successRestored).toHaveBeenCalledWith('User');
       expect(c.showRestoreModal()).toBe(false);
-      expect(service['getUsers']).toHaveBeenCalledTimes(2);
+      expect(service['getUsersPaged']).toHaveBeenCalledTimes(2);
     });
 
     it('cancel closes the modal', () => {

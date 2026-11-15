@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
-import { CreateUserDto, GetUsersQuery, UpdateUserDto, UserDto } from '@shared/models';
+import {
+  CreateUserDto,
+  GetUsersQuery,
+  PagedResultDto,
+  UpdateUserDto,
+  UserDto,
+} from '@shared/models';
 import { Observable, catchError, throwError } from 'rxjs';
 import { extractHttpErrorMessage } from './http-error-message';
 
@@ -40,6 +46,43 @@ export class UserService {
     }
 
     return this.http.get<UserDto[]>(this.baseUrl, { params }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error fetching users:', error);
+        return throwError(
+          () => new Error(this.getErrorMessage(error, UserService.MSG_FETCH_USERS_FAILED)),
+        );
+      }),
+    );
+  }
+
+  public getUsersPaged(query: {
+    searchTerm?: string | null;
+    isActive?: boolean | null;
+    roleIds?: number[];
+    sortBy?: string;
+    sortDirection?: string;
+    page: number;
+    pageSize: number;
+  }): Observable<PagedResultDto<UserDto>> {
+    let params = new HttpParams().set('page', String(query.page)).set('pageSize', String(query.pageSize));
+
+    if (query.searchTerm?.trim()) {
+      params = params.set('searchTerm', query.searchTerm.trim());
+    }
+
+    if (query.isActive !== undefined && query.isActive !== null) {
+      params = params.set('isActive', String(query.isActive));
+    }
+
+    query.roleIds?.forEach((roleId) => {
+      params = params.append('roleIds', String(roleId));
+    });
+
+    if (query.sortBy) {
+      params = params.set('sortBy', query.sortBy).set('sortDirection', query.sortDirection ?? 'asc');
+    }
+
+    return this.http.get<PagedResultDto<UserDto>>(`${this.baseUrl}/paged`, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching users:', error);
         return throwError(
