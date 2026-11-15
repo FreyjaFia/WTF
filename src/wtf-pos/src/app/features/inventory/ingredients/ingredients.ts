@@ -14,6 +14,8 @@ import {
   ProductIngredientsDto,
   ProductIngredientsRowDto,
 } from '@shared/models';
+import { ClientPager } from '@shared/utils/client-pager';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
 
 type IngredientsFilter = 'attention' | 'low-margin' | 'all';
 
@@ -41,7 +43,7 @@ const STATUS_STYLES: Record<ProductCoverageStatus, StatusStyle> = {
 
 @Component({
   selector: 'app-ingredients',
-  imports: [ConnectionErrorComponent, 
+  imports: [ConnectionErrorComponent, PaginationComponent, 
     RouterLink,
     IconComponent,
     PullToRefreshComponent,
@@ -101,6 +103,8 @@ export class IngredientsComponent implements OnInit {
           product.code.toLowerCase().includes(term),
       );
   });
+
+  protected readonly pager = new ClientPager(this.rows, 'inventory:ingredients', computed(() => [this.search(), this.filter()]));
 
   public ngOnInit(): void {
     this.load();

@@ -215,7 +215,7 @@
           </div>
 
           @for (
-            promo of sortedPromotions();
+            promo of pager.rows();
             track promo.id;
             let isLast = $last;
             let isFirst = $first
@@ -337,6 +337,15 @@
               </div>
             </div>
           }
+
+          <app-pagination
+            label="Promotion pages"
+            [page]="pager.page()"
+            [pageSize]="pager.pageSize()"
+            [totalCount]="pager.totalCount()"
+            (pageChange)="pager.goTo($event)"
+            (pageSizeChange)="pager.setPageSize($event)"
+          />
         </div>
       }
     </app-pull-to-refresh>

@@ -149,7 +149,7 @@
             <div class="col-span-1"></div>
           </div>
 
-          @for (role of sortedRoles(); track role.id; let isLast = $last; let isFirst = $first) {
+          @for (role of pager.rows(); track role.id; let isLast = $last; let isFirst = $first) {
             <div
               class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
               [attr.data-testid]="'role-row-' + role.id"
@@ -259,6 +259,15 @@
               </div>
             </div>
           }
+
+          <app-pagination
+            label="Role pages"
+            [page]="pager.page()"
+            [pageSize]="pager.pageSize()"
+            [totalCount]="pager.totalCount()"
+            (pageChange)="pager.goTo($event)"
+            (pageSizeChange)="pager.setPageSize($event)"
+          />
         </div>
       }
     </app-pull-to-refresh>
