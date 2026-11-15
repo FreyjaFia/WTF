@@ -60,7 +60,7 @@ describe('WasteComponent', () => {
   let reasons: { getReasons: ReturnType<typeof vi.fn> };
   let alerts: ReturnType<typeof fakeAlert>;
   let modalStack: { push: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
-  let router: { navigate: ReturnType<typeof vi.fn>; navigateByUrl: ReturnType<typeof vi.fn> };
+  let router: { navigate: ReturnType<typeof vi.fn>; navigateByUrl: ReturnType<typeof vi.fn>; url: string; parseUrl: () => unknown };
   let auth: { canReviewStockWaste: ReturnType<typeof vi.fn>; canWriteStockWaste: ReturnType<typeof vi.fn> };
   let queryParams: Record<string, string>;
   let route: { snapshot: { queryParamMap: ReturnType<typeof convertToParamMap> } };
@@ -117,7 +117,7 @@ describe('WasteComponent', () => {
     };
     alerts = fakeAlert();
     modalStack = { push: vi.fn(() => 7), remove: vi.fn() };
-    router = { navigate: vi.fn(() => Promise.resolve(true)), navigateByUrl: vi.fn() };
+    router = { navigate: vi.fn(() => Promise.resolve(true)), navigateByUrl: vi.fn(), url: '/list?page=2', parseUrl: () => ({ queryParams: { page: '2' } }) };
     auth = { canReviewStockWaste: vi.fn(() => true), canWriteStockWaste: vi.fn(() => true) };
     queryParams = {};
   });
