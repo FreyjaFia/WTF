@@ -56,6 +56,21 @@ describe('PlanStore', () => {
     expect(next.hasFeature('inventory')).toBe(true);
   });
 
+  it('drops a feature when the plan shrinks while the app is open, and keeps the smaller plan for the next start', () => {
+    const store = TestBed.inject(PlanStore);
+    store.apply(dto({ planName: 'Pro', features: ['inventory', 'promotions'] }));
+    expect(store.hasFeature('promotions')).toBe(true);
+
+    store.apply(dto({ planName: 'Starter', features: ['inventory'] }));
+
+    expect(store.hasFeature('promotions')).toBe(false);
+    expect(store.hasFeature('inventory')).toBe(true);
+    expect(store.planName()).toBe('Starter');
+
+    TestBed.resetTestingModule();
+    expect(TestBed.inject(PlanStore).hasFeature('promotions')).toBe(false);
+  });
+
   it('forgets the plan when cleared', () => {
     const store = TestBed.inject(PlanStore);
     store.apply(dto({ features: [] }));
