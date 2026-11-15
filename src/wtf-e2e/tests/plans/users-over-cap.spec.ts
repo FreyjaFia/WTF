@@ -22,7 +22,7 @@ test.describe('the users over the plan cap warning @plans @users', () => {
   for (const viewport of VIEWPORTS) {
     test(`shows on the Users list and the plan page at ${viewport.name}`, async ({ request, platform, newContext }) => {
       const code = unique('e2e-cap').replace(/\s/g, '-');
-      const plan = await platform.json<PlanRow>('POST', 'plans', { code, name: 'Cap test', monthlyPrice: 1, features: [], maxUsers: 5, isActive: true });
+      const plan = await platform.json<PlanRow>('POST', 'plans', { code, name: 'Cap test', monthlyPrice: 99999, features: [], maxUsers: 5, isActive: true });
       const shop = await openShop(request, platform);
       await platform.setSubscription(shop.id, { planId: plan.id });
       for (let i = 0; i < 2; i++) {
@@ -38,7 +38,7 @@ test.describe('the users over the plan cap warning @plans @users', () => {
       const within = await shop.owner.json<Cap>('GET', 'subscription');
       expect(within.usersOverCap).toBe(0);
 
-      const lowered = await platform.call('PUT', `plans/${plan.id}`, { name: 'Cap test', monthlyPrice: 1, features: [], maxUsers: 1, isActive: true });
+      const lowered = await platform.call('PUT', `plans/${plan.id}`, { name: 'Cap test', monthlyPrice: 99999, features: [], maxUsers: 1, isActive: true });
       expect(lowered.ok()).toBeTruthy();
       const over = await shop.owner.json<Cap>('GET', 'subscription');
       expect(over.maxUsers).toBe(1);

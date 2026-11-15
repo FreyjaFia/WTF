@@ -7,6 +7,8 @@ import { OrderListPage } from '@pages/order-list.page';
 import { measureOverflow, overflowProblem, VIEWPORTS } from '@utils/layout';
 import { unique } from '@utils/unique';
 
+const DESKTOP_MIN_WIDTH = 1024;
+
 interface SavedOrder {
   readonly id: string;
   readonly customerId: string | null;
@@ -76,9 +78,8 @@ test.describe('customer address on orders @orders @customer-address', () => {
       const editor = new OrderEditorPage(page);
       await editor.open();
       await editor.addProduct(drink.name);
-      const viewCart = page.getByRole('button', { name: /View Cart/ });
-      if (await viewCart.isVisible()) {
-        await viewCart.click();
+      if (viewport.width < DESKTOP_MIN_WIDTH) {
+        await page.getByRole('button', { name: /View Cart/ }).click();
       }
 
       await page.getByRole('button', { name: '+ New' }).locator('visible=true').first().click();
