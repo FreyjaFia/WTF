@@ -6,7 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, ProductService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { ProductDto } from '@shared/models';
+import { PagedResultDto, ProductDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProductListComponent } from './product-list';
@@ -38,6 +38,13 @@ const DATA: ProductDto[] = [
   product({ id: '5', name: 'Americano', price: 90, category: ProductCategoryEnum.Drink }),
 ];
 
+const paged = (
+  items: ProductDto[],
+  page = 1,
+  totalCount = items.length,
+  facets?: Record<string, number>,
+): PagedResultDto<ProductDto> => ({ items, page, pageSize: 25, totalCount, facets });
+
 describe('ProductListComponent', () => {
   let fixture: ComponentFixture<ProductListComponent>;
   let c: any;
@@ -47,7 +54,18 @@ describe('ProductListComponent', () => {
 
   function setup(canWrite = true, bare = false): void {
     service = {
-      getProducts: vi.fn(() => of(DATA)),
+      getProductsPaged: vi.fn(() =>
+        of(
+          paged(DATA.filter((p) => p.isActive).sort((a, b) => a.name.localeCompare(b.name)), 1, 4, {
+            active: 4,
+            inactive: 1,
+            'category:1': 2,
+            'category:2': 1,
+            'category:3': 1,
+            'category:4': 1,
+          }),
+        ),
+      ),
       deleteProduct: vi.fn(() => of(undefined)),
       restoreProduct: vi.fn(() => of(undefined)),
     };
@@ -70,9 +88,9 @@ describe('ProductListComponent', () => {
       });
     }
     router = TestBed.inject(Router);
-    vi.spyOn
     TestBed.inject(CatalogLookupService).set(SEEDED_LOOKUPS);
     vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(ProductListComponent);
     c = fixture.componentInstance;
   }
@@ -87,35 +105,47 @@ describe('ProductListComponent', () => {
     localStorage.clear();
   });
 
-  const names = (): string[] => c.sortedProducts().map((p: ProductDto) => p.name);
+  const names = (): string[] => c.products().map((p: ProductDto) => p.name);
+  const lastQuery = () => service['getProductsPaged'].mock.lastCall![0];
 
-  it('loads products on init and shows only active ones by default, sorted by name', () => {
+  it('loads the first page of active products sorted by name', () => {
     setup();
     fixture.detectChanges();
-    expect(service['getProducts']).toHaveBeenCalledTimes(1);
+    expect(service['getProductsPaged']).toHaveBeenCalledTimes(1);
+    expect(lastQuery()).toEqual(
+      expect.objectContaining({
+        page: 1,
+        pageSize: 25,
+        isActive: true,
+        categories: [],
+        sortBy: 'name',
+        sortDirection: 'asc',
+      }),
+    );
     expect(names()).toEqual(['Americano', 'Bagel', 'Cake', 'Latte']);
     expect(c.isLoading()).toBe(false);
   });
 
-  it('renders the component with data', () => {
+  it('renders the component with data and the pagination bar', () => {
     setup();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Latte');
+    expect(fixture.nativeElement.textContent).toContain('1 – 4 of 4');
   });
 
   it('is loading while the request is pending', () => {
     setup();
-    const subject = new Subject<ProductDto[]>();
-    service['getProducts'].mockReturnValue(subject);
+    const subject = new Subject<PagedResultDto<ProductDto>>();
+    service['getProductsPaged'].mockReturnValue(subject);
     fixture.detectChanges();
     expect(c.isLoading()).toBe(true);
-    subject.next(DATA);
+    subject.next(paged(DATA));
     expect(c.isLoading()).toBe(false);
   });
 
   it('alerts and stops loading on load error', () => {
     setup();
-    service['getProducts'].mockReturnValue(throwError(() => new Error('boom')));
+    service['getProductsPaged'].mockReturnValue(throwError(() => new Error('boom')));
     c.isRefreshing.set(true);
     fixture.detectChanges();
     expect(alerts['error']).toHaveBeenCalledWith('boom');
@@ -127,11 +157,11 @@ describe('ProductListComponent', () => {
     setup();
     fixture.detectChanges();
     c.refresh();
-    expect(service['getProducts']).toHaveBeenCalledTimes(2);
+    expect(service['getProductsPaged']).toHaveBeenCalledTimes(2);
     expect(c.isRefreshing()).toBe(false);
   });
 
-  it('computes category and status counts from the cache', () => {
+  it('reads category and status counts from the server counts', () => {
     setup();
     fixture.detectChanges();
     expect(c.categoryCounts()).toEqual({ 1: 2, 2: 1, 3: 1, 4: 1 });
@@ -140,62 +170,82 @@ describe('ProductListComponent', () => {
     expect(c.statusOptions().map((o: any) => o.count)).toEqual([4, 1]);
   });
 
+  describe('paging', () => {
+    beforeEach(() => {
+      setup();
+      service['getProductsPaged'].mockImplementation((q: { page: number }) => of(paged(DATA, q.page, 120)));
+      fixture.detectChanges();
+    });
+
+    it('goes to a page and writes it to the address', () => {
+      c.goToPage(3);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 3 }));
+      expect(vi.mocked(router.navigate).mock.lastCall![1]!.queryParams).toEqual({ page: 3 });
+    });
+
+    it('a new page size, type, status or sort returns to page one', () => {
+      c.goToPage(3);
+      c.changePageSize(50);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, pageSize: 50 }));
+      c.goToPage(3);
+      c.toggleTypeSelection(ProductCategoryEnum.Food);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, categories: [ProductCategoryEnum.Food] }));
+      c.goToPage(3);
+      c.toggleSort('price');
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, sortBy: 'price' }));
+    });
+  });
+
   describe('filtering', () => {
     beforeEach(() => {
       setup(true, true);
       fixture.detectChanges();
     });
 
-    it('filters by search term after the debounce, case-insensitively, and persists it', async () => {
+    it('searches on the server after the debounce and persists it', async () => {
+      service['getProductsPaged'].mockClear();
       c.filterForm.controls.searchTerm.setValue('CA');
-      expect(names()).toHaveLength(4);
+      expect(service['getProductsPaged']).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(300);
-      expect(names()).toEqual(['Americano', 'Cake']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ searchTerm: 'CA', page: 1 }));
       expect(JSON.parse(localStorage.getItem(STATE_KEY) as string).searchTerm).toBe('CA');
     });
 
-    it('ignores whitespace-only search', async () => {
-      c.filterForm.controls.searchTerm.setValue('   ');
-      await vi.advanceTimersByTimeAsync(300);
-      expect(names()).toHaveLength(4);
-    });
-
-    it('filters by type', () => {
+    it('filters by type on the server', () => {
       c.onTypeFilterChange([ProductCategoryEnum.Drink]);
-      expect(names()).toEqual(['Americano', 'Latte']);
+      expect(lastQuery().categories).toEqual([ProductCategoryEnum.Drink]);
       expect(c.isTypeSelected(ProductCategoryEnum.Drink)).toBe(true);
       c.onTypeFilterReset();
-      expect(names()).toHaveLength(4);
+      expect(lastQuery().categories).toEqual([]);
     });
 
     it('toggles type selection on and off', () => {
       c.toggleTypeSelection(ProductCategoryEnum.Food);
-      expect(names()).toEqual(['Bagel']);
       c.toggleTypeSelection(ProductCategoryEnum.Dessert);
-      expect(names()).toEqual(['Bagel', 'Cake']);
+      expect(lastQuery().categories).toEqual([ProductCategoryEnum.Food, ProductCategoryEnum.Dessert]);
       c.toggleTypeSelection(ProductCategoryEnum.Food);
-      expect(names()).toEqual(['Cake']);
+      expect(lastQuery().categories).toEqual([ProductCategoryEnum.Dessert]);
       c.clearTypeSelections();
       expect(c.selectedTypes()).toEqual([]);
     });
 
-    it('filters by status including inactive and both', () => {
+    it('asks for inactive, both or active products', () => {
       c.toggleStatusSelection('active');
       c.toggleStatusSelection('inactive');
-      expect(names()).toEqual(['Mug']);
+      expect(lastQuery().isActive).toBe(false);
       c.toggleStatusSelection('active');
-      expect(names()).toHaveLength(5);
+      expect(lastQuery().isActive).toBeUndefined();
       c.onStatusFilterChange(['active']);
-      expect(names()).toHaveLength(4);
+      expect(lastQuery().isActive).toBe(true);
       expect(c.isStatusSelected('active')).toBe(true);
     });
 
-    it('empty status selection shows everything', () => {
+    it('empty status selection asks for everything', () => {
       c.onStatusFilterReset();
-      expect(names()).toHaveLength(5);
+      expect(lastQuery().isActive).toBeUndefined();
       c.onStatusFilterChange(['inactive']);
       c.clearStatusSelections();
-      expect(names()).toHaveLength(5);
+      expect(lastQuery().isActive).toBeUndefined();
     });
 
     it('opens and closes the filter drawer', () => {
@@ -212,26 +262,19 @@ describe('ProductListComponent', () => {
       fixture.detectChanges();
     });
 
-    it('toggles direction on the same column', () => {
+    it('toggles direction on the same column, on the server', () => {
       c.toggleSort('name');
       expect(c.sortDirection()).toBe('desc');
-      expect(names()[0]).toBe('Latte');
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'name', sortDirection: 'desc' }));
       c.toggleSort('name');
       expect(c.sortDirection()).toBe('asc');
     });
 
-    it('switches to a new column ascending and sorts by price', () => {
+    it('switches to a new column ascending', () => {
       c.toggleSort('price');
       expect(c.sortColumn()).toBe('price');
       expect(c.sortDirection()).toBe('asc');
-      expect(names()).toEqual(['Bagel', 'Americano', 'Latte', 'Cake']);
-      c.toggleSort('price');
-      expect(names()).toEqual(['Cake', 'Latte', 'Americano', 'Bagel']);
-    });
-
-    it('does not sort when column is null', () => {
-      c.sortColumn.set(null);
-      expect(names()).toEqual(['Latte', 'Bagel', 'Cake', 'Americano']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'price', sortDirection: 'asc' }));
     });
   });
 
@@ -247,10 +290,11 @@ describe('ProductListComponent', () => {
         selectedStatuses: ['active'],
         sortColumn: 'price',
         sortDirection: 'asc',
+        pageSize: 25,
       });
     });
 
-    it('restores saved state on init', () => {
+    it('restores saved state on init, including the rows per page', () => {
       localStorage.setItem(
         STATE_KEY,
         JSON.stringify({
@@ -259,6 +303,7 @@ describe('ProductListComponent', () => {
           selectedStatuses: ['inactive'],
           sortColumn: 'price',
           sortDirection: 'desc',
+          pageSize: 50,
         }),
       );
       setup();
@@ -266,7 +311,9 @@ describe('ProductListComponent', () => {
       expect(c.filterForm.controls.searchTerm.value).toBe('mug');
       expect(c.sortColumn()).toBe('price');
       expect(c.sortDirection()).toBe('desc');
-      expect(names()).toEqual(['Mug']);
+      expect(lastQuery()).toEqual(
+        expect.objectContaining({ searchTerm: 'mug', categories: [4], isActive: false, pageSize: 50 }),
+      );
     });
   });
 
@@ -340,7 +387,7 @@ describe('ProductListComponent', () => {
       expect(service['deleteProduct']).toHaveBeenCalledWith('1');
       expect(c.showDeleteModal()).toBe(false);
       expect(c.isDeleting()).toBe(false);
-      expect(service['getProducts']).toHaveBeenCalledTimes(2);
+      expect(service['getProductsPaged']).toHaveBeenCalledTimes(2);
     });
 
     it('confirm without a target does nothing', () => {
@@ -382,7 +429,7 @@ describe('ProductListComponent', () => {
       expect(service['restoreProduct']).toHaveBeenCalledWith('4');
       expect(alerts['successRestored']).toHaveBeenCalledWith('Product');
       expect(c.showRestoreModal()).toBe(false);
-      expect(service['getProducts']).toHaveBeenCalledTimes(2);
+      expect(service['getProductsPaged']).toHaveBeenCalledTimes(2);
     });
 
     it('cancel is ignored while restoring, and confirm without target is a no-op', () => {
