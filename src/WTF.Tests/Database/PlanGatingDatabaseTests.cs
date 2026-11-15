@@ -3,6 +3,7 @@ using WTF.Api.Common.Auth;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Dashboard;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
