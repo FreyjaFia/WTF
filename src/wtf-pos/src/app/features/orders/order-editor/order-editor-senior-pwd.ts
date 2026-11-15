@@ -1,4 +1,4 @@
-import { isCoveredLine } from '@shared/calculations';
+import { isCoveredLine, isSeniorPwdEligibleLine } from '@shared/calculations';
 import type { CartItemDto, SeniorPwdPersonRequestDto } from '@shared/models';
 
 export interface SeniorPwdSelection {
@@ -107,4 +107,45 @@ export function coveredQuantityOf(selections: readonly SeniorPwdSelection[], lin
     (sum, selection, index) => (index === except ? sum : sum + (selection.picks[lineIndex] ?? 0)),
     0,
   );
+}
+
+export function seniorPwdBlockedReasonOf(productEligible: boolean, hasPromotion: boolean, isBundle: boolean): string | null {
+  if (isSeniorPwdEligibleLine(productEligible, hasPromotion, isBundle)) {
+    return null;
+  }
+
+  return productEligible ? 'Promotion item, not eligible' : 'Not eligible';
+}
+
+export function dropUnusedPersons(
+  cart: readonly CartItemDto[],
+  persons: readonly SeniorPwdPersonRequestDto[],
+): { cart: CartItemDto[]; persons: SeniorPwdPersonRequestDto[] } | null {
+  const used = new Set(cart.filter(isCoveredLine).map((line) => line.seniorPwdPersonIndex!));
+  const stale = persons.some((_person, index) => !used.has(index)) || [...used].some((index) => index >= persons.length);
+  if (!stale) {
+    return null;
+  }
+
+  const remap = new Map<number, number>();
+  const kept: SeniorPwdPersonRequestDto[] = [];
+  persons.forEach((person, index) => {
+    if (used.has(index)) {
+      remap.set(index, kept.length);
+      kept.push(person);
+    }
+  });
+
+  return {
+    persons: kept,
+    cart: cart.map((line) =>
+      isCoveredLine(line) ? { ...line, seniorPwdPersonIndex: remap.get(line.seniorPwdPersonIndex!) ?? null } : line,
+    ),
+  };
+}
+
+export function seniorPwdCommandPart(persons: readonly SeniorPwdPersonRequestDto[]): {
+  seniorPwdPersons?: SeniorPwdPersonRequestDto[];
+} {
+  return persons.length > 0 ? { seniorPwdPersons: [...persons] } : {};
 }

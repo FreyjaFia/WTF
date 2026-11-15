@@ -3,6 +3,9 @@ import { CartItemDto, SeniorPwdTypeEnum } from '@shared/models';
 import {
   applySelections,
   coveredQuantityOf,
+  dropUnusedPersons,
+  seniorPwdBlockedReasonOf,
+  seniorPwdCommandPart,
   lineSignature,
   selectionsFromCart,
   SeniorPwdSelection,
@@ -95,5 +98,26 @@ describe('senior / PWD cart helpers', () => {
 
     expect(coveredQuantityOf(selections, 0)).toBe(3);
     expect(coveredQuantityOf(selections, 0, 1)).toBe(2);
+  });
+
+  it('drops a person nobody is covered by and renumbers the rest', () => {
+    const cart = [line({ seniorPwdPersonIndex: 1 }), line({ seniorPwdPersonIndex: null })];
+
+    const pruned = dropUnusedPersons(cart, [rosa, jun]);
+
+    expect(pruned?.persons).toEqual([jun]);
+    expect(pruned?.cart.map((c) => c.seniorPwdPersonIndex ?? null)).toEqual([0, null]);
+    expect(dropUnusedPersons([line({ seniorPwdPersonIndex: 0 })], [rosa])).toBeNull();
+  });
+
+  it('says why a line cannot be covered', () => {
+    expect(seniorPwdBlockedReasonOf(true, false, false)).toBeNull();
+    expect(seniorPwdBlockedReasonOf(true, true, false)).toBe('Promotion item, not eligible');
+    expect(seniorPwdBlockedReasonOf(false, false, false)).toBe('Not eligible');
+  });
+
+  it('adds the persons to a command only when there are some', () => {
+    expect(seniorPwdCommandPart([])).toEqual({});
+    expect(seniorPwdCommandPart([rosa])).toEqual({ seniorPwdPersons: [rosa] });
   });
 });

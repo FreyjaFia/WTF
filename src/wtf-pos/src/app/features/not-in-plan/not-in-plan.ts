@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService, PlanStore } from '@core/services';
@@ -10,6 +10,7 @@ import { map } from 'rxjs';
   selector: 'app-not-in-plan',
   imports: [RouterLink],
   templateUrl: './not-in-plan.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotInPlanComponent {
   private readonly route = inject(ActivatedRoute);

@@ -1,5 +1,15 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, OnInit, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  input,
+  OnInit,
+  output,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -90,9 +100,6 @@ export class SeniorPwdDialogComponent implements OnInit {
   protected readonly showErrors = signal(false);
   protected readonly idWarnings = signal<Record<number, string>>({});
 
-  private readonly picks = signal<Record<number, number>[]>([]);
-  private readonly formChanges = toSignal(this.personForms.valueChanges.pipe(startWith(null)));
-
   protected readonly people = computed<PersonState[]>(() => {
     this.formChanges();
     const picks = this.picks();
@@ -115,6 +122,9 @@ export class SeniorPwdDialogComponent implements OnInit {
       Object.values(person.picks).some((quantity) => quantity > 0) ? byPerson[next++] : null,
     );
   });
+
+  private readonly picks = signal<Record<number, number>[]>([]);
+  private readonly formChanges = toSignal(this.personForms.valueChanges.pipe(startWith(null)));
 
   private readonly selections = computed<SeniorPwdSelection[]>(() =>
     this.people().map((person) => ({
