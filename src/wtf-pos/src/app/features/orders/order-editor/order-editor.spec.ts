@@ -41,8 +41,7 @@ interface Editor {
   bundlePromotions: Sig<PromotionListItemDto[]>;
   discountedProductPromotions: Sig<DiscountedProductPromotionDto[]>;
   selectedCustomerId: Sig<string | null>;
-  orderAddress: Sig<string>;
-  orderAddressControl: FormControl<string>;
+  orderAddress: { value: Sig<string>; control: FormControl<string> };
   orderSpecialInstructions: Sig<string>;
   isEditMode: Sig<boolean>;
   isOfflineEditMode: () => boolean;
@@ -1170,10 +1169,10 @@ describe('OrderEditor', () => {
       await start();
       withCart([line()]);
       t.onCustomerSelected('c1');
-      expect(t.orderAddress()).toBe('5 Pine St');
+      expect(t.orderAddress.value()).toBe('5 Pine St');
 
       t.onCustomerSelected(null);
-      expect(t.orderAddress()).toBe('');
+      expect(t.orderAddress.value()).toBe('');
 
       t.onCustomerSelected('c1');
       t.checkout();
@@ -1185,11 +1184,11 @@ describe('OrderEditor', () => {
       await start();
       withCart([line()]);
       t.onCustomerSelected('c1');
-      t.orderAddressControl.setValue('  9 Oak Ave ');
-      t.orderAddressControl.markAsDirty();
+      t.orderAddress.control.setValue('  9 Oak Ave ');
+      t.orderAddress.control.markAsDirty();
       t.onCustomerSelected(null);
       t.onCustomerSelected('c1');
-      expect(t.orderAddress()).toBe('  9 Oak Ave ');
+      expect(t.orderAddress.value()).toBe('  9 Oak Ave ');
 
       t.checkout();
       t.onOrderConfirmed(cash);
@@ -3373,10 +3372,12 @@ describe('OrderEditor', () => {
 
   describe('senior / PWD discount', () => {
     interface SeniorEditor {
-      seniorPwdPersons: Sig<{ type: number; idNumber: string; customerName: string }[]>;
+      seniorPwd: {
+        persons: Sig<{ type: number; idNumber: string; customerName: string }[]>;
+        apply: (selections: unknown[]) => void;
+        remove: () => void;
+      };
       canApplySeniorPwd: () => boolean;
-      applySeniorPwd: (selections: unknown[]) => void;
-      removeSeniorPwd: () => void;
     }
     const s = () => t as unknown as SeniorEditor;
     const person = { type: 1, idNumber: 'SC-1234', customerName: 'Rosa Reyes' };
@@ -3399,7 +3400,7 @@ describe('OrderEditor', () => {
       await start();
       withCart([line({ qty: 3 })]);
 
-      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+      s().seniorPwd.apply([{ person, picks: { 0: 1 } }]);
 
       expect(t.cart().map((c) => [c.qty, c.seniorPwdPersonIndex ?? null])).toEqual([
         [1, 0],
@@ -3423,7 +3424,7 @@ describe('OrderEditor', () => {
       await start();
       withCart([line({ qty: 1 })]);
 
-      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+      s().seniorPwd.apply([{ person, picks: { 0: 1 } }]);
 
       expect(t.totalPrice()).toBe(71.43);
     });
@@ -3432,12 +3433,12 @@ describe('OrderEditor', () => {
       catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: false });
       await start();
       withCart([line({ qty: 3 })]);
-      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+      s().seniorPwd.apply([{ person, picks: { 0: 1 } }]);
 
-      s().removeSeniorPwd();
+      s().seniorPwd.remove();
 
       expect(t.cart().map((c) => c.qty)).toEqual([3]);
-      expect(s().seniorPwdPersons()).toEqual([]);
+      expect(s().seniorPwd.persons()).toEqual([]);
       expect(t.totalPrice()).toBe(300);
     });
 
@@ -3445,13 +3446,13 @@ describe('OrderEditor', () => {
       catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: false });
       await start();
       withCart([line({ qty: 1 })]);
-      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+      s().seniorPwd.apply([{ person, picks: { 0: 1 } }]);
       TestBed.tick();
 
       t.clearAll();
       TestBed.tick();
 
-      expect(s().seniorPwdPersons()).toEqual([]);
+      expect(s().seniorPwd.persons()).toEqual([]);
     });
   });
 });

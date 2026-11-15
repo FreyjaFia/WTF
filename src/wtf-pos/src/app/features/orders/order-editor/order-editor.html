@@ -565,11 +565,11 @@
               maxlength="150"
               placeholder="Address (optional)"
               aria-label="Order address"
-              [formControl]="orderAddressControl"
+              [formControl]="orderAddress.control"
             />
-          } @else if (selectedCustomerId() && orderAddress().trim()) {
-            <div class="mt-2 truncate text-xs text-gray-500" [title]="orderAddress()">
-              {{ orderAddress() }}
+          } @else if (selectedCustomerId() && orderAddress.value().trim()) {
+            <div class="mt-2 truncate text-xs text-gray-500" [title]="orderAddress.value()">
+              {{ orderAddress.value() }}
             </div>
           }
         </div>
@@ -647,10 +647,10 @@
                             </div>
                           }
                         }
-                        @if (isSeniorPwdLine(c)) {
+                        @if (seniorPwd.isCoveredByPerson(c)) {
                           <div
                             class="mt-1 inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-sky-700"
-                            [attr.title]="seniorPwdPersons()[c.seniorPwdPersonIndex!].customerName"
+                            [attr.title]="seniorPwd.persons()[c.seniorPwdPersonIndex!].customerName"
                             data-testid="senior-pwd-line-badge"
                           >
                             Senior/PWD x{{ c.qty }}
@@ -699,7 +699,7 @@
                         }
                       </div>
                       <div class="text-right text-base font-bold whitespace-nowrap text-gray-900">
-                        @if (isSeniorPwdLine(c)) {
+                        @if (seniorPwd.isCoveredByPerson(c)) {
                           <div
                             class="text-xs font-normal text-gray-400 line-through"
                             data-testid="senior-pwd-line-list-price"
@@ -760,7 +760,7 @@
                   </div>
                 }
 
-                @if (isSeniorPwdLine(c)) {
+                @if (seniorPwd.isCoveredByPerson(c)) {
                   <div
                     class="mt-2 ml-19 border-t border-gray-200 pt-2 text-xs"
                     data-testid="senior-pwd-line-reduction"
@@ -784,7 +784,7 @@
                         >
                       </div>
                       <div class="shrink-0 text-right tabular-nums">
-                        - ₱{{ seniorPwdLineReduction($index) | number: '1.2-2' }}
+                        - ₱{{ seniorPwd.lineReduction($index) | number: '1.2-2' }}
                       </div>
                     </div>
                   </div>
@@ -919,32 +919,21 @@
                 </div>
               </div>
             }
-            @if (canApplySeniorPwd() || seniorPwdPersons().length > 0) {
+            @if (canApplySeniorPwd() || seniorPwd.persons().length > 0) {
               <div class="mb-4" data-testid="senior-pwd-section">
-                @for (person of seniorPwdPersons(); track $index; let personIndex = $index) {
-                  <div
-                    class="mb-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                @for (person of seniorPwd.persons(); track $index; let personIndex = $index) {
+                  <app-senior-pwd-summary
+                    class="mb-2 block"
+                    testIdPrefix="senior-pwd-row"
                     [attr.data-testid]="'senior-pwd-row-' + personIndex"
-                  >
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="min-w-0 font-medium wrap-break-word text-gray-800">
-                        {{ person.type | seniorPwdTypeLabel }}: {{ person.customerName }}
-                      </span>
-                      <span class="shrink-0 text-xs text-gray-500">ID {{ person.idNumber }}</span>
-                    </div>
-                    @if (vatRegistered()) {
-                      <div class="mt-1 flex justify-between text-xs text-gray-600">
-                        <span>VAT exempt</span>
-                        <span data-testid="senior-pwd-row-vat">{{ seniorPwdTotals()[personIndex].vatExempt | number: '1.2-2' }}</span>
-                      </div>
-                    }
-                    <div class="mt-1 flex justify-between text-xs text-gray-600">
-                      <span>Senior/PWD discount ({{ seniorPwdPercent }}%)</span>
-                      <span data-testid="senior-pwd-row-discount">-{{ seniorPwdTotals()[personIndex].discount | number: '1.2-2' }}</span>
-                    </div>
-                  </div>
+                    [type]="person.type"
+                    [customerName]="person.customerName"
+                    [idNumber]="person.idNumber"
+                    [vatExempt]="vatRegistered() ? seniorPwd.totals()[personIndex].vatExempt : null"
+                    [discount]="seniorPwd.totals()[personIndex].discount"
+                  />
                 }
-                @if (seniorPwdConflict()) {
+                @if (seniorPwd.conflict()) {
                   <p class="mb-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800" role="alert" data-testid="senior-pwd-conflict">
                     A covered item now has a promotion. Open Senior/PWD and apply it again.
                   </p>
@@ -955,9 +944,9 @@
                     class="app-btn app-btn-secondary app-btn-md w-full"
                     data-testid="senior-pwd-button"
                     [disabled]="isOrderRequestBusy()"
-                    (click)="openSeniorPwdDialog()"
+                    (click)="seniorPwd.open()"
                   >
-                    {{ seniorPwdPersons().length > 0 ? 'Edit Senior/PWD discount' : 'Senior/PWD' }}
+                    {{ seniorPwd.persons().length > 0 ? 'Edit Senior/PWD discount' : 'Senior/PWD' }}
                   </button>
                 }
               </div>
@@ -1277,14 +1266,14 @@
 }
 
 <!-- Senior / PWD discount -->
-@if (showSeniorPwdDialog()) {
+@if (seniorPwd.showDialog()) {
   <app-senior-pwd-dialog
-    [options]="seniorPwdOptions()"
-    [initial]="seniorPwdSelections()"
+    [options]="seniorPwd.options()"
+    [initial]="seniorPwd.selections()"
     [vatRegistered]="vatRegistered()"
-    (applied)="applySeniorPwd($event)"
-    (cleared)="removeSeniorPwd()"
-    (cancelled)="closeSeniorPwdDialog()"
+    (applied)="seniorPwd.apply($event)"
+    (cleared)="seniorPwd.remove()"
+    (cancelled)="seniorPwd.close()"
   />
 }
 

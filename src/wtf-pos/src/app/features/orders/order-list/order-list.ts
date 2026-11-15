@@ -4,6 +4,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -87,6 +88,7 @@ interface OrderGroup {
     PosWasteSheetComponent,
   ],
   templateUrl: './order-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderList implements OnInit, OnDestroy {
   private readonly loadMoreSentinel = viewChild<ElementRef<HTMLElement>>('loadMoreSentinel');

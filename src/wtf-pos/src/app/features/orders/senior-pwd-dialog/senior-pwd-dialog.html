@@ -192,25 +192,13 @@
           </div>
 
           @if (totals()[personIndex]; as total) {
-            <dl
-              class="space-y-1 rounded-lg bg-gray-50 px-3 py-2 text-sm"
+            <app-senior-pwd-summary
+              testIdPrefix="senior-pwd-total"
               [attr.data-testid]="'senior-pwd-person-total-' + personIndex"
-            >
-              @if (vatRegistered()) {
-                <div class="flex justify-between text-gray-600">
-                  <dt>VAT exempt</dt>
-                  <dd data-testid="senior-pwd-total-vat">{{ total.vatExempt | number: '1.2-2' }}</dd>
-                </div>
-              }
-              <div class="flex justify-between text-gray-600">
-                <dt>Discount ({{ seniorPwdPercent }}%)</dt>
-                <dd data-testid="senior-pwd-total-discount">-{{ total.discount | number: '1.2-2' }}</dd>
-              </div>
-              <div class="flex justify-between font-semibold text-gray-900">
-                <dt>Amount due</dt>
-                <dd data-testid="senior-pwd-total-due">{{ total.amountDue | number: '1.2-2' }}</dd>
-              </div>
-            </dl>
+              [vatExempt]="vatRegistered() ? total.vatExempt : null"
+              [discount]="total.discount"
+              [amountDue]="total.amountDue"
+            />
           }
         </section>
       }

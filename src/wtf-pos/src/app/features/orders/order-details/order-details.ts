@@ -1,7 +1,7 @@
 import type { BadgeVariant } from '@shared/components/badge/badge';
 import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
 import { CommonModule } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -26,6 +26,7 @@ import {
   RejectOrderDialogComponent,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import { SeniorPwdSummaryComponent } from '@shared/components/senior-pwd-summary/senior-pwd-summary';
 import {
   CartAddOnDto,
   CartBundleItemDto,
@@ -53,13 +54,12 @@ import {
   savedLineTotal,
   addMoney,
   sumAmounts,
-  SENIOR_PWD_DISCOUNT_PERCENT,
   isCoveredLine,
   lineNetTotal,
   subtractMoney,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { AddOnLabelsPipe, SeniorPwdTypeLabelPipe } from '@shared/pipes';
+import { AddOnLabelsPipe } from '@shared/pipes';
 
 @Component({
   selector: 'app-order-details',
@@ -68,7 +68,7 @@ import { AddOnLabelsPipe, SeniorPwdTypeLabelPipe } from '@shared/pipes';
     IconComponent,
     LineBreakdownComponent,
     AddOnLabelsPipe,
-    SeniorPwdTypeLabelPipe,
+    SeniorPwdSummaryComponent,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,
@@ -78,6 +78,7 @@ import { AddOnLabelsPipe, SeniorPwdTypeLabelPipe } from '@shared/pipes';
     OrderChatDrawerComponent,
   ],
   templateUrl: './order-details.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -111,11 +112,6 @@ export class OrderDetails implements OnInit {
   protected readonly notReturnedLineIds = signal<ReadonlySet<string>>(new Set());
   protected readonly stockMovements = signal<OrderStockMovementDto[]>([]);
 
-  // Only lines whose product took stock matter when refunding; an order without any skips the question.
-  private readonly stockLines = computed(() => {
-    const ids = new Set(this.order()?.stockLineIds ?? []);
-    return (this.order()?.items ?? []).filter((item) => ids.has(item.id));
-  });
   protected readonly showStockMovements = signal(false);
 
   protected readonly refundLines = computed(() =>
@@ -243,6 +239,12 @@ export class OrderDetails implements OnInit {
       tips: order.tips ?? null,
       seniorPwdPersons: order.seniorPwdPersons ?? null,
     };
+  });
+
+  // Only lines whose product took stock matter when refunding; an order without any skips the question.
+  private readonly stockLines = computed(() => {
+    const ids = new Set(this.order()?.stockLineIds ?? []);
+    return (this.order()?.items ?? []).filter((item) => ids.has(item.id));
   });
 
   public ngOnInit(): void {
@@ -480,8 +482,6 @@ export class OrderDetails implements OnInit {
   protected getOrderItemTotal(item: OrderDto['items'][number]): number {
     return savedLineTotal(item);
   }
-
-  protected readonly seniorPwdPercent = SENIOR_PWD_DISCOUNT_PERCENT;
 
   protected isCovered(item: CartItemDto): boolean {
     return isCoveredLine(item);

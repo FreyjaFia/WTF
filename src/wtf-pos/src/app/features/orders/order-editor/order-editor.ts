@@ -15,16 +15,10 @@ import {
 } from './order-editor-bundles';
 import type { BadgeVariant } from '@shared/components/badge/badge';
 import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
-import {
-  applySelections,
-  dropUnusedPersons,
-  seniorPwdBlockedReasonOf,
-  seniorPwdCommandPart,
-  selectionsFromCart,
-  SeniorPwdSelection,
-  uncoverLines,
-} from './order-editor-senior-pwd';
-import { SeniorPwdDialogComponent, SeniorPwdLineOption } from '../senior-pwd-dialog/senior-pwd-dialog';
+import { OrderEditorAddress } from './order-editor-address';
+import { seniorPwdBlockedReasonOf } from './order-editor-senior-pwd';
+import { OrderEditorSeniorPwd } from './order-editor-senior-pwd-state';
+import { SeniorPwdDialogComponent } from '../senior-pwd-dialog/senior-pwd-dialog';
 import { joinName } from '@shared/utils/person-name';
 import { CommonModule } from '@angular/common';
 import {
@@ -40,7 +34,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
@@ -81,6 +75,7 @@ import {
   SearchInputComponent,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import { SeniorPwdSummaryComponent } from '@shared/components/senior-pwd-summary/senior-pwd-summary';
 import {
   CartAddOnDto,
   CartBundleItemDto,
@@ -101,7 +96,6 @@ import {
   DiscountedProductPromotionDto,
   PromotionListItemDto,
   PromotionTypeEnum,
-  SeniorPwdPersonRequestDto,
   UpdateOrderCommand,
   formatSubCategoryName,
   SYSTEM_CATALOG_IDS,
@@ -125,16 +119,12 @@ import {
   promoDiscount,
   StockCartLine,
   stockShortfalls,
-  SENIOR_PWD_DISCOUNT_PERCENT,
   cartTotalAfterSeniorPwd,
   isCoveredLine,
   lineNetTotal,
-  rowAmounts,
-  seniorPwdReduction,
-  totalsByPerson,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { AddOnLabelsPipe, SeniorPwdTypeLabelPipe } from '@shared/pipes';
+import { AddOnLabelsPipe } from '@shared/pipes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
 
 type CartDiscountRule = DiscountedProductItemDto & DiscountRule;
@@ -151,7 +141,7 @@ type CatalogScrollTab = number | 'bundles';
     IconComponent,
     LineBreakdownComponent,
     AddOnLabelsPipe,
-    SeniorPwdTypeLabelPipe,
+    SeniorPwdSummaryComponent,
     CheckoutModal,
     CartDrawerComponent,
     CustomerDropdownComponent,
@@ -187,6 +177,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   private readonly stockLimits = inject(StockLimitsService);
   private readonly offlineOrder = inject(OfflineOrderService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly conversationInbox = inject(ConversationInboxService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Order-level special instructions state
   public readonly orderSpecialInstructions = signal('');
@@ -194,15 +186,6 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   // Abandon order guard
   protected readonly showAbandonModal = signal(false);
-  private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
-  private skipGuard = false;
-  private checkoutAttempt: { key: string; signature: string } | null = null;
-  private originalCartSnapshot = '';
-  private abandonModalStackId: number | null = null;
-  private cancelOrderModalStackId: number | null = null;
-  private overrideOrderModalStackId: number | null = null;
-  private createCustomerModalStackId: number | null = null;
-  private cartPersistenceReady = false;
 
   // Cancel order
   protected readonly showCancelOrderModal = signal(false);
@@ -211,19 +194,10 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showOverrideModal = signal(false);
   protected readonly overrideReason = signal('');
   protected readonly showOverrideReasonError = signal(false);
-  private pendingOverridePayment: {
-    paymentMethod: PaymentMethodEnum;
-    amountReceived?: number;
-    changeAmount?: number;
-    tips?: number;
-  } | null = null;
   protected readonly showCancelOrderNoteError = signal(false);
   protected readonly showCreateCustomerModal = signal(false);
   protected readonly isCreatingCustomer = signal(false);
   protected readonly isSavingOrder = signal(false);
-  private readonly activeOrderAction = signal<'save' | 'checkout' | null>(null);
-  private readonly seniorPwdLineAmounts = computed(() => rowAmounts(this.cart(), this.vatRegistered()));
-  private readonly pendingBundleSelection = signal<BundlePromotionSelection | null>(null);
   protected readonly isCancellingOrder = signal(false);
   protected readonly isSavingOrderDraft = computed(
     () => this.isSavingOrder() && this.activeOrderAction() === 'save',
@@ -241,15 +215,9 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showMobileCart = signal(false);
   protected readonly cartDragY = signal(0);
   protected readonly isCartDragging = signal(false);
-  private cartDragStartY = 0;
-  private quickPayHoldRaf: number | null = null;
-  private quickPayHoldStartMs: number | null = null;
-  private readonly quickPayHoldDurationMs = 1000;
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingReceipt = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  private isProgrammaticSubCategoryScroll = false;
-  private programmaticSubCategoryScrollTimeout: number | null = null;
 
   protected readonly createCustomerForm = new FormGroup({
     firstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -268,9 +236,6 @@ export class OrderEditor implements OnInit, OnDestroy {
       .map((subCategory) => ({ id: subCategory.id, label: formatSubCategoryName(subCategory.name) })),
   );
   protected readonly cart = signal<CartItemDto[]>([]);
-  protected readonly seniorPwdPercent = SENIOR_PWD_DISCOUNT_PERCENT;
-  protected readonly seniorPwdPersons = signal<SeniorPwdPersonRequestDto[]>([]);
-  protected readonly showSeniorPwdDialog = signal(false);
   protected readonly vatRegistered = computed(() => this.catalogCache.shopSettings().vatRegistered);
   protected readonly canApplySeniorPwd = computed(
     () =>
@@ -280,21 +245,13 @@ export class OrderEditor implements OnInit, OnDestroy {
       !this.isReadOnly() &&
       this.cart().length > 0,
   );
-  protected readonly seniorPwdTotals = computed(() =>
-    totalsByPerson(this.cart(), this.seniorPwdPersons().length, this.vatRegistered()),
-  );
-  protected readonly seniorPwdOptions = computed<SeniorPwdLineOption[]>(() =>
-    uncoverLines(this.cart()).map((line) => ({
-      line,
-      blockedReason: this.seniorPwdBlockedReason(line),
-    })),
-  );
-  protected readonly seniorPwdSelections = computed<SeniorPwdSelection[]>(() =>
-    selectionsFromCart(this.cart(), this.seniorPwdPersons()).selections,
-  );
-  protected readonly seniorPwdConflict = computed(() =>
-    this.cart().some((line) => isCoveredLine(line) && this.seniorPwdBlockedReason(line) !== null),
-  );
+  protected readonly seniorPwd = new OrderEditorSeniorPwd({
+    cart: this.cart,
+    vatRegistered: this.vatRegistered,
+    canApply: () => this.canApplySeniorPwd(),
+    isBusy: () => this.isOrderRequestBusy(),
+    blockedReasonOf: (line) => this.seniorPwdBlockedReason(line),
+  });
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
@@ -304,8 +261,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly isLoadingPromotions = signal(false);
   protected readonly isLoadingDiscountedPromotions = signal(false);
   protected readonly selectedCustomerId = signal<string | null>(null);
-  protected readonly orderAddressControl = new FormControl('', { nonNullable: true });
-  protected readonly orderAddress = toSignal(this.orderAddressControl.valueChanges, { initialValue: '' });
+  protected readonly orderAddress = new OrderEditorAddress();
   protected readonly isLoadingCustomers = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isEditMode = signal(false);
@@ -314,26 +270,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showDiscardOrderModal = signal(false);
   protected readonly currentOrder = signal<OrderDto | null>(null);
 
-  // The uses of limited discounts that the order being edited already holds. They are not gone for it: saving the order
-  // again moves them, so the cart may keep using them.
-  private readonly ownHeldUses = computed(() => {
-    const held = new Map<string, number>();
-    const order = this.currentOrder();
-    if (order?.status !== OrderStatusEnum.Pending) {
-      return held;
-    }
-
-    for (const line of order.items) {
-      if (line.discountPromotionId) {
-        held.set(line.discountPromotionId, (held.get(line.discountPromotionId) ?? 0) + line.quantity);
-      }
-    }
-
-    return held;
-  });
   protected offlineLocalId: string | null = null;
-  private discardOrderModalStackId: number | null = null;
-  private offlineEditSyncLockActive = false;
 
   protected readonly isCompleted = computed(() => {
     const order = this.currentOrder();
@@ -475,8 +412,6 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected readonly isMarkingReady = signal(false);
 
-  private readonly conversationInbox = inject(ConversationInboxService);
-  private readonly destroyRef = inject(DestroyRef);
   protected readonly showChat = signal(false);
 
   /** A customer link order that is open here: staff can chat with the customer about it. */
@@ -491,6 +426,49 @@ export class OrderEditor implements OnInit, OnDestroy {
     const id = this.currentOrder()?.id;
     return id ? this.conversationInbox.unreadFor(id) : 0;
   });
+
+  private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
+  private skipGuard = false;
+  private checkoutAttempt: { key: string; signature: string } | null = null;
+  private originalCartSnapshot = '';
+  private abandonModalStackId: number | null = null;
+  private cancelOrderModalStackId: number | null = null;
+  private overrideOrderModalStackId: number | null = null;
+  private createCustomerModalStackId: number | null = null;
+  private cartPersistenceReady = false;
+  private pendingOverridePayment: {
+    paymentMethod: PaymentMethodEnum;
+    amountReceived?: number;
+    changeAmount?: number;
+    tips?: number;
+  } | null = null;
+  private readonly activeOrderAction = signal<'save' | 'checkout' | null>(null);
+  private readonly pendingBundleSelection = signal<BundlePromotionSelection | null>(null);
+  private cartDragStartY = 0;
+  private quickPayHoldRaf: number | null = null;
+  private quickPayHoldStartMs: number | null = null;
+  private readonly quickPayHoldDurationMs = 1000;
+  private isProgrammaticSubCategoryScroll = false;
+  private programmaticSubCategoryScrollTimeout: number | null = null;
+  // The uses of limited discounts that the order being edited already holds. They are not gone for it: saving the order
+  // again moves them, so the cart may keep using them.
+  private readonly ownHeldUses = computed(() => {
+    const held = new Map<string, number>();
+    const order = this.currentOrder();
+    if (order?.status !== OrderStatusEnum.Pending) {
+      return held;
+    }
+
+    for (const line of order.items) {
+      if (line.discountPromotionId) {
+        held.set(line.discountPromotionId, (held.get(line.discountPromotionId) ?? 0) + line.quantity);
+      }
+    }
+
+    return held;
+  });
+  private discardOrderModalStackId: number | null = null;
+  private offlineEditSyncLockActive = false;
 
   protected openChat(): void {
     this.showChat.set(true);
@@ -569,7 +547,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
   });
 
-  protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
+  protected readonly itemCount = (): number => this.cart().reduce((s, i) => s + i.qty, 0);
   protected readonly totalPrice = (): number =>
     cartTotalAfterSeniorPwd(this.cart(), this.vatRegistered(), (line) => this.getLineDiscount(line));
 
@@ -594,7 +572,7 @@ export class OrderEditor implements OnInit, OnDestroy {
             ...item,
             promoLabel: null,
             promoDiscount: null,
-            ...(isCoveredLine(item) && { seniorPwdReduction: this.seniorPwdLineReduction(index) }),
+            ...(isCoveredLine(item) && { seniorPwdReduction: this.seniorPwd.lineReduction(index) }),
           },
         ];
       }
@@ -881,11 +859,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   public constructor() {
     effect(() => {
-      if (this.isOrderRequestBusy()) {
-        this.orderAddressControl.disable({ emitEvent: false });
-      } else {
-        this.orderAddressControl.enable({ emitEvent: false });
-      }
+      this.orderAddress.setBusy(this.isOrderRequestBusy());
     });
 
     // Keeps a new order's cart saved as it changes, so a reload does not lose it.
@@ -903,18 +877,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         return;
       }
 
-      this.cartPersistence.save(items, customerId, instructions, this.seniorPwdPersons());
-    });
-
-    // A person whose lines are all gone is dropped, so the discount never lists someone who covers nothing.
-    effect(() => {
-      const cart = this.cart();
-      const persons = this.seniorPwdPersons();
-      if (persons.length === 0 && !cart.some(isCoveredLine)) {
-        return;
-      }
-
-      untracked(() => this.pruneSeniorPwdPersons(cart, persons));
+      this.cartPersistence.save(items, customerId, instructions, this.seniorPwd.persons());
     });
 
     // The bundle promotions come from the shared catalog.
@@ -1008,7 +971,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         switchMap((order) => {
           this.currentOrder.set(order);
           this.selectedCustomerId.set(order.customerId ?? null);
-          this.setOrderAddress(order.customerAddress ?? '', true);
+          this.orderAddress.set(order.customerAddress ?? '', true);
           this.orderSpecialInstructions.set(order.specialInstructions ?? '');
 
           const wantsOverride = this.route.snapshot.queryParamMap.has('override');
@@ -1051,9 +1014,9 @@ export class OrderEditor implements OnInit, OnDestroy {
 
       this.offlineOrderStatus.set(pending.command.status);
       this.cart.set([...pending.cartSnapshot]);
-      this.seniorPwdPersons.set(pending.command.seniorPwdPersons ?? []);
+      this.seniorPwd.persons.set(pending.command.seniorPwdPersons ?? []);
       this.selectedCustomerId.set(pending.command.customerId ?? null);
-      this.setOrderAddress(pending.command.customerAddress ?? '', true);
+      this.orderAddress.set(pending.command.customerAddress ?? '', true);
       this.orderSpecialInstructions.set(pending.command.specialInstructions ?? '');
 
       this.loadCatalog();
@@ -1076,7 +1039,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     >();
     const regularItems: CartItemDto[] = [];
     const personIndexById = new Map((order.seniorPwdPersons ?? []).map((person, index) => [person.id, index]));
-    this.seniorPwdPersons.set(
+    this.seniorPwd.persons.set(
       (order.seniorPwdPersons ?? []).map((person) => ({
         type: person.type,
         idNumber: person.idNumber,
@@ -1210,12 +1173,11 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.seniorPwdPersons().length === 0 && !this.cart().some(isCoveredLine)) {
+    if (!this.seniorPwd.hasAnything()) {
       return;
     }
 
-    this.cart.set(uncoverLines(this.cart()));
-    this.seniorPwdPersons.set([]);
+    this.seniorPwd.uncoverAll();
   }
 
   private loadCustomers(): void {
@@ -1588,12 +1550,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected getCartLineNetTotal(item: CartItemDto, index: number): number {
-    return lineNetTotal(this.getLineTotal(item), this.seniorPwdLineReduction(index));
-  }
-
-  protected seniorPwdLineReduction(index: number): number {
-    const amounts = this.seniorPwdLineAmounts()[index];
-    return amounts ? seniorPwdReduction(amounts) : 0;
+    return lineNetTotal(this.getLineTotal(item), this.seniorPwd.lineReduction(index));
   }
 
   protected getPartialDiscountNote(item: CartItemDto): string | null {
@@ -1810,36 +1767,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
   }
 
-  protected openSeniorPwdDialog(): void {
-    if (!this.canApplySeniorPwd() || this.isOrderRequestBusy()) {
-      return;
-    }
-
-    this.showSeniorPwdDialog.set(true);
-  }
-
-  protected closeSeniorPwdDialog(): void {
-    this.showSeniorPwdDialog.set(false);
-  }
-
-  protected applySeniorPwd(selections: SeniorPwdSelection[]): void {
-    const lines = uncoverLines(this.cart());
-    const { cart, persons } = applySelections(lines, selections);
-    this.cart.set(cart);
-    this.seniorPwdPersons.set(persons);
-    this.showSeniorPwdDialog.set(false);
-  }
-
-  protected removeSeniorPwd(): void {
-    this.cart.set(uncoverLines(this.cart()));
-    this.seniorPwdPersons.set([]);
-    this.showSeniorPwdDialog.set(false);
-  }
-
-  protected isSeniorPwdLine(line: CartItemDto): boolean {
-    return isCoveredLine(line) && !!this.seniorPwdPersons()[line.seniorPwdPersonIndex!];
-  }
-
   protected clearAll(): void {
     if (!this.canManageOrderActions() || this.isOrderRequestBusy()) {
       return;
@@ -1955,27 +1882,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   private fillOrderAddressFromCustomer(): void {
-    if (this.orderAddressControl.dirty) {
-      return;
-    }
-
     const customer = this.customers().find((c) => c.id === this.selectedCustomerId());
-    this.setOrderAddress(customer?.address?.trim() ?? '', false);
-  }
-
-  private setOrderAddress(address: string, edited: boolean): void {
-    this.orderAddressControl.setValue(address);
-    if (edited) {
-      this.orderAddressControl.markAsDirty();
-    }
-  }
-
-  private currentOrderAddress(): string | null {
-    if (!this.selectedCustomerId()) {
-      return null;
-    }
-
-    return this.orderAddress().trim() || null;
+    this.orderAddress.fillFromCustomer(customer?.address);
   }
 
   protected getStatusVariant(status?: OrderStatusEnum | null): BadgeVariant {
@@ -2241,7 +2149,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     const command: UpdateOrderCommand = {
       id: order.id,
       customerId: this.selectedCustomerId(),
-      customerAddress: this.currentOrderAddress(),
+      customerAddress: this.orderAddress.currentFor(!!this.selectedCustomerId()),
       items: this.buildOrderItemsFromCart(),
       bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
@@ -2410,14 +2318,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     return seniorPwdBlockedReasonOf(productEligible, hasPromotion, isBundle);
   }
 
-  private pruneSeniorPwdPersons(cart: CartItemDto[], persons: SeniorPwdPersonRequestDto[]): void {
-    const pruned = dropUnusedPersons(cart, persons);
-    if (pruned) {
-      this.seniorPwdPersons.set(pruned.persons);
-      this.cart.set(pruned.cart);
-    }
-  }
-
   private cartUsesPromotions(): boolean {
     return this.cart().some(
       (line) =>
@@ -2560,12 +2460,12 @@ export class OrderEditor implements OnInit, OnDestroy {
     const offline = !this.connectivity.isOnline();
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
-      customerAddress: this.currentOrderAddress(),
+      customerAddress: this.orderAddress.currentFor(!!this.selectedCustomerId()),
       items: this.buildOrderItemsFromCart(offline),
       bundlePromotions: this.buildBundlePromotionsFromCart(offline),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
-      ...seniorPwdCommandPart(this.seniorPwdPersons()),
+      ...this.seniorPwd.commandPart(),
       ...(!offline && status === OrderStatusEnum.Completed && { expectedTotal: this.totalPrice() }),
       ...(event && {
         paymentMethod: event.paymentMethod,
@@ -2650,12 +2550,12 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
-      customerAddress: this.currentOrderAddress(),
+      customerAddress: this.orderAddress.currentFor(!!this.selectedCustomerId()),
       items: this.buildOrderItemsFromCart(true),
       bundlePromotions: this.buildBundlePromotionsFromCart(true),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
-      ...seniorPwdCommandPart(this.seniorPwdPersons()),
+      ...this.seniorPwd.commandPart(),
       ...(event && {
         paymentMethod: event.paymentMethod,
         amountReceived: event.amountReceived ?? null,
@@ -2703,7 +2603,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
-      ...seniorPwdCommandPart(this.seniorPwdPersons()),
+      ...this.seniorPwd.commandPart(),
       ...(status === OrderStatusEnum.Completed && { expectedTotal: this.totalPrice() }),
       ...(event && {
         paymentMethod: event.paymentMethod,
@@ -2742,7 +2642,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.cartPersistence.load().then((saved) => {
       if (saved && saved.items.length > 0) {
         this.cart.set(saved.items);
-        this.seniorPwdPersons.set(saved.seniorPwdPersons ?? []);
+        this.seniorPwd.persons.set(saved.seniorPwdPersons ?? []);
         this.selectedCustomerId.set(saved.customerId);
         this.fillOrderAddressFromCustomer();
         this.orderSpecialInstructions.set(saved.specialInstructions);

@@ -45,3 +45,4 @@ export * from './sort-header/sort-header';
 export * from './sparkline/sparkline';
 export * from './theme-switcher/theme-switcher';
 export * from './update-banner/update-banner';
+export * from './senior-pwd-summary/senior-pwd-summary';

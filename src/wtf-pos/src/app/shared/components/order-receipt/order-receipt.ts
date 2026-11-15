@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   ElementRef,
@@ -51,6 +52,7 @@ export interface ReceiptData {
   selector: 'app-order-receipt',
   imports: [CommonModule, LineBreakdownComponent, AddOnLabelsPipe, SeniorPwdTypeLabelPipe],
   templateUrl: './order-receipt.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderReceiptComponent implements OnInit {
   private static readonly logoPath = '/assets/images/logo_new.png';

@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -24,6 +23,7 @@ import {
 import { ConnectivityService, OrderService } from '@core/services';
 import { SENIOR_PWD_DISCOUNT_PERCENT, totalsByPerson } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { SeniorPwdSummaryComponent } from '@shared/components/senior-pwd-summary/senior-pwd-summary';
 import { CartItemDto, SENIOR_PWD_TYPE_LABELS, SeniorPwdTypeEnum } from '@shared/models';
 import { startWith } from 'rxjs';
 import {
@@ -70,7 +70,7 @@ const nameValidator: ValidatorFn = (control: AbstractControl): ValidationErrors 
 
 @Component({
   selector: 'app-senior-pwd-dialog',
-  imports: [DecimalPipe, IconComponent, ReactiveFormsModule],
+  imports: [IconComponent, ReactiveFormsModule, SeniorPwdSummaryComponent],
   templateUrl: './senior-pwd-dialog.html',
   host: { class: 'contents' },
   changeDetection: ChangeDetectionStrategy.OnPush,
