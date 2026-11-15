@@ -103,7 +103,7 @@ public sealed record SalesSummary(
     decimal VatExemptSales = 0m,
     int SeniorPwdOrderCount = 0)
 {
-    public decimal GrossSales => Revenue + RefundedAmount + Discounts + SeniorPwdDiscounts + VatExemptSales;
+    public decimal GrossSales => Revenue + RefundedAmount + Discounts + SeniorPwdReduction;
 
     public decimal SeniorPwdReduction => SeniorPwdDiscounts + VatExemptSales;
 

@@ -39,8 +39,7 @@ public static class OrderMetrics
         IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
         IReadOnlyDictionary<Guid, PreviewDiscount>? previewDiscounts = null)
     {
-        var regularTotal = order.OrderItems
-            .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
+        var regularTotal = ParentRows(order)
             .Sum(parent => ComputeParentItemTotal(
                 parent,
                 order.OrderItems.Where(child => child.ParentOrderItemId == parent.Id && child.BundlePromotionId == null),
@@ -74,12 +73,15 @@ public static class OrderMetrics
     }
 
 
-    public static decimal SeniorPwdReduction(OrderItem parentItem) =>
+    public static IEnumerable<OrderItem> ParentRows(Order order) =>
+        order.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null);
+
+    internal static decimal SeniorPwdReduction(OrderItem parentItem) =>
         (parentItem.SeniorPwdVatExempt ?? 0m) + (parentItem.SeniorPwdDiscount ?? 0m);
 
     public static (decimal Discount, decimal VatExempt) SeniorPwdAmountsOf(Order order)
     {
-        var parents = order.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null).ToList();
+        var parents = ParentRows(order).ToList();
         return (parents.Sum(p => p.SeniorPwdDiscount ?? 0m), parents.Sum(p => p.SeniorPwdVatExempt ?? 0m));
     }
 
@@ -110,7 +112,7 @@ public static class OrderMetrics
         var discount = 0m;
         var seniorPwd = 0m;
 
-        foreach (var parent in order.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null))
+        foreach (var parent in ParentRows(order))
         {
             var addOns = order.OrderItems.Where(child => child.ParentOrderItemId == parent.Id && child.BundlePromotionId == null);
             gross += ComputeParentItemGross(parent, addOns, addOnOverridePrices);
