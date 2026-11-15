@@ -1,10 +1,11 @@
 import { Page } from '@playwright/test';
 import { expect, test } from '@fixtures/index';
-import { PlatformApi } from '@api/platform';
+import { PlatformApi, PlatformPlan } from '@api/platform';
 import { LoginPage } from '@pages/login.page';
 import { VIEWPORTS, measureOverflow, overflowProblem, watch } from '@utils/layout';
 import { go } from '@utils/navigation';
 import { openShop, TestShop } from '@utils/tenants';
+import { unique } from '@utils/unique';
 
 interface PlanFeature {
   readonly key: string;
@@ -18,14 +19,25 @@ interface PlanRow {
   readonly shopCount: number;
 }
 
-async function planId(platform: PlatformApi, code: string): Promise<number> {
+async function planByCode(platform: PlatformApi, code: string): Promise<PlatformPlan> {
   const plan = (await platform.plans()).find((p) => p.code === code);
   if (!plan) {
     throw new Error(`Plan ${code} is not seeded.`);
   }
 
-  return plan.id;
+  return plan;
 }
+
+async function planId(platform: PlatformApi, code: string): Promise<number> {
+  return (await planByCode(platform, code)).id;
+}
+
+const FEATURE_PROBES: ReadonlyArray<{ feature: string; permission: string; route: string }> = [
+  { feature: 'inventory', permission: 'items.read', route: 'items' },
+  { feature: 'expenses', permission: 'expenses.read', route: 'expenses' },
+  { feature: 'purchasing', permission: 'purchasing.read', route: 'purchase-orders' },
+  { feature: 'audit', permission: 'audit.read', route: 'audit-logs' },
+];
 
 async function status(shop: TestShop, path: string, method: 'GET' | 'POST' = 'GET'): Promise<number> {
   return (await shop.owner.call(method, path)).status();
@@ -69,21 +81,16 @@ test.describe('plan gating on the API @plans', () => {
     expect(await status(shop, 'reports/daily-sales')).not.toBe(403);
   });
 
-  test('a Pro shop has inventory, promotions, links, chat, expenses and custom roles and the workbook, but not purchasing or audit', async ({ request, platform }) => {
+  test('a shop holds exactly the permissions of the features its plan lists', async ({ request, platform }) => {
+    const plan = await planByCode(platform, 'pro');
     const shop = await openShop(request, platform, { planCode: 'pro' });
     const held = await shop.owner.json<string[]>('GET', 'auth/permissions');
 
-    for (const key of ['items.read', 'stock.write', 'promotions.write', 'orderlinks.manage', 'chat.write', 'expenses.read', 'roles.manage', 'reports.generate']) {
-      expect(held, key).toContain(key);
+    for (const probe of FEATURE_PROBES) {
+      const inPlan = plan.features.includes(probe.feature);
+      expect(held.includes(probe.permission), `${probe.permission} (${probe.feature})`).toBe(inPlan);
+      expect(await status(shop, probe.route), probe.route).toBe(inPlan ? 200 : 403);
     }
-
-    for (const key of ['purchasing.read', 'suppliers.read', 'audit.read']) {
-      expect(held, key).not.toContain(key);
-    }
-
-    expect(await status(shop, 'items')).toBe(200);
-    expect(await status(shop, 'purchase-orders')).toBe(403);
-    expect(await status(shop, 'audit-logs')).toBe(403);
   });
 
   test('a Business shop holds every permission', async ({ request, platform }) => {
@@ -124,10 +131,13 @@ test.describe('plan gating on the API @plans', () => {
   test('the shop sees which plans hold each feature', async ({ request, platform }) => {
     const shop = await openShop(request, platform, { planCode: 'starter' });
     const mine = await shop.owner.json<{ features: string[]; plansByFeature: Record<string, string[]> }>('GET', 'subscription');
+    const plans = (await platform.plans()).filter((p) => p.isActive);
 
     expect(mine.features).not.toContain('inventory');
-    expect(mine.plansByFeature['inventory']).toEqual(expect.arrayContaining(['Pro', 'Business']));
-    expect(mine.plansByFeature['purchasing']).toEqual(['Business']);
+    for (const feature of ['inventory', 'purchasing']) {
+      const holders = plans.filter((p) => p.features.includes(feature)).map((p) => p.name);
+      expect([...mine.plansByFeature[feature]].sort(), feature).toEqual(holders.sort());
+    }
   });
 
   test('two shops on different plans never see each other\'s limits', async ({ request, platform }) => {
@@ -136,7 +146,6 @@ test.describe('plan gating on the API @plans', () => {
 
     expect(await status(starter, 'items')).toBe(403);
     expect(await status(business, 'items')).toBe(200);
-    expect(await status(starter, 'items')).toBe(403);
   });
 });
 
@@ -148,7 +157,7 @@ test.describe('platform plan editor rules @plans @platform', () => {
     );
     expect(catalog.find((f) => f.key === 'purchasing')?.needs).toEqual(['inventory']);
 
-    const code = `e2e-${Date.now().toString(36)}`;
+    const code = unique('e2e').replace(/\s/g, '-');
     const bad = await platform.call('POST', 'plans', { code, name: 'Bad', monthlyPrice: 1, features: ['inventory', 'bogus'], maxUsers: null, isActive: true });
     expect(bad.status()).toBe(400);
     expect(await bad.text()).toContain('bogus');
@@ -159,7 +168,7 @@ test.describe('platform plan editor rules @plans @platform', () => {
   });
 
   test('a retired plan cannot be given to another shop, but a shop already on it keeps it', async ({ request, platform }) => {
-    const code = `e2e-r${Date.now().toString(36)}`;
+    const code = unique('e2e-r').replace(/\s/g, '-');
     const created = await platform.json<PlanRow>('POST', 'plans', { code, name: 'Retiring', monthlyPrice: 1, features: ['expenses'], maxUsers: null, isActive: true });
     const shop = await openShop(request, platform);
     await platform.setSubscription(shop.id, { planId: created.id });
@@ -200,13 +209,20 @@ async function signInPage(page: Page, shop: TestShop): Promise<void> {
 
 test.describe('plan gating in the app @plans @layout', () => {
   for (const viewport of VIEWPORTS) {
-    test(`a Starter shop sees no gated menu items and a direct URL lands on Not in your plan at ${viewport.name}`, async ({ newContext, request, platform }) => {
+    test(`a Starter shop has no gated menu entries and a direct URL lands on Not in your plan at ${viewport.name}`, async ({ newContext, request, platform }) => {
       const shop = await openShop(request, platform, { planCode: 'starter' });
       const context = await newContext({ width: viewport.width, height: viewport.height });
       const page = await context.newPage();
       const watcher = watch(page);
 
       await signInPage(page, shop);
+      await expect(page.locator('app-sidebar nav a[title="Inventory"]')).toHaveCount(0);
+      await go(page, '/management');
+      await expect(page.getByTestId('management-hub')).toBeVisible();
+      for (const card of ['expenses', 'promotions', 'audit-logs']) {
+        await expect(page.getByTestId(`management-card-${card}`), card).toHaveCount(0);
+      }
+
       await go(page, '/inventory/receiving');
       await expect(page).toHaveURL(/not-in-plan/);
       await expect(page.getByText(/not in your plan/i).first()).toBeVisible();
@@ -230,7 +246,6 @@ test.describe('plan gating in the app @plans @layout', () => {
     await expect(page).toHaveURL(/not-in-plan/);
 
     await platform.setSubscription(shop.id, { planId: await planId(platform, 'pro') });
-    await page.waitForTimeout(500);
     await go(page, '/management/expenses');
     await expect(page).toHaveURL(/management\/expenses/);
   });

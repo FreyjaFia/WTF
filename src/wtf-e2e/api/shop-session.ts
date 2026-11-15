@@ -48,7 +48,7 @@ export class ShopSession {
     return new ShopSession(request, username, accessToken, '');
   }
 
-  public async call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<APIResponse> {
+  public async call(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<APIResponse> {
     return this.request.fetch(`${API_ORIGIN}/api/${path.replace(/^\//, '')}`, {
       method,
       headers: { Authorization: `Bearer ${this.accessToken}`, 'X-TimeZone': TIME_ZONE },
@@ -56,7 +56,7 @@ export class ShopSession {
     });
   }
 
-  public async json<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  public async json<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
     const response = await this.call(method, path, body);
     const text = await response.text();
     expect(response.ok(), `${this.username} ${method} ${path} -> ${response.status()} ${text}`).toBeTruthy();
