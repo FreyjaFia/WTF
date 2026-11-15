@@ -192,21 +192,59 @@ internal sealed class SeniorPwdOrders
         throw new InvalidOperationException($"{productName} {reason}.");
     }
 
-    public void CreateRows(Guid orderId, Guid recordedBy, DateTime createdAt)
+    public List<OrderSeniorPwdDiscount> CreateRows(
+        Guid orderId,
+        Guid recordedBy,
+        DateTime createdAt,
+        IEnumerable<OrderSeniorPwdDiscount>? existing = null)
     {
+        var unused = (existing ?? []).ToList();
         Rows = _persons
-            .Select(person => new OrderSeniorPwdDiscount
+            .Select(person =>
             {
-                Id = Guid.NewGuid(),
-                OrderId = orderId,
-                Type = (byte)person.Type,
-                IdNumber = person.IdNumber,
-                CustomerName = person.CustomerName,
-                RecordedBy = recordedBy,
-                CreatedAt = createdAt
+                var kept = unused.FirstOrDefault(row => row.Type == (byte)person.Type
+                    && SeniorPwdRules.IdKey(row.IdNumber) == SeniorPwdRules.IdKey(person.IdNumber)
+                    && row.CustomerName == person.CustomerName);
+                if (kept is null)
+                {
+                    return new OrderSeniorPwdDiscount
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = orderId,
+                        Type = (byte)person.Type,
+                        IdNumber = person.IdNumber,
+                        CustomerName = person.CustomerName,
+                        RecordedBy = recordedBy,
+                        CreatedAt = createdAt
+                    };
+                }
+
+                unused.Remove(kept);
+                kept.IdNumber = person.IdNumber;
+                kept.CoveredAmount = 0m;
+                kept.VatExemptAmount = 0m;
+                kept.DiscountAmount = 0m;
+                return kept;
             })
             .ToList();
+
+        return unused;
     }
+
+    public static List<OrderSeniorPwdDiscount> Snapshot(IEnumerable<OrderSeniorPwdDiscount> rows) =>
+        rows.Select(row => new OrderSeniorPwdDiscount
+        {
+            Id = row.Id,
+            OrderId = row.OrderId,
+            Type = row.Type,
+            IdNumber = row.IdNumber,
+            CustomerName = row.CustomerName,
+            CoveredAmount = row.CoveredAmount,
+            VatExemptAmount = row.VatExemptAmount,
+            DiscountAmount = row.DiscountAmount,
+            RecordedBy = row.RecordedBy,
+            CreatedAt = row.CreatedAt
+        }).ToList();
 
     public void Cover(int personIndex, OrderItem parent, SeniorPwdAmounts amounts)
     {
@@ -222,7 +260,7 @@ internal sealed class SeniorPwdOrders
     // The person rows are saved with their final amounts, then the covered lines point at them.
     public void Complete(WTFDbContext db)
     {
-        db.OrderSeniorPwdDiscounts.AddRange(Rows);
+        db.OrderSeniorPwdDiscounts.AddRange(Rows.Where(row => db.Entry(row).State == EntityState.Detached));
         foreach (var (parent, personIndex) in _covered)
         {
             parent.SeniorPwdDiscountId = Rows[personIndex].Id;

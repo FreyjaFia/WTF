@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
@@ -202,6 +204,15 @@ public class UpdateOrderHandler(
                 $"Order is already {oldStatus} and cannot be updated.");
         }
 
+        var actorUserId = httpContextAccessor.HttpContext?.User.GetUserId() ?? order.CreatedBy;
+
+        if (order.OrderSeniorPwdDiscounts.Count > 0
+            && request.SeniorPwdPersons.Count == 0
+            && !PermissionChecks.Has(httpContextAccessor.HttpContext?.User, PermissionKeys.OrdersSeniorPwdApply))
+        {
+            throw new ForbiddenActionException("You are not allowed to remove the Senior/PWD discount.");
+        }
+
         var seniorPwd = await SeniorPwdOrders.LoadAsync(
             db,
             httpContextAccessor,
@@ -363,7 +374,7 @@ public class UpdateOrderHandler(
         order.UpdatedAt = DateTime.UtcNow;
         if (isOverride)
         {
-            order.UpdatedBy = httpContextAccessor.HttpContext?.User.GetUserId();
+            order.UpdatedBy = actorUserId;
             order.OverrideReason = overrideReason;
             order.OverriddenAt = order.UpdatedAt;
         }
@@ -374,11 +385,12 @@ public class UpdateOrderHandler(
             : null;
 
         // Update items: remove old, add new
-        var seniorPwdBefore = order.OrderSeniorPwdDiscounts.ToList();
+        var seniorPwdBefore = SeniorPwdOrders.Snapshot(order.OrderSeniorPwdDiscounts);
         db.OrderItems.RemoveRange(order.OrderItems);
         db.OrderBundlePromotions.RemoveRange(order.OrderBundlePromotions);
-        db.OrderSeniorPwdDiscounts.RemoveRange(seniorPwdBefore);
-        seniorPwd?.CreateRows(order.Id, httpContextAccessor.HttpContext!.User.GetUserId(), order.CreatedAt);
+        var seniorPwdRemoved = seniorPwd?.CreateRows(order.Id, actorUserId, order.CreatedAt, order.OrderSeniorPwdDiscounts)
+            ?? order.OrderSeniorPwdDiscounts.ToList();
+        db.OrderSeniorPwdDiscounts.RemoveRange(seniorPwdRemoved);
 
         if (request.BundlePromotions.Count > 0)
         {
@@ -501,7 +513,7 @@ public class UpdateOrderHandler(
         var chat = statusLine == null
             ? null
             : await ConversationStore.AddSystemMessageAsync(
-                db, order, statusLine, httpContextAccessor.HttpContext?.User.GetUserId(), order.UpdatedAt!.Value,
+                db, order, statusLine, actorUserId, order.UpdatedAt!.Value,
                 cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
@@ -510,7 +522,7 @@ public class UpdateOrderHandler(
         var stock = newStatus == OrderStatusEnum.Completed
             ? await stockService.DeductForOrderAsync(
                 order.Id,
-                httpContextAccessor.HttpContext?.User.GetUserId() ?? order.CreatedBy,
+                actorUserId,
                 new StockDeductionOptions(IsCorrection: isOverride),
                 cancellationToken)
             : StockDeductionResult.None;
@@ -601,7 +613,6 @@ public class UpdateOrderHandler(
             (oldStatus == OrderStatusEnum.Pending &&
                 (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)))
         {
-            var actorUserId = httpContextAccessor.HttpContext?.User.GetUserId() ?? Guid.Empty;
             await pushNotifications.SendOrderStatusChangedAsync(
                 order,
                 totalAmount,
@@ -616,7 +627,7 @@ public class UpdateOrderHandler(
             order,
             seniorPwdBefore,
             seniorPwd?.Rows ?? [],
-            httpContextAccessor.HttpContext?.User.GetUserId() ?? order.CreatedBy,
+            actorUserId,
             cancellationToken);
 
         if (isOverride)

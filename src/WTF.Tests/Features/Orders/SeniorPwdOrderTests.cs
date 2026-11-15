@@ -277,6 +277,83 @@ public class SeniorPwdOrderTests
     }
 
     [Fact]
+    public async Task Update_UnchangedPerson_KeepsTheRowTheRecorderAndTheTime()
+    {
+        await ConfigureShopAsync();
+        var latte = _data.AddProduct("Latte", 100m);
+        var created = await CreateHandler().Handle(Sale([Covered(latte)], [Person()], status: OrderStatusEnum.Pending), CancellationToken.None);
+        Guid rowId;
+        DateTime recordedAt;
+        await using (var db = TestDb.Create(_dbName))
+        {
+            var row = await db.OrderSeniorPwdDiscounts.SingleAsync(s => s.OrderId == created.Id);
+            rowId = row.Id;
+            recordedAt = row.CreatedAt;
+        }
+
+        var editor = Guid.NewGuid();
+        var handler = new UpdateOrderHandler(TestDb.Create(_dbName), TestRequest.As(editor, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
+        var updated = await handler.Handle(
+            new UpdateOrderCommand
+            {
+                Id = created.Id,
+                Status = OrderStatusEnum.Completed,
+                Items = [Covered(latte, 2)],
+                SeniorPwdPersons = [Person(" sc-123456 ")],
+                ExpectedTotal = 160m,
+            },
+            CancellationToken.None);
+
+        updated!.SeniorPwdPersons.ShouldHaveSingleItem().CoveredAmount.ShouldBe(200m);
+        await using var check = TestDb.Create(_dbName);
+        var kept = await check.OrderSeniorPwdDiscounts.SingleAsync(s => s.OrderId == created.Id);
+        kept.Id.ShouldBe(rowId);
+        kept.RecordedBy.ShouldBe(_userId);
+        kept.CreatedAt.ShouldBe(recordedAt);
+        kept.CoveredAmount.ShouldBe(200m);
+        kept.DiscountAmount.ShouldBe(40m);
+        (await check.OrderItems.Where(i => i.OrderId == created.Id).AllAsync(i => i.SeniorPwdDiscountId == rowId)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Update_ChangedPerson_ReplacesTheRowAndRecordsTheEditor()
+    {
+        await ConfigureShopAsync();
+        var latte = _data.AddProduct("Latte", 100m);
+        var created = await CreateHandler().Handle(Sale([Covered(latte)], [Person()], status: OrderStatusEnum.Pending), CancellationToken.None);
+
+        await UpdateHandler().Handle(
+            new UpdateOrderCommand
+            {
+                Id = created.Id,
+                Status = OrderStatusEnum.Pending,
+                Items = [Covered(latte)],
+                SeniorPwdPersons = [Person("SC-999", "Lolo Ben")],
+            },
+            CancellationToken.None);
+
+        await using var db = TestDb.Create(_dbName);
+        var row = await db.OrderSeniorPwdDiscounts.SingleAsync(s => s.OrderId == created.Id);
+        row.IdNumber.ShouldBe("SC-999");
+        row.RecordedBy.ShouldBe(_userId);
+    }
+
+    [Fact]
+    public async Task Update_RemovingThePersonsWithoutThePermission_IsForbiddenAndKeepsTheDiscount()
+    {
+        await ConfigureShopAsync();
+        var latte = _data.AddProduct("Latte", 100m);
+        var created = await CreateHandler().Handle(Sale([Covered(latte)], [Person()], status: OrderStatusEnum.Pending), CancellationToken.None);
+
+        await Should.ThrowAsync<ForbiddenActionException>(UpdateHandler(AppRoles.AdminViewer).Handle(
+            new UpdateOrderCommand { Id = created.Id, Status = OrderStatusEnum.Pending, Items = [Plain(latte)] },
+            CancellationToken.None));
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.OrderSeniorPwdDiscounts.CountAsync(s => s.OrderId == created.Id)).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Update_WrongExpectedTotal_IsRefused()
     {
         await ConfigureShopAsync();
