@@ -515,6 +515,9 @@
     "OrdersOverride": [
       "orders.override"
     ],
+    "SeniorPwdApply": [
+      "orders.seniorpwd.apply"
+    ],
     "ChatRead": [
       "chat.read"
     ],
