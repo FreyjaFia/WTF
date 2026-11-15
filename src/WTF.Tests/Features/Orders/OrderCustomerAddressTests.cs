@@ -161,6 +161,45 @@ public class OrderCustomerAddressTests
     }
 
     [Fact]
+    public async Task Update_NoAddressSent_KeepsTheAddressOnTheOrder()
+    {
+        var product = _data.AddProduct("Latte", 100);
+        var customer = AddCustomer("Ana", "Cruz", "Home St");
+        var order = await Creator().Handle(Create(product, customer, "Office Blvd"), CancellationToken.None);
+
+        await Updater().Handle(Update(order.Id, customer, product, null), CancellationToken.None);
+
+        (await SavedAddress(order.Id)).ShouldBe("Office Blvd");
+    }
+
+    [Fact]
+    public async Task Update_NewCustomerAndNoAddressSent_TakesTheNewCustomersSavedAddress()
+    {
+        var product = _data.AddProduct("Latte", 100);
+        var ana = AddCustomer("Ana", "Cruz", "Home St");
+        var ben = AddCustomer("Ben", "Reyes", "Ben Ave");
+        var order = await Creator().Handle(Create(product, ana), CancellationToken.None);
+
+        await Updater().Handle(Update(order.Id, ben, product, null), CancellationToken.None);
+
+        (await SavedAddress(order.Id)).ShouldBe("Ben Ave");
+    }
+
+    [Fact]
+    public async Task Update_BlankAddressSent_ClearsIt_AndWalkInHasNone()
+    {
+        var product = _data.AddProduct("Latte", 100);
+        var customer = AddCustomer("Ana", "Cruz", "Home St");
+        var order = await Creator().Handle(Create(product, customer), CancellationToken.None);
+
+        await Updater().Handle(Update(order.Id, customer, product, ""), CancellationToken.None);
+        (await SavedAddress(order.Id)).ShouldBeNull();
+
+        await Updater().Handle(Update(order.Id, null, product, "Somewhere"), CancellationToken.None);
+        (await SavedAddress(order.Id)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Update_CompletedOrderWithoutOverride_IsRefusedSoTheAddressStaysLocked()
     {
         var product = _data.AddProduct("Latte", 100);

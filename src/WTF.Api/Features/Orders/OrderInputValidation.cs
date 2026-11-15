@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Customers;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Domain.Data;
 
@@ -9,7 +10,6 @@ internal static class OrderInputValidation
 {
     public const int InstructionsMaxLength = 100;
     public const int NoteMaxLength = 500;
-    public const int AddressMaxLength = 150;
     public const int MaxQuantity = 9999;
 
     public static void EnsureLengths(
@@ -52,16 +52,31 @@ internal static class OrderInputValidation
         }
     }
 
-    public static string? NormalizeCustomerAddress(string? address)
+    public static string? NormalizeCustomerAddress(string? address) => CustomerValidation.NormalizeAddress(address);
+
+    public static async Task<string?> ResolveCustomerAddressAsync(
+        WTFDbContext db,
+        Guid? customerId,
+        string? requestedAddress,
+        CancellationToken cancellationToken)
     {
-        var trimmed = address?.Trim();
-        if (string.IsNullOrEmpty(trimmed))
+        if (!customerId.HasValue)
         {
             return null;
         }
 
-        EnsureMax(trimmed, AddressMaxLength, "Address");
-        return trimmed;
+        if (requestedAddress is not null)
+        {
+            return NormalizeCustomerAddress(requestedAddress);
+        }
+
+        var saved = (await db.Customers
+            .Where(c => c.Id == customerId.Value)
+            .Select(c => c.Address)
+            .FirstOrDefaultAsync(cancellationToken))?.Trim();
+
+        // A saved address longer than the limit (from before it was lowered) is cut so the order still saves.
+        return string.IsNullOrEmpty(saved) ? null : saved.Length > CustomerValidation.MaxAddressLength ? saved[..CustomerValidation.MaxAddressLength] : saved;
     }
 
     public static void EnsureQuantities(IEnumerable<OrderItemRequestDto> items, bool checkMax = true)

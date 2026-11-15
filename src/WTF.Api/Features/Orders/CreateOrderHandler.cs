@@ -134,18 +134,8 @@ public class CreateOrderHandler(
             await OrderInputValidation.EnsureCustomerAsync(db, request.CustomerId, cancellationToken);
         }
 
-        var customerAddress = OrderInputValidation.NormalizeCustomerAddress(request.CustomerAddress);
-        if (request.CustomerAddress is null && request.CustomerId.HasValue)
-        {
-            var saved = (await db.Customers
-                .Where(c => c.Id == request.CustomerId.Value)
-                .Select(c => c.Address)
-                .FirstOrDefaultAsync(cancellationToken))?.Trim();
-
-            // Addresses saved before the limit was lowered may be longer than an order accepts.
-            customerAddress = OrderInputValidation.NormalizeCustomerAddress(
-                saved is { Length: > OrderInputValidation.AddressMaxLength } ? saved[..OrderInputValidation.AddressMaxLength] : saved);
-        }
+        var customerAddress = await OrderInputValidation.ResolveCustomerAddressAsync(
+            db, request.CustomerId, request.CustomerAddress, cancellationToken);
 
         OrderInputValidation.EnsureQuantities(request.Items, checkMax: !held);
 
@@ -241,7 +231,7 @@ public class CreateOrderHandler(
             OrderLinkId = request.OrderLinkId,
             FulfillmentType = request.FulfillmentType.HasValue ? (byte)request.FulfillmentType.Value : null,
             DeliveryAddress = request.DeliveryAddress,
-            CustomerAddress = request.CustomerId.HasValue ? customerAddress : null,
+            CustomerAddress = customerAddress,
             ContactNumber = request.ContactNumber,
             OfflineLocalId = request.OfflineLocalId,
             ReviewReasons = held ? OfflineOrderReview.JoinReasons(request.HeldReasons!) : null

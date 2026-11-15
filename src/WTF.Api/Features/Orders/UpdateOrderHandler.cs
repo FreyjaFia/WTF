@@ -342,12 +342,15 @@ public class UpdateOrderHandler(
             }
         }
 
+        var customerChanged = request.CustomerId != order.CustomerId;
         order.CustomerId = request.CustomerId;
         if (isOverride || oldStatus != OrderStatusEnum.Completed)
         {
-            order.CustomerAddress = request.CustomerId.HasValue
-                ? OrderInputValidation.NormalizeCustomerAddress(request.CustomerAddress)
-                : null;
+            // A request that leaves the address out keeps the one on the order; a new customer brings their saved one.
+            order.CustomerAddress = request.CustomerAddress is null && !customerChanged && request.CustomerId.HasValue
+                ? order.CustomerAddress
+                : await OrderInputValidation.ResolveCustomerAddressAsync(
+                    db, request.CustomerId, request.CustomerAddress, cancellationToken);
         }
 
         order.SpecialInstructions = request.SpecialInstructions;
