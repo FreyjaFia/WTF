@@ -147,19 +147,11 @@ public class CreateOrderHandler(
                 saved is { Length: > OrderInputValidation.AddressMaxLength } ? saved[..OrderInputValidation.AddressMaxLength] : saved);
         }
 
+        OrderInputValidation.EnsureQuantities(request.Items, checkMax: !held);
+
         // Validate no nested add-ons and add-on type rules
         foreach (var item in request.Items)
         {
-            if (item.Quantity <= 0)
-            {
-                throw new InvalidOperationException("Item quantity must be greater than zero.");
-            }
-
-            if (item.AddOns.Any(addOn => addOn.Quantity <= 0))
-            {
-                throw new InvalidOperationException("Add-on quantity must be greater than zero.");
-            }
-
             if (item.AddOns.Any(addOn => addOn.AddOns?.Count > 0))
             {
                 throw new InvalidOperationException("Nested add-ons are not allowed. Add-ons cannot have their own add-ons.");

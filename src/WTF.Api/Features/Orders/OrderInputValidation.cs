@@ -10,6 +10,7 @@ internal static class OrderInputValidation
     public const int InstructionsMaxLength = 100;
     public const int NoteMaxLength = 500;
     public const int AddressMaxLength = 150;
+    public const int MaxQuantity = 999;
 
     public static void EnsureLengths(
         string? specialInstructions,
@@ -61,6 +62,35 @@ internal static class OrderInputValidation
 
         EnsureMax(trimmed, AddressMaxLength, "Address");
         return trimmed;
+    }
+
+    public static void EnsureQuantities(IEnumerable<OrderItemRequestDto> items, bool checkMax = true)
+    {
+        foreach (var item in items)
+        {
+            if (item.Quantity <= 0)
+            {
+                throw new InvalidOperationException("Item quantity must be greater than zero.");
+            }
+
+            if (checkMax && item.Quantity > MaxQuantity)
+            {
+                throw new InvalidOperationException($"Item quantity cannot be more than {MaxQuantity}.");
+            }
+
+            foreach (var addOn in item.AddOns ?? [])
+            {
+                if (addOn.Quantity <= 0)
+                {
+                    throw new InvalidOperationException("Add-on quantity must be greater than zero.");
+                }
+
+                if (checkMax && addOn.Quantity > MaxQuantity)
+                {
+                    throw new InvalidOperationException($"Add-on quantity cannot be more than {MaxQuantity}.");
+                }
+            }
+        }
     }
 
     public static void EnsureNoteLength(string? note) => EnsureMax(note, NoteMaxLength, "Note");

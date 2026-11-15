@@ -74,4 +74,32 @@ public class OrderInputValidationTests
         Should.Throw<InvalidOperationException>(() => OrderInputValidation.EnsureNoteLength(new string('a', 501)));
         Should.NotThrow(() => OrderInputValidation.EnsureNoteLength(null));
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(OrderInputValidation.MaxQuantity + 1)]
+    public void EnsureQuantities_BadItemQuantity_Throws(int quantity)
+    {
+        Should.Throw<InvalidOperationException>(() =>
+            OrderInputValidation.EnsureQuantities([new OrderItemRequestDto(Guid.NewGuid(), quantity, [], null, null)]));
+    }
+
+    [Fact]
+    public void EnsureQuantities_BadAddOnQuantity_Throws()
+    {
+        var addOn = new OrderItemRequestDto(Guid.NewGuid(), 0, [], null, null);
+
+        Should.Throw<InvalidOperationException>(() =>
+            OrderInputValidation.EnsureQuantities([new OrderItemRequestDto(Guid.NewGuid(), 1, [addOn], null, null)]));
+    }
+
+    [Fact]
+    public void EnsureQuantities_MaxCanBeSkippedButZeroCannot()
+    {
+        var big = new OrderItemRequestDto(Guid.NewGuid(), OrderInputValidation.MaxQuantity + 1, [], null, null);
+
+        Should.NotThrow(() => OrderInputValidation.EnsureQuantities([big], checkMax: false));
+        Should.NotThrow(() => OrderInputValidation.EnsureQuantities([Item()]));
+    }
 }

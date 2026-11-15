@@ -51,6 +51,22 @@ public class UpdateOrderHandlerTests
         return await db.OrderItems.Where(i => i.OrderId == orderId).ToListAsync();
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-2)]
+    [InlineData(1000)]
+    public async Task Handle_BadQuantity_IsRefusedAndKeepsTheLines(int quantity)
+    {
+        var burger = _data.AddProduct("Burger", 100);
+        var orderId = _data.AddOrder();
+        _data.AddLine(orderId, burger, 1);
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            Handler().Handle(Cmd(orderId, null, [Line(burger, quantity)]), CancellationToken.None));
+
+        (await LinesOf(orderId)).Single().Quantity.ShouldBe(1);
+    }
+
     // ---- not found / basic update ----
 
     [Fact]

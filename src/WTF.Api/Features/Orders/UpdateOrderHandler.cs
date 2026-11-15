@@ -88,6 +88,8 @@ public class UpdateOrderHandler(
             return null;
         }
 
+        OrderInputValidation.EnsureQuantities(request.Items);
+
         // Validate no nested add-ons and add-on type rules
         foreach (var item in request.Items)
         {
