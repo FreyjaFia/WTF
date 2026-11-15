@@ -2,7 +2,8 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
-import { AlertService, AuthService, ExpenseService, ModalStackService } from '@core/services';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AlertService, AuthService, ExpenseService, ListStateService, ModalStackService } from '@core/services';
 import { HttpErrorMessages } from '@core/messages';
 import {
   BadgeComponent,
@@ -16,6 +17,9 @@ import { PullToRefreshComponent } from '@shared/components/pull-to-refresh/pull-
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { ExpenseCategoryDto, ExpenseDto, ExpenseListDto, SaveExpenseDto } from '@shared/models';
 import { Subscription } from 'rxjs';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, isPageSizeOption } from '@shared/calculations/pagination';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 
 type ExpenseDialog = 'edit' | 'delete' | 'restore';
 
@@ -35,7 +39,7 @@ type SortColumn = 'date' | 'category' | 'amount';
 
 @Component({
   selector: 'app-expenses',
-  imports: [
+  imports: [PaginationComponent, 
     ConnectionErrorComponent,
     DecimalPipe,
     ReactiveFormsModule,
@@ -54,6 +58,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   private readonly expenseService = inject(ExpenseService);
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly listState = inject(ListStateService);
   private readonly modalStack = inject(ModalStackService);
 
   protected readonly isAndroid = Capacitor.getPlatform() === 'android';
@@ -63,24 +70,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   protected readonly result = signal<ExpenseListDto>({ items: [], total: 0, byCategory: [] });
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
-  protected readonly sortedItems = computed(() => {
-    const column = this.sortColumn();
-    const items = this.result().items;
-    if (!column) {
-      return items;
-    }
-
-    const factor = this.sortDirection() === 'asc' ? 1 : -1;
-    return [...items].sort((a, b) => {
-      const byColumn =
-        column === 'date'
-          ? a.expenseDate.localeCompare(b.expenseDate)
-          : column === 'category'
-            ? a.categoryName.localeCompare(b.categoryName)
-            : a.amount - b.amount;
-      return byColumn * factor;
-    });
-  });
+  protected readonly page = signal(readPageParam(this.route));
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly isReloading = signal(false);
   protected readonly isFiltersOpen = signal(false);
   protected readonly activeFilterCount = signal(0);
   protected readonly isLoading = signal(false);
@@ -119,6 +112,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   private loadSubscription: Subscription | null = null;
 
   public ngOnInit(): void {
+    const saved = this.listState.load<{ pageSize?: number }>('management:expenses', {});
+    this.pageSize.set(isPageSizeOption(saved.pageSize) ? (saved.pageSize as number) : DEFAULT_PAGE_SIZE);
     const today = new Date();
     this.filter.patchValue({
       fromDate: monthStart(today),
@@ -144,6 +139,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       this.sortColumn.set(column);
       this.sortDirection.set('asc');
     }
+
+    this.reloadFromFirstPage();
   }
 
   protected refresh(): void {
@@ -153,7 +150,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   protected applyFilter(): void {
     this.updateFilterCount();
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected openFilters(): void {
@@ -340,7 +337,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
     this.filterError.set(null);
     this.connectionFailed.set(false);
-    this.isLoading.set(!this.isRefreshing());
+    const firstLoad = this.result().items.length === 0 && !this.isRefreshing();
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
     this.loadSubscription?.unsubscribe();
     this.loadSubscription = this.expenseService
       .getExpenses({
@@ -348,19 +347,47 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         toDate: toDate || undefined,
         category: Number(category) || null,
         includeDeleted,
+        sortBy: this.sortColumn(),
+        sortDirection: this.sortColumn() ? this.sortDirection() : null,
+        page: this.page(),
+        pageSize: this.pageSize(),
       })
       .subscribe({
         next: (result) => {
           this.result.set(result);
+          if (result.page && result.page !== this.page()) {
+            this.page.set(result.page);
+            writePageParam(this.router, this.route, result.page);
+          }
           this.isLoading.set(false);
+          this.isReloading.set(false);
           this.isRefreshing.set(false);
         },
         error: (err: Error) => {
           this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
           this.alertService.error(err.message);
           this.isLoading.set(false);
+          this.isReloading.set(false);
           this.isRefreshing.set(false);
         },
       });
+  }
+
+  protected goToPage(page: number): void {
+    this.page.set(page);
+    writePageParam(this.router, this.route, page);
+    this.load();
+  }
+
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.listState.save('management:expenses', { pageSize: size });
+    this.reloadFromFirstPage();
+  }
+
+  private reloadFromFirstPage(): void {
+    this.page.set(1);
+    writePageParam(this.router, this.route, 1);
+    this.load();
   }
 }

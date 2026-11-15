@@ -205,8 +205,8 @@
               />
               <div class="col-span-1"></div>
             </div>
-            <ul class="space-y-2 lg:space-y-3" data-testid="expense-list">
-              @for (expense of sortedItems(); track expense.id; let last = $last) {
+            <ul class="space-y-2 transition-opacity lg:space-y-3" [class.opacity-60]="isReloading()" [class.pointer-events-none]="isReloading()" data-testid="expense-list">
+              @for (expense of result().items; track expense.id; let last = $last) {
                 <li
                   class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
                   [class.opacity-70]="!expense.isActive"
@@ -304,6 +304,16 @@
                 </li>
               }
             </ul>
+
+            <app-pagination
+              label="Expense pages"
+              [page]="page()"
+              [pageSize]="pageSize()"
+              [totalCount]="result().totalCount ?? 0"
+              [disabled]="isReloading()"
+              (pageChange)="goToPage($event)"
+              (pageSizeChange)="changePageSize($event)"
+            />
           </div>
         }
       }

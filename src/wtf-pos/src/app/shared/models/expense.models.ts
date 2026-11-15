@@ -21,6 +21,9 @@ export interface ExpenseListDto {
   items: ExpenseDto[];
   total: number;
   byCategory: ExpenseCategoryTotalDto[];
+  page?: number;
+  pageSize?: number;
+  totalCount?: number;
 }
 
 export interface ExpenseCategoryDto {
@@ -41,4 +44,8 @@ export interface ExpenseListQuery {
   toDate?: string;
   category?: number | null;
   includeDeleted?: boolean;
+  sortBy?: string | null;
+  sortDirection?: string | null;
+  page?: number;
+  pageSize?: number;
 }
