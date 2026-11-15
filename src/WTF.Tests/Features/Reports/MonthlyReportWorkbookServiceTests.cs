@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using WTF.Api.Endpoints;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Api.Features.Reports;
 using WTF.Api.Services;
 using WTF.Tests.Infrastructure;
 
@@ -564,7 +564,7 @@ public class MonthlyReportWorkbookServiceTests
 
         var ws = wb.Worksheet("Daily Sales Summary");
         Row(ws, 6, 10).ShouldBe(
-            ["Period", "Gross Sales", "Discounts", "Senior/PWD", "Refunded", "Net Sales", "Orders", "Avg/Order", "Tips", "Void/Cancelled"]);
+            ["Period", "Gross Sales", "Discounts", "Senior/PWD relief", "Refunded", "Net Sales", "Orders", "Avg/Order", "Tips", "Void/Cancelled"]);
         Row(ws, 7, 10).ShouldBe(
             ["March 01, 2026 (Sun)", "PHP 1,700.00", "PHP 100.00", "PHP 0.00", "PHP 100.00", "PHP 1,500.00", "3", "PHP 500.00", "PHP 50.00", "1"]);
         Text(ws, 8, 6).ShouldBe("PHP 2,500.50");

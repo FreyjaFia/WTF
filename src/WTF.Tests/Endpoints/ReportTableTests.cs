@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using System.Text;
 using WTF.Api.Endpoints;
-using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Api.Features.Reports;
 
 namespace WTF.Tests.Endpoints;
 
@@ -349,7 +349,7 @@ public class ReportTableTests : IDisposable
 
         ws.Cell(6, 2).GetString().ShouldBe("Gross Sales");
         ws.Cell(6, 3).GetString().ShouldBe("Discounts");
-        ws.Cell(6, 4).GetString().ShouldBe("Senior/PWD");
+        ws.Cell(6, 4).GetString().ShouldBe("Senior/PWD relief");
         ws.Cell(6, 5).GetString().ShouldBe("Refunded");
         ws.Cell(6, 6).GetString().ShouldBe("Net Sales");
         ws.Cell(7, 2).GetString().ShouldBe("PHP 300.00");

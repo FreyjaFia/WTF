@@ -1,7 +1,7 @@
 using System.Globalization;
-using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Api.Features.Reports;
 using WTF.Calculations.Inventory;
 using WTF.Calculations.Sales;
 using static WTF.Api.Endpoints.ReportFormat;
@@ -10,13 +10,18 @@ namespace WTF.Api.Endpoints;
 
 internal static class ReportTables
 {
+    private const string ReliefLabel = "Senior/PWD relief";
+
+    private static ReportColumn<T> ReliefColumn<T>(float weight, Func<T, decimal> amount) =>
+        new("seniorPwdDiscounts", ReliefLabel, r => Money(amount(r)), r => amount(r), true, weight, rows => Money(rows.Sum(amount)));
+
     public static ReportTable<DailySalesReportRowDto> DailySales(ReportGroupByEnum groupBy) => new(
         "Daily Sales Summary",
         [
             new("periodStart", "Period", r => FormatPeriodLabel(r.PeriodStart, groupBy), r => r.PeriodStart, false, 1.7f),
             new("grossSales", "Gross Sales", r => Money(r.GrossSales), r => r.GrossSales, true, 1.3f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discounts", r => Money(r.Discounts), r => r.Discounts, true, 1.2f, rows => Money(rows.Sum(r => r.Discounts))),
-            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+            ReliefColumn<DailySalesReportRowDto>(1.2f, r => r.SeniorPwdReduction),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.2f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("netSales", "Net Sales", r => Money(r.NetSales), r => r.NetSales, true, 1.3f, rows => Money(rows.Sum(r => r.NetSales))),
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.8f, rows => Number(rows.Sum(r => r.OrderCount))),
@@ -32,7 +37,7 @@ internal static class ReportTables
             [
                 ("Gross Sales", Money(rows.Sum(r => r.GrossSales))),
                 ("Discounts", Money(rows.Sum(r => r.Discounts))),
-                ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+                (ReliefLabel, Money(rows.Sum(r => r.SeniorPwdReduction))),
                 ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
                 ("Net Sales", Money(net)),
                 ("Total Orders", Number(orders)),
@@ -138,7 +143,7 @@ internal static class ReportTables
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.9f, rows => Number(rows.Sum(r => r.OrderCount))),
             new("grossSales", "Gross", r => Money(r.GrossSales), r => r.GrossSales, true, 1.4f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discount", r => Money(r.Discounts), r => r.Discounts, true, 1.3f, rows => Money(rows.Sum(r => r.Discounts))),
-            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+            ReliefColumn<PaymentsReportRowDto>(1.2f, r => r.SeniorPwdReduction),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.3f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("totalAmount", "Net", r => Money(r.TotalAmount), r => r.TotalAmount, true, 1.4f, rows => Money(rows.Sum(r => r.TotalAmount))),
             new("tips", "Tips", r => Money(r.Tips), r => r.Tips, true, 1f, rows => Money(rows.Sum(r => r.Tips))),
@@ -148,7 +153,7 @@ internal static class ReportTables
         [
             ("Gross", Money(rows.Sum(r => r.GrossSales))),
             ("Discounts", Money(rows.Sum(r => r.Discounts))),
-            ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+            (ReliefLabel, Money(rows.Sum(r => r.SeniorPwdReduction))),
             ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
             ("Net Amount", Money(rows.Sum(r => r.TotalAmount))),
             ("Total Orders", Number(rows.Sum(r => r.OrderCount))),
@@ -162,7 +167,7 @@ internal static class ReportTables
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.9f, rows => Number(rows.Sum(r => r.OrderCount))),
             new("grossSales", "Gross", r => Money(r.GrossSales), r => r.GrossSales, true, 1.4f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discount", r => Money(r.Discounts), r => r.Discounts, true, 1.3f, rows => Money(rows.Sum(r => r.Discounts))),
-            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+            ReliefColumn<HourlySalesReportRowDto>(1.2f, r => r.SeniorPwdReduction),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.3f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("revenue", "Net", r => Money(r.Revenue), r => r.Revenue, true, 1.4f, rows => Money(rows.Sum(r => r.Revenue)))
         ],
@@ -170,7 +175,7 @@ internal static class ReportTables
         [
             ("Gross", Money(rows.Sum(r => r.GrossSales))),
             ("Discounts", Money(rows.Sum(r => r.Discounts))),
-            ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+            (ReliefLabel, Money(rows.Sum(r => r.SeniorPwdReduction))),
             ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
             ("Net Revenue", Money(rows.Sum(r => r.Revenue))),
             ("Total Orders", Number(rows.Sum(r => r.OrderCount)))
@@ -183,7 +188,7 @@ internal static class ReportTables
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.9f, rows => Number(rows.Sum(r => r.OrderCount))),
             new("grossSales", "Gross", r => Money(r.GrossSales), r => r.GrossSales, true, 1.3f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discount", r => Money(r.Discounts), r => r.Discounts, true, 1.2f, rows => Money(rows.Sum(r => r.Discounts))),
-            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+            ReliefColumn<StaffPerformanceReportRowDto>(1.2f, r => r.SeniorPwdReduction),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.2f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("totalRevenue", "Net", r => Money(r.TotalRevenue), r => r.TotalRevenue, true, 1.3f, rows => Money(rows.Sum(r => r.TotalRevenue))),
             new("averageOrderValue", "Avg/Order", r => Money(r.AverageOrderValue), r => r.AverageOrderValue, true, 1.2f, rows => Money(SalesRules.Average(rows.Sum(r => r.TotalRevenue), rows.Sum(r => r.OrderCount)))),
@@ -197,7 +202,7 @@ internal static class ReportTables
             [
                 ("Gross", Money(rows.Sum(r => r.GrossSales))),
                 ("Discounts", Money(rows.Sum(r => r.Discounts))),
-                ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
+                (ReliefLabel, Money(rows.Sum(r => r.SeniorPwdReduction))),
                 ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
                 ("Net Revenue", Money(revenue)),
                 ("Total Orders", Number(orders)),

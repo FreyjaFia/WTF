@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WTF.Api.Features.Reports.DTOs;
 
 public sealed record DailySalesReportRowDto(
@@ -12,5 +14,5 @@ public sealed record DailySalesReportRowDto(
     decimal GrossSales = 0m,
     decimal NetSales = 0m,
     decimal Discounts = 0m,
-    decimal SeniorPwdDiscounts = 0m
+    [property: JsonPropertyName("seniorPwdDiscounts")] decimal SeniorPwdReduction = 0m
 );
