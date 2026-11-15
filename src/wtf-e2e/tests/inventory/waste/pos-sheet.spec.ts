@@ -2,6 +2,7 @@ import { expect, test } from '@fixtures/index';
 import { WASTE_REASON_NAMES, WasteReason } from '@data/enums';
 import { PosWasteSheet } from '@pages/pos-waste-sheet.page';
 import { RecordWasteDialog } from '@pages/record-waste-dialog.page';
+import { VIEWPORTS, useStyle } from '@utils/layout';
 
 test.describe('quick waste entry at the register @waste @pos', () => {
   test('a cashier records waste from the orders screen', async ({ api, signIn }) => {
@@ -32,6 +33,25 @@ test.describe('quick waste entry at the register @waste @pos', () => {
     await sheet.openButton.click();
     await sheet.search.fill(item.name);
     await expect(sheet.item(item.name)).toContainText('0');
+  });
+
+  test('the sheet has a solid background in the cafe style at every width', async ({ signIn }) => {
+    const page = await signIn('cashier', { landing: true });
+    await useStyle(page, 'cafe');
+    await page.reload();
+    const sheet = new PosWasteSheet(page);
+
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await sheet.openOrders();
+      await sheet.openButton.click();
+      const paper = sheet.sheet.getByRole('document');
+      await expect(paper).toBeVisible();
+      await expect(paper).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await page.screenshot({ path: `test-results/waste-sheet/cafe-${viewport.width}.png` });
+      await sheet.sheet.getByRole('button', { name: 'Close' }).click();
+      await expect(sheet.sheet).toBeHidden();
+    }
   });
 
   test('a viewer has no Record Waste button and the API refuses', async ({ api, signIn }) => {
