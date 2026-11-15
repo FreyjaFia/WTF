@@ -73,7 +73,7 @@ public class CustomerOrderHubTests
         context.ConnectionAborted.Returns(CancellationToken.None);
 
         var groups = Substitute.For<IGroupManager>();
-        var hub = new CustomerOrderHub(TestDb.Create(_db), NullLogger<CustomerOrderHub>.Instance)
+        var hub = new CustomerOrderHub(TestDb.Create(_db), NullLogger<CustomerOrderHub>.Instance, TestFakes.Features)
         {
             Context = context,
             Groups = groups

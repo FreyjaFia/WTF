@@ -41,6 +41,7 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
         builder.Services.AddAppAuthorization();
         builder.Services.AddScoped<WTFDbContext>(_ => TestDb.Create(_db));
         builder.Services.AddSingleton(Substitute.For<IPushNotificationService>());
+        builder.Services.AddSingleton(TestFakes.Features);
         builder.Services.AddScoped<IConversationNotifier, ConversationNotifier>();
 
         _app = builder.Build();
@@ -236,7 +237,7 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
         await using var scope = _app.Services.CreateAsyncScope();
         var handler = new SendPublicMessageHandler(
             scope.ServiceProvider.GetRequiredService<WTFDbContext>(), TestFakes.Audit(),
-            scope.ServiceProvider.GetRequiredService<IConversationNotifier>(), TimeProvider.System);
+            scope.ServiceProvider.GetRequiredService<IConversationNotifier>(), TimeProvider.System, TestFakes.Features);
         (await handler.Handle(new SendPublicMessageCommand(link.Token, order.Id, body), default)).ShouldNotBeNull();
     }
 

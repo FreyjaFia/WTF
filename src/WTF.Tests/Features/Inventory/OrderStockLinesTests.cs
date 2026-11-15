@@ -28,7 +28,7 @@ public class OrderStockLinesTests
 
     private async Task<List<Guid>?> StockLineIds(Guid orderId)
     {
-        var dto = await new GetOrderByIdHandler(TestDb.Create(_db)).Handle(new GetOrderByIdQuery(orderId), CancellationToken.None);
+        var dto = await new GetOrderByIdHandler(TestDb.Create(_db), TestFakes.Features).Handle(new GetOrderByIdQuery(orderId), CancellationToken.None);
         return dto!.StockLineIds;
     }
 

@@ -8,7 +8,7 @@ public class GetOrdersHandlerTests
 {
     private readonly OrderSeed _data = new(TestDb.NewName());
 
-    private GetOrdersHandler Handler() => new(_data.Open());
+    private GetOrdersHandler Handler() => new(_data.Open(), TestFakes.Features);
 
     [Fact]
     public async Task Handle_NoOrders_ReturnsEmptyList()

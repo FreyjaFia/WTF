@@ -19,9 +19,9 @@ internal static class BundlePromotionResolver
         TimeZoneInfo timeZone,
         IReadOnlyDictionary<Guid, decimal>? savedUnitPrices,
         CancellationToken cancellationToken,
+        ITenantFeatures tenantFeatures,
         List<string>? problems = null,
-        Guid? exceptOrderId = null,
-        ITenantFeatures? tenantFeatures = null)
+        Guid? exceptOrderId = null)
     {
         EnsureStructure(bundles, items);
 

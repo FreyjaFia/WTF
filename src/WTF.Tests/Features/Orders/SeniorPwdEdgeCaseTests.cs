@@ -525,7 +525,7 @@ public class SeniorPwdEdgeCaseTests
         var queued = new OrderItemRequestDto(latte, 1, [], null, null, QuotedPrice: 80m, QuotedOriginalPrice: 100m, QuotedPromoLabel: "Promo", SeniorPwdPersonIndex: 0);
 
         var reasons = await OfflineOrderReview.FindReasonsAsync(
-            db, Sale([queued], [Person()], expectedTotal: 64m), TimeZoneInfo.Utc, CancellationToken.None);
+            db, Sale([queued], [Person()], expectedTotal: 64m), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features);
 
         reasons.ShouldContain(r => r.Contains("promotion"));
     }
@@ -545,7 +545,7 @@ public class SeniorPwdEdgeCaseTests
         var queued = new OrderItemRequestDto(mug, 1, [], null, null, QuotedPrice: 250m, SeniorPwdPersonIndex: 0);
 
         var reasons = await OfflineOrderReview.FindReasonsAsync(
-            db, Sale([queued], [Person()], expectedTotal: 200m), TimeZoneInfo.Utc, CancellationToken.None);
+            db, Sale([queued], [Person()], expectedTotal: 200m), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features);
 
         reasons.ShouldContain(r => r.Contains("Mug"));
     }

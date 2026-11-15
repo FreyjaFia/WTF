@@ -8,7 +8,7 @@ public class GetPagedOrdersHandlerTests
 {
     private readonly OrderSeed _data = new(TestDb.NewName());
 
-    private GetPagedOrdersHandler Handler() => new(_data.Open());
+    private GetPagedOrdersHandler Handler() => new(_data.Open(), TestFakes.Features);
 
     private void SeedOrders(int count)
     {

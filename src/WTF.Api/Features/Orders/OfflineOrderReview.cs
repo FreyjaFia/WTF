@@ -32,8 +32,8 @@ internal static class OfflineOrderReview
         CreateOrderCommand command,
         TimeZoneInfo timeZone,
         CancellationToken cancellationToken,
-        IHttpContextAccessor? httpContextAccessor = null,
-        ITenantFeatures? tenantFeatures = null)
+        ITenantFeatures tenantFeatures,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         var reasons = new List<string>();
         var createdAt = command.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
@@ -169,7 +169,7 @@ internal static class OfflineOrderReview
         TimeZoneInfo timeZone,
         List<string> reasons,
         CancellationToken cancellationToken,
-        ITenantFeatures? tenantFeatures)
+        ITenantFeatures tenantFeatures)
     {
         if (command.BundlePromotions.Count == 0)
         {
@@ -181,7 +181,7 @@ internal static class OfflineOrderReview
         try
         {
             currentPrices = await BundlePromotionResolver.ResolveAsync(
-                db, command.BundlePromotions, command.Items, createdAt, timeZone, null, cancellationToken, problems, tenantFeatures: tenantFeatures);
+                db, command.BundlePromotions, command.Items, createdAt, timeZone, null, cancellationToken, tenantFeatures, problems);
         }
         catch (InvalidOperationException)
         {
@@ -215,7 +215,7 @@ internal static class OfflineOrderReview
         TimeZoneInfo timeZone,
         List<string> reasons,
         CancellationToken cancellationToken,
-        ITenantFeatures? tenantFeatures)
+        ITenantFeatures tenantFeatures)
     {
         var parentIds = command.Items.Select(i => i.ProductId).Distinct().ToList();
         var overridePrices = await db.ProductAddOnPriceOverrides

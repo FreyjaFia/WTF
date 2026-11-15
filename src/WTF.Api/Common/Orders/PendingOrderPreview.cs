@@ -17,7 +17,7 @@ internal static class PendingOrderPreview
         IEnumerable<Order> orders,
         IHttpContextAccessor? httpContextAccessor,
         CancellationToken cancellationToken,
-        ITenantFeatures? tenantFeatures = null)
+        ITenantFeatures tenantFeatures)
     {
         var unpriced = orders
             .Where(o => o.StatusId is (int)OrderStatusEnum.Pending or (int)OrderStatusEnum.PendingApproval)

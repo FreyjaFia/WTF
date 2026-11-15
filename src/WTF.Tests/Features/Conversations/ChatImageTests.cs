@@ -263,18 +263,18 @@ public class ChatImageTests
     private IChatImageService Images() => new ChatImageService(_store, Options.Create(_options));
 
     private SendPublicMessageHandler PublicSend() =>
-        new(TestDb.Create(_db), _audit, _notifier, TimeProvider.System, Images());
+        new(TestDb.Create(_db), _audit, _notifier, TimeProvider.System, TestFakes.Features, Images());
 
     private SendStaffMessageHandler StaffSend() =>
         new(TestDb.Create(_db), TestRequest.As(_staffId, AppRoles.Cashier), _audit, _notifier, Images());
 
     private RemovePublicMessageImageHandler PublicRemove() =>
-        new(TestDb.Create(_db), _audit, _notifier, TimeProvider.System, Images());
+        new(TestDb.Create(_db), _audit, _notifier, TimeProvider.System, TestFakes.Features, Images());
 
     private RemoveMessageImageHandler Remove() =>
         new(TestDb.Create(_db), TestRequest.As(_staffId, AppRoles.Cashier), _audit, _notifier, TimeProvider.System, Images());
 
-    private GetPublicMessageImageHandler PublicImage() => new(TestDb.Create(_db), Images());
+    private GetPublicMessageImageHandler PublicImage() => new(TestDb.Create(_db), TestFakes.Features, Images());
 
     private GetMessageImageHandler StaffImage() => new(TestDb.Create(_db), Images());
 
@@ -520,7 +520,7 @@ public class ChatImageTests
     public async Task Customer_WithoutThePictureService_CannotSendPictures()
     {
         var (_, link, order) = await SeedAsync();
-        var handler = new SendPublicMessageHandler(TestDb.Create(_db), _audit, _notifier, TimeProvider.System);
+        var handler = new SendPublicMessageHandler(TestDb.Create(_db), _audit, _notifier, TimeProvider.System, TestFakes.Features);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(new SendPublicMessageCommand(link.Token, order.Id, "", Picture("jpeg")), default));
@@ -714,7 +714,7 @@ public class ChatImageTests
         var (_, link, order) = await SeedAsync();
         await PublicSend().Handle(new SendPublicMessageCommand(link.Token, order.Id, "", Picture("jpeg", 60, 20)), default);
 
-        var chat = await new GetPublicOrderConversationHandler(TestDb.Create(_db))
+        var chat = await new GetPublicOrderConversationHandler(TestDb.Create(_db), TestFakes.Features)
             .Handle(new GetPublicOrderConversationQuery(link.Token, order.Id), default);
 
         var message = chat!.Messages.Single();

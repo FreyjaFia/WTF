@@ -24,7 +24,7 @@ internal static class DiscountRuleLoader
         TimeZoneInfo timeZone,
         Guid? exceptOrderId,
         CancellationToken cancellationToken,
-        ITenantFeatures? tenantFeatures = null)
+        ITenantFeatures tenantFeatures)
     {
         // A plan without promotions sells at the normal price; the sale still saves.
         if (!await PromotionsGate.IsOnAsync(db, tenantFeatures, cancellationToken))

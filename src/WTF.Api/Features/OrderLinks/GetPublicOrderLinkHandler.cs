@@ -14,7 +14,7 @@ namespace WTF.Api.Features.OrderLinks;
 
 public record GetPublicOrderLinkQuery(string Token) : IRequest<PublicOrderLinkDto?>;
 
-public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures? tenantFeatures = null)
+public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures)
     : IRequestHandler<GetPublicOrderLinkQuery, PublicOrderLinkDto?>
 {
     // Opening the page repeatedly should not write to the database every time.

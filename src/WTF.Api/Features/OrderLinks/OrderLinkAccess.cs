@@ -21,8 +21,7 @@ public sealed record OrderLinkAccessResult(ShortLink Link, Customer Customer);
 public static class OrderLinkAccess
 {
     public static async Task<OrderLinkAccessResult?> ResolveAsync(
-        WTFDbContext db, string? token, CancellationToken cancellationToken, DateTime? nowUtc = null, string? alsoRequires = null,
-        ITenantFeatures? tenantFeatures = null)
+        WTFDbContext db, string? token, CancellationToken cancellationToken, ITenantFeatures tenantFeatures, DateTime? nowUtc = null, string? alsoRequires = null)
     {
         var now = nowUtc ?? DateTime.UtcNow;
         if (string.IsNullOrWhiteSpace(token) || token.Length > 64)
@@ -55,7 +54,7 @@ public static class OrderLinkAccess
         if (db.TenantFilterEnabled
             && (!await TenantAccess.IsActiveAsync(db, link.TenantId, cancellationToken)
                 || await SubscriptionStateLoader.IsLockedAsync(db, link.TenantId, now, cancellationToken)
-                || !(plan = await LoadPlanAsync(db, link.TenantId, tenantFeatures, cancellationToken)).Features.Contains(PlanFeatures.OrderLinks)))
+                || !(plan = await tenantFeatures.GetAsync(db, link.TenantId, cancellationToken)).Features.Contains(PlanFeatures.OrderLinks)))
         {
             var brand = await BrandDefaults.LoadAsync(db, link.TenantId, cancellationToken);
             throw new ShopUnavailableException(brand.ShopName, brand.Phone);
@@ -69,18 +68,13 @@ public static class OrderLinkAccess
 
         // A part of the page that belongs to another feature (the chat) answers "not found" when that feature is off.
         if (alsoRequires != null && db.TenantFilterEnabled
-            && !(plan ??= await LoadPlanAsync(db, link.TenantId, tenantFeatures, cancellationToken)).Features.Contains(alsoRequires))
+            && !(plan ??= await tenantFeatures.GetAsync(db, link.TenantId, cancellationToken)).Features.Contains(alsoRequires))
         {
             return null;
         }
 
         return new OrderLinkAccessResult(link, customer);
     }
-
-    private static Task<TenantPlan> LoadPlanAsync(WTFDbContext db, Guid tenantId, ITenantFeatures? tenantFeatures, CancellationToken cancellationToken) =>
-        tenantFeatures is null
-            ? TenantPlanLookup.LoadAsync(db, tenantId, cancellationToken)
-            : tenantFeatures.GetAsync(db, tenantId, cancellationToken);
 
     /// <summary>
     /// Asks the database again, right now, whether this link may still be used. Call it immediately before an action

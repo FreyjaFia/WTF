@@ -61,8 +61,9 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         var recentOrders = await ComputeRecentOrders(range, cancellationToken);
         var paymentMethods = ComputePaymentMethods(primaryOrders, overridePrices);
-        var insights = await ComputeInsights(primaryOrders, range, overridePrices, cancellationToken);
-        var profit = await ComputeProfitAsync(range, cancellationToken);
+        var stockOn = await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken);
+        var insights = await ComputeInsights(primaryOrders, range, overridePrices, stockOn, cancellationToken);
+        var profit = await ComputeProfitAsync(range, stockOn, cancellationToken);
 
         return new DashboardDto(
             summary,
@@ -79,10 +80,10 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
     // The owner tiles: margin, waste, the item with the biggest count difference and what the stock is worth. They use costs,
     // so only the roles that may read costs get them; everyone else gets null.
-    private async Task<DashboardProfitDto?> ComputeProfitAsync(DateRangeInfo range, CancellationToken cancellationToken)
+    private async Task<DashboardProfitDto?> ComputeProfitAsync(DateRangeInfo range, bool stockOn, CancellationToken cancellationToken)
     {
         var user = httpContextAccessor.HttpContext?.User;
-        if (user is null || !CostAccess.CanReadCosts(user) || !await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken))
+        if (user is null || !CostAccess.CanReadCosts(user) || !stockOn)
         {
             return null;
         }
@@ -122,6 +123,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         List<Order> primaryOrders,
         DateRangeInfo range,
         IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
+        bool stockOn,
         CancellationToken cancellationToken)
     {
         var summary = SalesRules.Summarize(primaryOrders, addOnOverridePrices);
@@ -134,7 +136,6 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var awaiting = await db.Orders.CountAsync(o => o.StatusId == OrderStatuses.PendingApproval, cancellationToken);
 
         // Without inventory the stock cards read zero (the app hides them) and nothing about stock is looked up.
-        var stockOn = await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken);
         var stockStatuses = new List<StockStatus>();
         if (stockOn)
         {
@@ -455,7 +456,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .ToListAsync(cancellationToken);
 
         var recentOverridePrices = await AddOnPriceLookup.ForOrdersAsync(db, recentOrderEntities, cancellationToken);
-        var recentPreviewPrices = await PendingOrderPreview.LoadAsync(db, recentOrderEntities, httpContextAccessor, cancellationToken);
+        var recentPreviewPrices = await PendingOrderPreview.LoadAsync(db, recentOrderEntities, httpContextAccessor, cancellationToken, tenantFeatures);
 
         return recentOrderEntities.Select(o =>
         {

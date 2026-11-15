@@ -94,7 +94,7 @@ public class OrderGuardsTests
         await using var db = TestDb.Create(_dbName);
 
         var reasons = await OfflineOrderReview.FindReasonsAsync(
-            db, QueuedSale(latte, Person()), TimeZoneInfo.Utc, CancellationToken.None, TestRequest.As(_userId, "NoPermissions"));
+            db, QueuedSale(latte, Person()), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features, TestRequest.As(_userId, "NoPermissions"));
 
         reasons.ShouldContain(r => r.Contains("without the permission"));
     }
@@ -107,7 +107,7 @@ public class OrderGuardsTests
         await using var db = TestDb.Create(_dbName);
 
         var reasons = await OfflineOrderReview.FindReasonsAsync(
-            db, QueuedSale(latte, Person()), TimeZoneInfo.Utc, CancellationToken.None, TestRequest.As(_userId, AppRoles.Cashier));
+            db, QueuedSale(latte, Person()), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features, TestRequest.As(_userId, AppRoles.Cashier));
 
         reasons.ShouldBeEmpty();
     }
@@ -120,7 +120,7 @@ public class OrderGuardsTests
         await using var db = TestDb.Create(_dbName);
 
         var reasons = await OfflineOrderReview.FindReasonsAsync(
-            db, QueuedSale(latte, Person("SC-1"), Person(" sc-1 ")), TimeZoneInfo.Utc, CancellationToken.None, TestRequest.As(_userId, AppRoles.Cashier));
+            db, QueuedSale(latte, Person("SC-1"), Person(" sc-1 ")), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features, TestRequest.As(_userId, AppRoles.Cashier));
 
         reasons.ShouldContain(r => r.Contains("more than once"));
     }

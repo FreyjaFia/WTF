@@ -8,7 +8,7 @@ public class GetOrderByIdHandlerTests
 {
     private readonly OrderSeed _data = new(TestDb.NewName());
 
-    private GetOrderByIdHandler Handler() => new(_data.Open());
+    private GetOrderByIdHandler Handler() => new(_data.Open(), TestFakes.Features);
 
     [Fact]
     public async Task Handle_UnknownId_ReturnsNull()

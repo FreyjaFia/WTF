@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.DTOs;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
@@ -19,7 +20,7 @@ public sealed record GetPagedOrdersQuery(
     int PageSize = 20,
     OrderSourceEnum? Source = null) : IRequest<PagedResultDto<OrderDto>>;
 
-public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null)
+public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IHttpContextAccessor? httpContextAccessor = null)
     : IRequestHandler<GetPagedOrdersQuery, PagedResultDto<OrderDto>>
 {
     public async Task<PagedResultDto<OrderDto>> Handle(GetPagedOrdersQuery request, CancellationToken cancellationToken)
@@ -95,7 +96,7 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
             db,
             orders.SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null)),
             cancellationToken);
-        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken, tenantFeatures);
 
         var items = orders.Select(o => OrderMapping.ToDto(
             o,

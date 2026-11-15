@@ -93,7 +93,7 @@ public class ChatSystemLineTests
     {
         var (link, order) = await SeedAsync();
 
-        var chat = await new GetPublicOrderConversationHandler(TestDb.Create(_db))
+        var chat = await new GetPublicOrderConversationHandler(TestDb.Create(_db), TestFakes.Features)
             .Handle(new GetPublicOrderConversationQuery(link.Token, order.Id), default);
 
         var system = chat!.Messages.Single(m => m.Sender == "system");

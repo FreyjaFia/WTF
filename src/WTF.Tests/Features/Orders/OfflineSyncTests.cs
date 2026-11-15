@@ -454,7 +454,7 @@ public class OfflineSyncTests
     {
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto?>>(), Arg.Any<CancellationToken>())
-            .Returns(call => new GetOrderByIdHandler(TestDb.Create(_dbName))
+            .Returns(call => new GetOrderByIdHandler(TestDb.Create(_dbName), TestFakes.Features)
                 .Handle((GetOrderByIdQuery)call.Arg<IRequest<OrderDto?>>(), call.Arg<CancellationToken>()));
         return sender;
     }

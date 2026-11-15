@@ -197,7 +197,7 @@ public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, S
 
 public record GetPublicBrandQuery(string Token) : IRequest<PublicBrandDto?>;
 
-public class GetPublicBrandHandler(WTFDbContext db, IHttpContextAccessor http, ITenantFeatures? tenantFeatures = null) : IRequestHandler<GetPublicBrandQuery, PublicBrandDto?>
+public class GetPublicBrandHandler(WTFDbContext db, IHttpContextAccessor http, ITenantFeatures tenantFeatures) : IRequestHandler<GetPublicBrandQuery, PublicBrandDto?>
 {
     public async Task<PublicBrandDto?> Handle(GetPublicBrandQuery request, CancellationToken cancellationToken)
     {

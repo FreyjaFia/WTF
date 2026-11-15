@@ -12,7 +12,7 @@ namespace WTF.Api.Hubs;
 /// anything else is aborted at once. The server only pushes (new messages, order changes, link revoked): there are
 /// no methods a client can call to read or write anything, so a connection can never act, only listen.
 /// </summary>
-public class CustomerOrderHub(WTFDbContext db, ILogger<CustomerOrderHub> logger, ITenantFeatures? tenantFeatures = null) : Hub
+public class CustomerOrderHub(WTFDbContext db, ILogger<CustomerOrderHub> logger, ITenantFeatures tenantFeatures) : Hub
 {
     /// <summary>Open connections one address may hold, so the hub cannot be used to exhaust the server.</summary>
     public const int MaxConnectionsPerAddress = 10;

@@ -11,11 +11,11 @@ public class PendingOrderPreviewTests
 {
     private readonly OrderSeed _data = new(TestDb.NewName());
 
-    private GetOrdersHandler List() => new(_data.Open(), TestRequest.As(Guid.NewGuid(), timeZone: "UTC"));
+    private GetOrdersHandler List() => new(_data.Open(), TestFakes.Features, TestRequest.As(Guid.NewGuid(), timeZone: "UTC"));
 
-    private GetPagedOrdersHandler Paged() => new(_data.Open(), TestRequest.As(Guid.NewGuid(), timeZone: "UTC"));
+    private GetPagedOrdersHandler Paged() => new(_data.Open(), TestFakes.Features, TestRequest.As(Guid.NewGuid(), timeZone: "UTC"));
 
-    private GetOrderByIdHandler ById() => new(_data.Open(), TestRequest.As(Guid.NewGuid(), timeZone: "UTC"));
+    private GetOrderByIdHandler ById() => new(_data.Open(), TestFakes.Features, TestRequest.As(Guid.NewGuid(), timeZone: "UTC"));
 
     private async Task<decimal> TotalOf(Guid orderId) =>
         (await List().Handle(new GetOrdersQuery(), CancellationToken.None)).Single(o => o.Id == orderId).TotalAmount;
@@ -290,7 +290,7 @@ public class PendingOrderPreviewTests
         Discount(m.Product, null, 50m);
         var order = PendingOrder(m.Product);
 
-        var dto = await new GetOrderByIdHandler(_data.Open()).Handle(new GetOrderByIdQuery(order), CancellationToken.None);
+        var dto = await new GetOrderByIdHandler(_data.Open(), TestFakes.Features).Handle(new GetOrderByIdQuery(order), CancellationToken.None);
 
         dto!.TotalAmount.ShouldBe(60m);
     }

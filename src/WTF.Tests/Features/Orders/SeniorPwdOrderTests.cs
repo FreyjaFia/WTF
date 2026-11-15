@@ -377,9 +377,9 @@ public class SeniorPwdOrderTests
         var latte = _data.AddProduct("Latte", 100m);
         var created = await CreateHandler().Handle(Sale([Covered(latte)], [Person("SC-123456")]), CancellationToken.None);
 
-        var asCashier = await new GetOrderByIdHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Cashier))
+        var asCashier = await new GetOrderByIdHandler(TestDb.Create(_dbName), TestFakes.Features, TestRequest.As(_userId, AppRoles.Cashier))
             .Handle(new GetOrderByIdQuery(created.Id), CancellationToken.None);
-        var asViewer = await new GetOrderByIdHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.AdminViewer))
+        var asViewer = await new GetOrderByIdHandler(TestDb.Create(_dbName), TestFakes.Features, TestRequest.As(_userId, AppRoles.AdminViewer))
             .Handle(new GetOrderByIdQuery(created.Id), CancellationToken.None);
 
         asCashier!.SeniorPwdPersons.ShouldHaveSingleItem().IdNumber.ShouldBe("SC-123456");
@@ -394,7 +394,7 @@ public class SeniorPwdOrderTests
         var latte = _data.AddProduct("Latte", 100m);
         await CreateHandler().Handle(Sale([Covered(latte)], [Person("SC-123456")]), CancellationToken.None);
 
-        var orders = await new GetOrdersHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin))
+        var orders = await new GetOrdersHandler(TestDb.Create(_dbName), TestFakes.Features, TestRequest.As(_userId, AppRoles.Admin))
             .Handle(new GetOrdersQuery(OrderStatusEnum.All, null), CancellationToken.None);
 
         var order = orders.ShouldHaveSingleItem();
@@ -489,7 +489,7 @@ public class SeniorPwdOrderTests
         await using var db = TestDb.Create(_dbName);
         var command = Sale([new OrderItemRequestDto(latte, 1, [], null, null, QuotedPrice: 100m, SeniorPwdPersonIndex: 0)], [Person("", "")]);
 
-        var reasons = await OfflineOrderReview.FindReasonsAsync(db, command, TimeZoneInfo.Utc, CancellationToken.None);
+        var reasons = await OfflineOrderReview.FindReasonsAsync(db, command, TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features);
 
         reasons.ShouldContain(r => r.Contains("missing the ID number"));
 
@@ -509,7 +509,7 @@ public class SeniorPwdOrderTests
 
         // The register ran as a non-VAT shop (80.00); the server now knows the shop is VAT-registered (71.43).
         var reasons = await OfflineOrderReview.FindReasonsAsync(
-            db, Sale([queued], [Person()], expectedTotal: 80m), TimeZoneInfo.Utc, CancellationToken.None);
+            db, Sale([queued], [Person()], expectedTotal: 80m), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features);
 
         reasons.ShouldContain(r => r.Contains("Senior/PWD discount now comes to"));
     }

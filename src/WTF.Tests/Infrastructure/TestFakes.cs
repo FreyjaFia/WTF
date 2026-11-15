@@ -51,3 +51,22 @@ internal sealed class UncachedTenantFeatures : ITenantFeatures
     {
     }
 }
+
+internal sealed class CountingFeatures(IReadOnlySet<string> features) : ITenantFeatures
+{
+    public int Calls { get; private set; }
+
+    public Task<TenantPlan> GetAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        Calls++;
+        return Task.FromResult(new TenantPlan("Test", features));
+    }
+
+    public void Forget()
+    {
+    }
+
+    public void Forget(Guid tenantId)
+    {
+    }
+}

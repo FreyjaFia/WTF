@@ -253,15 +253,15 @@ public class OrderCustomerAddressTests
         var walkIn = await Creator().Handle(Create(product, null), CancellationToken.None);
 
         await using var db = _data.Open();
-        var byId = await new GetOrderByIdHandler(db).Handle(new GetOrderByIdQuery(withAddress.Id), default);
+        var byId = await new GetOrderByIdHandler(db, TestFakes.Features).Handle(new GetOrderByIdQuery(withAddress.Id), default);
         byId!.CustomerAddress.ShouldBe("77 Mango Lane");
         byId.CustomerName.ShouldBe("Ana");
-        (await new GetOrderByIdHandler(db).Handle(new GetOrderByIdQuery(walkIn.Id), default))!.CustomerAddress.ShouldBeNull();
+        (await new GetOrderByIdHandler(db, TestFakes.Features).Handle(new GetOrderByIdQuery(walkIn.Id), default))!.CustomerAddress.ShouldBeNull();
 
-        var list = await new GetOrdersHandler(db).Handle(new GetOrdersQuery(), default);
+        var list = await new GetOrdersHandler(db, TestFakes.Features).Handle(new GetOrdersQuery(), default);
         list.Single(o => o.Id == withAddress.Id).CustomerAddress.ShouldBe("77 Mango Lane");
 
-        var paged = await new GetPagedOrdersHandler(db).Handle(new GetPagedOrdersQuery(SearchTerm: "mango"), default);
+        var paged = await new GetPagedOrdersHandler(db, TestFakes.Features).Handle(new GetPagedOrdersQuery(SearchTerm: "mango"), default);
         paged.Items.Select(o => o.Id).ShouldBe([withAddress.Id]);
         paged.Items.Single().CustomerAddress.ShouldBe("77 Mango Lane");
     }

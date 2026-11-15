@@ -31,13 +31,13 @@ public class ConversationHandlerTests
     private GetConversationsHandler StaffList() => new(TestDb.Create(_db));
 
     private SendPublicMessageHandler PublicSend() =>
-        new(TestDb.Create(_db), _audit, _notifier, TimeProvider.System);
+        new(TestDb.Create(_db), _audit, _notifier, TimeProvider.System, TestFakes.Features);
 
-    private GetPublicOrderConversationHandler PublicGet() => new(TestDb.Create(_db));
+    private GetPublicOrderConversationHandler PublicGet() => new(TestDb.Create(_db), TestFakes.Features);
 
-    private GetPublicConversationsHandler PublicList() => new(TestDb.Create(_db));
+    private GetPublicConversationsHandler PublicList() => new(TestDb.Create(_db), TestFakes.Features);
 
-    private MarkPublicConversationReadHandler PublicRead() => new(TestDb.Create(_db), TimeProvider.System, _notifier);
+    private MarkPublicConversationReadHandler PublicRead() => new(TestDb.Create(_db), TimeProvider.System, _notifier, TestFakes.Features);
 
     // --- seeding ---
 

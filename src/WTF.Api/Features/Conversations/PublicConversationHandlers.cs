@@ -39,7 +39,7 @@ public record MarkPublicConversationReadCommand(string Token, Guid OrderId) : IR
 internal static class PublicChatAccess
 {
     public static async Task<(OrderLinkAccessResult Access, Order Order)?> ResolveAsync(
-        WTFDbContext db, string token, Guid orderId, bool track, CancellationToken cancellationToken, ITenantFeatures? tenantFeatures = null)
+        WTFDbContext db, string token, Guid orderId, bool track, CancellationToken cancellationToken, ITenantFeatures tenantFeatures)
     {
         var access = await OrderLinkAccess.ResolveAsync(db, token, cancellationToken, alsoRequires: PlanFeatures.Chat, tenantFeatures: tenantFeatures);
         if (access == null)
@@ -58,7 +58,7 @@ internal static class PublicChatAccess
     }
 }
 
-public class GetPublicConversationsHandler(WTFDbContext db, ITenantFeatures? tenantFeatures = null)
+public class GetPublicConversationsHandler(WTFDbContext db, ITenantFeatures tenantFeatures)
     : IRequestHandler<GetPublicConversationsQuery, ConversationListDto?>
 {
     public async Task<ConversationListDto?> Handle(GetPublicConversationsQuery request, CancellationToken cancellationToken)
@@ -68,7 +68,7 @@ public class GetPublicConversationsHandler(WTFDbContext db, ITenantFeatures? ten
     }
 }
 
-public class GetPublicOrderConversationHandler(WTFDbContext db, IOptions<ChatRetentionOptions>? retention = null, ITenantFeatures? tenantFeatures = null)
+public class GetPublicOrderConversationHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IOptions<ChatRetentionOptions>? retention = null)
     : IRequestHandler<GetPublicOrderConversationQuery, OrderConversationDto?>
 {
     public async Task<OrderConversationDto?> Handle(
@@ -109,8 +109,8 @@ public class SendPublicMessageHandler(
     IAuditService auditService,
     IConversationNotifier notifier,
     TimeProvider timeProvider,
-    IChatImageService? chatImages = null,
-    ITenantFeatures? tenantFeatures = null) : IRequestHandler<SendPublicMessageCommand, ConversationMessageDto?>
+    ITenantFeatures tenantFeatures,
+    IChatImageService? chatImages = null) : IRequestHandler<SendPublicMessageCommand, ConversationMessageDto?>
 {
     public async Task<ConversationMessageDto?> Handle(SendPublicMessageCommand request, CancellationToken cancellationToken)
     {
@@ -291,7 +291,7 @@ public class SendPublicMessageHandler(
     }
 }
 
-public class MarkPublicConversationReadHandler(WTFDbContext db, TimeProvider timeProvider, IConversationNotifier notifier, ITenantFeatures? tenantFeatures = null)
+public class MarkPublicConversationReadHandler(WTFDbContext db, TimeProvider timeProvider, IConversationNotifier notifier, ITenantFeatures tenantFeatures)
     : IRequestHandler<MarkPublicConversationReadCommand, bool>
 {
     public async Task<bool> Handle(MarkPublicConversationReadCommand request, CancellationToken cancellationToken)
@@ -321,7 +321,7 @@ public class MarkPublicConversationReadHandler(WTFDbContext db, TimeProvider tim
     }
 }
 
-public class GetPublicMessageImageHandler(WTFDbContext db, IChatImageService? chatImages = null, ITenantFeatures? tenantFeatures = null)
+public class GetPublicMessageImageHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IChatImageService? chatImages = null)
     : IRequestHandler<GetPublicMessageImageQuery, ChatImageFile?>
 {
     public async Task<ChatImageFile?> Handle(GetPublicMessageImageQuery request, CancellationToken cancellationToken)
@@ -342,8 +342,8 @@ public class RemovePublicMessageImageHandler(
     IAuditService auditService,
     IConversationNotifier notifier,
     TimeProvider timeProvider,
-    IChatImageService? chatImages = null,
-    ITenantFeatures? tenantFeatures = null) : IRequestHandler<RemovePublicMessageImageCommand, ConversationMessageDto?>
+    ITenantFeatures tenantFeatures,
+    IChatImageService? chatImages = null) : IRequestHandler<RemovePublicMessageImageCommand, ConversationMessageDto?>
 {
     public async Task<ConversationMessageDto?> Handle(RemovePublicMessageImageCommand request, CancellationToken cancellationToken)
     {

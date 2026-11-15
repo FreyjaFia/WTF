@@ -67,7 +67,7 @@ public class ConversationDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            var sent = await new SendPublicMessageHandler(db, TestFakes.Audit(), Notifier(), TimeProvider.System)
+            var sent = await new SendPublicMessageHandler(db, TestFakes.Audit(), Notifier(), TimeProvider.System, TestFakes.Features)
                 .Handle(new SendPublicMessageCommand(s.Link.Token, s.Order.Id, "Is 5pm ok?"), default);
             sent.ShouldNotBeNull();
         }
@@ -100,7 +100,7 @@ public class ConversationDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            var customerView = await new GetPublicOrderConversationHandler(db)
+            var customerView = await new GetPublicOrderConversationHandler(db, TestFakes.Features)
                 .Handle(new GetPublicOrderConversationQuery(s.Link.Token, s.Order.Id), default);
             customerView!.UnreadCount.ShouldBe(1);
             customerView.Messages[1].SenderName.ShouldBe("Al", "the customer sees the first name only");
@@ -108,13 +108,13 @@ public class ConversationDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            (await new MarkPublicConversationReadHandler(db, TimeProvider.System, Notifier())
+            (await new MarkPublicConversationReadHandler(db, TimeProvider.System, Notifier(), TestFakes.Features)
                 .Handle(new MarkPublicConversationReadCommand(s.Link.Token, s.Order.Id), default)).ShouldBeTrue();
         }
 
         await using (var db = database.CreateContext())
         {
-            var list = await new GetPublicConversationsHandler(db).Handle(new GetPublicConversationsQuery(s.Link.Token), default);
+            var list = await new GetPublicConversationsHandler(db, TestFakes.Features).Handle(new GetPublicConversationsQuery(s.Link.Token), default);
             list!.UnreadConversations.ShouldBe(0);
             list.Items.ShouldHaveSingleItem().LastSender.ShouldBe("staff");
         }
@@ -152,13 +152,13 @@ public class ConversationDatabaseTests
         // Order 1: a read message (newest). Order 2: an unread message (older). Order 3: nothing.
         await using (var db = database.CreateContext())
         {
-            await new SendPublicMessageHandler(db, TestFakes.Audit(), Notifier(), TimeProvider.System)
+            await new SendPublicMessageHandler(db, TestFakes.Audit(), Notifier(), TimeProvider.System, TestFakes.Features)
                 .Handle(new SendPublicMessageCommand(first.Link.Token, orders[0].Id, "unread"), default);
         }
 
         await using (var db = database.CreateContext())
         {
-            await new SendPublicMessageHandler(db, TestFakes.Audit(), Notifier(), TimeProvider.System)
+            await new SendPublicMessageHandler(db, TestFakes.Audit(), Notifier(), TimeProvider.System, TestFakes.Features)
                 .Handle(new SendPublicMessageCommand(first.Link.Token, first.Order.Id, "read later"), default);
             await new MarkConversationReadHandler(db, Notifier())
                 .Handle(new MarkOrderConversationReadCommand(first.Order.Id), default);

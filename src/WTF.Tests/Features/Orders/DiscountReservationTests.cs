@@ -77,7 +77,7 @@ public class DiscountReservationTests
     }
 
     private async Task<decimal> TotalOf(Guid orderId) =>
-        (await new GetOrderByIdHandler(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, "UTC"))
+        (await new GetOrderByIdHandler(_data.Open(), TestFakes.Features, TestRequest.As(_userId, AppRoles.Admin, "UTC"))
             .Handle(new GetOrderByIdQuery(orderId), CancellationToken.None))!.TotalAmount;
 
     [Theory]
@@ -296,7 +296,7 @@ public class DiscountReservationTests
 
     private async Task<PublicDealDto[]> OpenDeals(string token)
     {
-        var handler = new GetPublicOrderLinkHandler(_data.Open(), TestRequest.None());
+        var handler = new GetPublicOrderLinkHandler(_data.Open(), TestRequest.None(), TestFakes.Features);
         var dto = await handler.Handle(new GetPublicOrderLinkQuery(token), CancellationToken.None);
         return [.. dto!.Catalog.Deals];
     }

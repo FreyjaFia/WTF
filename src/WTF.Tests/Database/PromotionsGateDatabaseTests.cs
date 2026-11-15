@@ -1,7 +1,5 @@
 using WTF.Api.Common.Orders;
-using WTF.Api.Common.Tenancy;
 using WTF.Calculations.Subscriptions;
-using WTF.Domain.Data;
 using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
 
@@ -31,24 +29,5 @@ public class PromotionsGateDatabaseTests
         await using var db = database.CreateContext(Shop);
 
         (await PromotionsGate.IsOnAsync(db, new CountingFeatures(PlanFeatures.Parse("promotions")), CancellationToken.None)).ShouldBeTrue();
-    }
-
-    private sealed class CountingFeatures(IReadOnlySet<string> features) : ITenantFeatures
-    {
-        public int Calls { get; private set; }
-
-        public Task<TenantPlan> GetAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
-        {
-            Calls++;
-            return Task.FromResult(new TenantPlan("Test", features));
-        }
-
-        public void Forget()
-        {
-        }
-
-        public void Forget(Guid tenantId)
-        {
-        }
     }
 }

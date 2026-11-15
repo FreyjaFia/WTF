@@ -40,9 +40,9 @@ public class WaitingOrderStatusTests
         _data.AddOrder(OrderStatusEnum.Cancelled);
         AddWaiting();
 
-        var all = await new GetPagedOrdersHandler(_data.Open())
+        var all = await new GetPagedOrdersHandler(_data.Open(), TestFakes.Features)
             .Handle(new GetPagedOrdersQuery(), CancellationToken.None);
-        var active = await new GetPagedOrdersHandler(_data.Open())
+        var active = await new GetPagedOrdersHandler(_data.Open(), TestFakes.Features)
             .Handle(new GetPagedOrdersQuery(ExcludeFinalized: true), CancellationToken.None);
 
         all.TotalCount.ShouldBe(2);
@@ -57,7 +57,7 @@ public class WaitingOrderStatusTests
         _data.AddOrder(OrderStatusEnum.Pending);
         var waiting = AddWaiting();
 
-        var result = await new GetPagedOrdersHandler(_data.Open())
+        var result = await new GetPagedOrdersHandler(_data.Open(), TestFakes.Features)
             .Handle(new GetPagedOrdersQuery(Status: OrderStatusEnum.PendingApproval), CancellationToken.None);
 
         result.Items.ShouldHaveSingleItem().Id.ShouldBe(waiting);
@@ -70,7 +70,7 @@ public class WaitingOrderStatusTests
         var customer = _data.AddCustomer("Maria", "Cruz");
         AddWaiting(customerId: customer);
 
-        var result = await new GetPagedOrdersHandler(_data.Open())
+        var result = await new GetPagedOrdersHandler(_data.Open(), TestFakes.Features)
             .Handle(new GetPagedOrdersQuery(SearchTerm: "maria"), CancellationToken.None);
 
         result.Items.ShouldBeEmpty();
@@ -81,7 +81,7 @@ public class WaitingOrderStatusTests
     {
         var waiting = AddWaiting();
 
-        var dto = (await new GetPagedOrdersHandler(_data.Open())
+        var dto = (await new GetPagedOrdersHandler(_data.Open(), TestFakes.Features)
             .Handle(new GetPagedOrdersQuery(Status: OrderStatusEnum.PendingApproval), CancellationToken.None)).Items.Single();
 
         dto.Id.ShouldBe(waiting);
@@ -97,10 +97,10 @@ public class WaitingOrderStatusTests
         _data.AddOrder(OrderStatusEnum.Pending);
         var waiting = AddWaiting();
 
-        var all = await new GetOrdersHandler(_data.Open()).Handle(new GetOrdersQuery(), CancellationToken.None);
-        var active = await new GetOrdersHandler(_data.Open())
+        var all = await new GetOrdersHandler(_data.Open(), TestFakes.Features).Handle(new GetOrdersQuery(), CancellationToken.None);
+        var active = await new GetOrdersHandler(_data.Open(), TestFakes.Features)
             .Handle(new GetOrdersQuery(ExcludeFinalized: true), CancellationToken.None);
-        var onlyWaiting = await new GetOrdersHandler(_data.Open())
+        var onlyWaiting = await new GetOrdersHandler(_data.Open(), TestFakes.Features)
             .Handle(new GetOrdersQuery(Status: OrderStatusEnum.PendingApproval), CancellationToken.None);
 
         all.ShouldAllBe(o => o.Status != OrderStatusEnum.PendingApproval);
@@ -121,7 +121,7 @@ public class WaitingOrderStatusTests
             await db.SaveChangesAsync();
         }
 
-        var dto = await new GetOrderByIdHandler(_data.Open()).Handle(new GetOrderByIdQuery(waiting), CancellationToken.None);
+        var dto = await new GetOrderByIdHandler(_data.Open(), TestFakes.Features).Handle(new GetOrderByIdQuery(waiting), CancellationToken.None);
 
         dto!.Source.ShouldBe(OrderSourceEnum.CustomerLink);
         dto.FulfillmentType.ShouldBe(FulfillmentTypeEnum.Delivery);
@@ -134,7 +134,7 @@ public class WaitingOrderStatusTests
     {
         var id = _data.AddOrder();
 
-        var dto = await new GetOrderByIdHandler(_data.Open()).Handle(new GetOrderByIdQuery(id), CancellationToken.None);
+        var dto = await new GetOrderByIdHandler(_data.Open(), TestFakes.Features).Handle(new GetOrderByIdQuery(id), CancellationToken.None);
 
         dto!.Source.ShouldBe(OrderSourceEnum.Pos);
         dto.FulfillmentType.ShouldBeNull();

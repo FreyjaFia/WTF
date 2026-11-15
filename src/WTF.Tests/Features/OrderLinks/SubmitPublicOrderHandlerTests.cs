@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
@@ -146,7 +146,7 @@ public class SubmitPublicOrderHandlerTests
         SubmitPublicOrderRequest request, string? token = null, TimeProvider? clock = null, ISender? sender = null) =>
         new SubmitPublicOrderHandler(
                 TestDb.Create(_db), sender ?? RealSender(), NullLogger<SubmitPublicOrderHandler>.Instance,
-                clock ?? TimeProvider.System)
+                clock ?? TimeProvider.System, TestFakes.Features)
             .Handle(new SubmitPublicOrderCommand(token ?? _link.Token, request), CancellationToken.None);
 
     private SubmitPublicOrderRequest Request(
@@ -472,7 +472,7 @@ public class SubmitPublicOrderHandlerTests
     private Task<WTF.Api.Features.OrderLinks.DTOs.PublicOrderDto?> SubmitWithAudit(SubmitPublicOrderRequest request) =>
         new SubmitPublicOrderHandler(
                 TestDb.Create(_db), RealSender(), NullLogger<SubmitPublicOrderHandler>.Instance,
-                TimeProvider.System, null, _audit)
+                TimeProvider.System, TestFakes.Features, null, _audit)
             .Handle(new SubmitPublicOrderCommand(_link.Token, request), CancellationToken.None);
 
     [Fact]
@@ -984,7 +984,7 @@ public class SubmitPublicOrderHandlerTests
     public async Task Submit_AMissingRequest_IsRejected()
     {
         var handler = new SubmitPublicOrderHandler(
-            TestDb.Create(_db), RealSender(), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System);
+            TestDb.Create(_db), RealSender(), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(new SubmitPublicOrderCommand(_link.Token, null!), CancellationToken.None));

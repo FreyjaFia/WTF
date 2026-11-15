@@ -26,7 +26,7 @@ public class ApproveRejectOrderHandlerTests
     {
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto?>>(), Arg.Any<CancellationToken>())
-            .Returns(call => new GetOrderByIdHandler(_data.Open())
+            .Returns(call => new GetOrderByIdHandler(_data.Open(), TestFakes.Features)
                 .Handle((GetOrderByIdQuery)call.Arg<IRequest<OrderDto?>>(), call.Arg<CancellationToken>()));
         return sender;
     }

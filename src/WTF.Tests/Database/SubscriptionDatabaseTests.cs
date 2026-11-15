@@ -337,7 +337,7 @@ public class SubscriptionDatabaseTests
             await using var db = database.CreateContext(new SwitchableTenant());
             try
             {
-                return await OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None) is not null;
+                return await OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None, TestFakes.Features) is not null;
             }
             catch (ShopUnavailableException ex)
             {

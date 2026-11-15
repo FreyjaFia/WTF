@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
@@ -14,7 +15,7 @@ public record GetOrdersQuery(
     Guid? CustomerId = null,
     bool ExcludeFinalized = false) : IRequest<List<OrderDto>>;
 
-public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
+public class GetOrdersHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
 {
     public async Task<List<OrderDto>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
     {
@@ -61,7 +62,7 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
             orders.SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null)),
             cancellationToken);
 
-        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken, tenantFeatures);
 
         return [.. orders.Select(o => OrderMapping.ToDto(
             o,

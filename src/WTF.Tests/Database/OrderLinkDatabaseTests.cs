@@ -117,12 +117,12 @@ public class OrderLinkDatabaseTests
         }
 
         await using var db = database.CreateContext();
-        (await OrderLinkAccess.ResolveAsync(db, "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-aBcDe", default)).ShouldNotBeNull();
+        (await OrderLinkAccess.ResolveAsync(db, "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-aBcDe", default, TestFakes.Features)).ShouldNotBeNull();
 
         await using var other = database.CreateContext();
         (await other.ShortLinks.AnyAsync(l => l.Token == "abcdefghijklmnopqrstuvwxyz0123456789_-abcde"))
             .ShouldBeTrue("SQL Server compares this column without regard to case");
-        (await OrderLinkAccess.ResolveAsync(other, "abcdefghijklmnopqrstuvwxyz0123456789_-abcde", default)).ShouldBeNull();
+        (await OrderLinkAccess.ResolveAsync(other, "abcdefghijklmnopqrstuvwxyz0123456789_-abcde", default, TestFakes.Features)).ShouldBeNull();
         _ = setup;
     }
 
@@ -183,7 +183,7 @@ public class OrderLinkDatabaseTests
         await using (var db = database.CreateContext())
         {
             placed = await new SubmitPublicOrderHandler(
-                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
                 .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte)), default);
         }
 
@@ -206,7 +206,7 @@ public class OrderLinkDatabaseTests
         }
 
         await using var read = database.CreateContext();
-        var mine = await new GetPublicOrdersHandler(read)
+        var mine = await new GetPublicOrdersHandler(read, TestFakes.Features)
             .Handle(new GetPublicOrdersQuery(setup.Link.Token), default);
         mine!.Items.ShouldHaveSingleItem().Id.ShouldBe(placed.Id);
     }
@@ -224,7 +224,7 @@ public class OrderLinkDatabaseTests
 
         await using var db = database.CreateContext();
         var placed = await new SubmitPublicOrderHandler(
-                db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
             .Handle(new SubmitPublicOrderCommand(setup.Link.Token, request), default);
 
         placed.ShouldNotBeNull();
@@ -243,7 +243,7 @@ public class OrderLinkDatabaseTests
         await using (var db = database.CreateContext())
         {
             var placed = await new SubmitPublicOrderHandler(
-                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
                 .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte, 500) with { Tips = 12.345m }), default);
             placed!.Tips.ShouldBe(12.35m);
         }
@@ -267,7 +267,7 @@ public class OrderLinkDatabaseTests
 
         await using var handlerDb = database.CreateContext();
         var result = await new SubmitPublicOrderHandler(
-                handlerDb, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                handlerDb, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
             .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte)), default);
 
         result.ShouldBeNull();
@@ -285,13 +285,13 @@ public class OrderLinkDatabaseTests
         {
             await using var db = database.CreateContext();
             (await new SubmitPublicOrderHandler(
-                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
                 .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte)), default)).ShouldNotBeNull();
         }
 
         await using var last = database.CreateContext();
         await Should.ThrowAsync<InvalidOperationException>(() => new SubmitPublicOrderHandler(
-                last, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                last, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
             .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte)), default));
     }
 
@@ -303,14 +303,14 @@ public class OrderLinkDatabaseTests
         await using (var db = database.CreateContext())
         {
             await new SubmitPublicOrderHandler(
-                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
                 .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte)), default);
         }
 
         await using var read = database.CreateContext();
-        var all = await new GetPagedOrdersHandler(read).Handle(new GetPagedOrdersQuery(), default);
-        var active = await new GetPagedOrdersHandler(read).Handle(new GetPagedOrdersQuery(ExcludeFinalized: true), default);
-        var waiting = await new GetPagedOrdersHandler(read)
+        var all = await new GetPagedOrdersHandler(read, TestFakes.Features).Handle(new GetPagedOrdersQuery(), default);
+        var active = await new GetPagedOrdersHandler(read, TestFakes.Features).Handle(new GetPagedOrdersQuery(ExcludeFinalized: true), default);
+        var waiting = await new GetPagedOrdersHandler(read, TestFakes.Features)
             .Handle(new GetPagedOrdersQuery(Status: OrderStatusEnum.PendingApproval), default);
 
         all.TotalCount.ShouldBe(0);
@@ -329,7 +329,7 @@ public class OrderLinkDatabaseTests
         {
             await using var db = database.CreateContext();
             var placed = await new SubmitPublicOrderHandler(
-                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
                 .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte)), default);
             ids.Add(placed!.Id);
         }
@@ -341,7 +341,7 @@ public class OrderLinkDatabaseTests
                 .Returns(async call =>
                 {
                     await using var readDb = database.CreateContext();
-                    return await new GetOrderByIdHandler(readDb)
+                    return await new GetOrderByIdHandler(readDb, TestFakes.Features)
                         .Handle((GetOrderByIdQuery)call.Arg<IRequest<OrderDto?>>(), call.Arg<CancellationToken>());
                 });
             return sender;
@@ -377,7 +377,7 @@ public class OrderLinkDatabaseTests
         await using (var db = database.CreateContext())
         {
             orderId = (await new SubmitPublicOrderHandler(
-                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System)
+                    db, Sender(database), NullLogger<SubmitPublicOrderHandler>.Instance, TimeProvider.System, TestFakes.Features)
                 .Handle(new SubmitPublicOrderCommand(setup.Link.Token, Request(setup.Latte)), default))!.Id;
         }
 

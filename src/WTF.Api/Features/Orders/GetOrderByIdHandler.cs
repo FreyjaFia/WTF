@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
@@ -11,7 +12,7 @@ namespace WTF.Api.Features.Orders;
 
 public record GetOrderByIdQuery(Guid Id) : IRequest<OrderDto?>;
 
-public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<GetOrderByIdQuery, OrderDto?>
+public class GetOrderByIdHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<GetOrderByIdQuery, OrderDto?>
 {
     public async Task<OrderDto?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
@@ -41,7 +42,7 @@ public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpCont
             .ThenBy(oi => oi.Id)
             .ToList();
         var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(db, parentItems, cancellationToken);
-        var previewPrices = await PendingOrderPreview.LoadAsync(db, [order], httpContextAccessor, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, [order], httpContextAccessor, cancellationToken, tenantFeatures);
 
         var items = OrderMapping.ToItemDtos(parentItems, overridePrices);
         var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices, previewPrices);

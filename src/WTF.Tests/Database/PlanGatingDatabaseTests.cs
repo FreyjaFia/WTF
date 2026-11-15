@@ -135,7 +135,7 @@ public class PlanGatingDatabaseTests
             bundles.FixedBundles.ShouldBeEmpty();
             bundles.MixMatch.ShouldBeEmpty();
 
-            var old = await new GetOrderByIdHandler(db, accessor).Handle(new GetOrderByIdQuery(withPromotions.Id), CancellationToken.None);
+            var old = await new GetOrderByIdHandler(db, TestFakes.Features, accessor).Handle(new GetOrderByIdQuery(withPromotions.Id), CancellationToken.None);
             old.ShouldNotBeNull();
             old.TotalAmount.ShouldBe(75m);
         }
@@ -174,7 +174,7 @@ public class PlanGatingDatabaseTests
         await using (var db = ShopContext(database))
         {
             var reasons = await OfflineOrderReview.FindReasonsAsync(
-                db, BundleSale(burger.Id, promotionId), TimeZoneInfo.Utc, CancellationToken.None);
+                db, BundleSale(burger.Id, promotionId), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features);
             reasons.ShouldContain(r => r.Contains("not part of this shop's plan"));
         }
 
@@ -182,7 +182,7 @@ public class PlanGatingDatabaseTests
         await using (var db = ShopContext(database))
         {
             var reasons = await OfflineOrderReview.FindReasonsAsync(
-                db, BundleSale(burger.Id, promotionId), TimeZoneInfo.Utc, CancellationToken.None);
+                db, BundleSale(burger.Id, promotionId), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features);
             reasons.ShouldBeEmpty();
         }
     }
@@ -206,7 +206,7 @@ public class PlanGatingDatabaseTests
             await using var db = database.CreateContext(new SwitchableTenant());
             try
             {
-                return await OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None) is not null;
+                return await OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None, TestFakes.Features) is not null;
             }
             catch (ShopUnavailableException ex)
             {
@@ -218,7 +218,7 @@ public class PlanGatingDatabaseTests
         async Task<bool> ChatOpensAsync()
         {
             await using var db = database.CreateContext(new SwitchableTenant());
-            return await new GetPublicConversationsHandler(db).Handle(new GetPublicConversationsQuery(token), CancellationToken.None) is not null;
+            return await new GetPublicConversationsHandler(db, TestFakes.Features).Handle(new GetPublicConversationsQuery(token), CancellationToken.None) is not null;
         }
 
         await SetPlanAsync(database, string.Empty);

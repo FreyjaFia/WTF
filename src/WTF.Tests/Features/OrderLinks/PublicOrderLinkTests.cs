@@ -117,14 +117,14 @@ public class PublicOrderLinkTests
     private Task<OrderLinkAccessResult?> Resolve(string? token)
     {
         var db = TestDb.Create(_db);
-        return OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None);
+        return OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None, TestFakes.Features);
     }
 
     private Task<PublicOrderLinkDto?> OpenLink(string token) =>
-        new GetPublicOrderLinkHandler(TestDb.Create(_db), TestRequest.None())
+        new GetPublicOrderLinkHandler(TestDb.Create(_db), TestRequest.None(), TestFakes.Features)
             .Handle(new GetPublicOrderLinkQuery(token), CancellationToken.None);
 
-    private GetPublicOrdersHandler Orders() => new(TestDb.Create(_db));
+    private GetPublicOrdersHandler Orders() => new(TestDb.Create(_db), TestFakes.Features);
 
     // --- the shared token check ---
 
@@ -225,7 +225,7 @@ public class PublicOrderLinkTests
         var db = TestDb.Create(_db);
 
         // The first check loads (and tracks) the link in this context...
-        (await OrderLinkAccess.ResolveAsync(db, link.Token, default)).ShouldNotBeNull();
+        (await OrderLinkAccess.ResolveAsync(db, link.Token, default, TestFakes.Features)).ShouldNotBeNull();
 
         // ...then someone else revokes it.
         await using (var other = TestDb.Create(_db))
@@ -244,7 +244,7 @@ public class PublicOrderLinkTests
         var customer = await AddCustomerAsync();
         var link = await AddLinkAsync(customer.Id);
         var db = TestDb.Create(_db);
-        (await OrderLinkAccess.ResolveAsync(db, link.Token, default)).ShouldNotBeNull();
+        (await OrderLinkAccess.ResolveAsync(db, link.Token, default, TestFakes.Features)).ShouldNotBeNull();
 
         await using (var other = TestDb.Create(_db))
         {
@@ -262,8 +262,8 @@ public class PublicOrderLinkTests
         var end = DateTime.UtcNow.AddMinutes(10);
         var link = await AddLinkAsync(customer.Id, expiresAt: end);
 
-        (await OrderLinkAccess.ResolveAsync(TestDb.Create(_db), link.Token, default, end.AddMinutes(-1))).ShouldNotBeNull();
-        (await OrderLinkAccess.ResolveAsync(TestDb.Create(_db), link.Token, default, end.AddMinutes(1))).ShouldBeNull();
+        (await OrderLinkAccess.ResolveAsync(TestDb.Create(_db), link.Token, default, TestFakes.Features, end.AddMinutes(-1))).ShouldNotBeNull();
+        (await OrderLinkAccess.ResolveAsync(TestDb.Create(_db), link.Token, default, TestFakes.Features, end.AddMinutes(1))).ShouldBeNull();
     }
 
     // --- opening a link ---
@@ -335,7 +335,7 @@ public class PublicOrderLinkTests
         var accessor = TestRequest.As(Guid.NewGuid());
         accessor.HttpContext!.Request.Scheme = "https";
         accessor.HttpContext.Request.Host = new Microsoft.AspNetCore.Http.HostString("shop.example.com");
-        var dto = await new GetPublicOrderLinkHandler(TestDb.Create(_db), accessor)
+        var dto = await new GetPublicOrderLinkHandler(TestDb.Create(_db), accessor, TestFakes.Features)
             .Handle(new GetPublicOrderLinkQuery(link.Token), CancellationToken.None);
 
         dto!.ImageUrl.ShouldBe("https://shop.example.com/uploads/customers/maria.png");

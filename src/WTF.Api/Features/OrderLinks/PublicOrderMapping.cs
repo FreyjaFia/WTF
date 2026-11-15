@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
@@ -42,11 +43,12 @@ public static class PublicOrderMapping
         WTFDbContext db,
         IReadOnlyList<Order> orders,
         IHttpContextAccessor? httpContextAccessor,
+        ITenantFeatures tenantFeatures,
         CancellationToken cancellationToken)
     {
         // Orders that are not completed yet store no prices, so add-on prices come from the current overrides.
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
-        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken, tenantFeatures);
 
         var addOnTypes = await LoadAddOnTypesAsync(db, orders, cancellationToken);
 

@@ -54,16 +54,16 @@ public class OrderCustomerNameDatabaseTests
         }
 
         await using var read = database.CreateContext();
-        var found = await new GetPagedOrdersHandler(read).Handle(new GetPagedOrdersQuery(SearchTerm: "ann"), CancellationToken.None);
+        var found = await new GetPagedOrdersHandler(read, TestFakes.Features).Handle(new GetPagedOrdersQuery(SearchTerm: "ann"), CancellationToken.None);
 
         found.TotalCount.ShouldBe(1);
         found.Items.Single().CustomerName.ShouldBe("Ann");
 
-        var byId = await new GetOrderByIdHandler(read, TestRequest.As(user.Id, AppRoles.Admin, "UTC"))
+        var byId = await new GetOrderByIdHandler(read, TestFakes.Features, TestRequest.As(user.Id, AppRoles.Admin, "UTC"))
             .Handle(new GetOrderByIdQuery(found.Items.Single().Id), CancellationToken.None);
         byId!.CustomerName.ShouldBe("Ann");
 
-        var listed = await new GetOrdersHandler(read, TestRequest.As(user.Id, AppRoles.Admin, "UTC"))
+        var listed = await new GetOrdersHandler(read, TestFakes.Features, TestRequest.As(user.Id, AppRoles.Admin, "UTC"))
             .Handle(new GetOrdersQuery(OrderStatusEnum.All, null), CancellationToken.None);
         listed.Single().CustomerName.ShouldBe("Ann");
     }
@@ -102,7 +102,7 @@ public class OrderCustomerNameDatabaseTests
 
         await using var db = database.CreateContext();
         var reasons = await OfflineOrderReview.FindReasonsAsync(
-            db, Sale(latte.Id, customer.Id), TimeZoneInfo.Utc, CancellationToken.None);
+            db, Sale(latte.Id, customer.Id), TimeZoneInfo.Utc, CancellationToken.None, TestFakes.Features);
 
         reasons.ShouldContain("Customer Ann is inactive.");
     }

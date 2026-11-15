@@ -399,7 +399,7 @@ public class ChatMessageExpiryTests
 
         var staff = await new GetOrderConversationHandler(TestDb.Create(_db), Options.Create(new ChatRetentionOptions()))
             .Handle(new GetOrderConversationQuery(order.Id), default);
-        var theirs = await new GetPublicOrderConversationHandler(TestDb.Create(_db), Options.Create(new ChatRetentionOptions()))
+        var theirs = await new GetPublicOrderConversationHandler(TestDb.Create(_db), TestFakes.Features, Options.Create(new ChatRetentionOptions()))
             .Handle(new GetPublicOrderConversationQuery(link.Token, order.Id), default);
         var kept = await new GetOrderConversationHandler(TestDb.Create(_db), Options.Create(new ChatRetentionOptions { MessageDays = 0 }))
             .Handle(new GetOrderConversationQuery(order.Id), default);

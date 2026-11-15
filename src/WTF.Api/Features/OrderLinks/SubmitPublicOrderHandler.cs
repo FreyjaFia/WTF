@@ -7,9 +7,9 @@ using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Customers;
 using WTF.Api.Features.OrderLinks.DTOs;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Services;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
@@ -50,9 +50,9 @@ public class SubmitPublicOrderHandler(
     ISender sender,
     ILogger<SubmitPublicOrderHandler> logger,
     TimeProvider timeProvider,
+    ITenantFeatures tenantFeatures,
     IHttpContextAccessor? httpContextAccessor = null,
-    IAuditService? auditService = null,
-    ITenantFeatures? tenantFeatures = null) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
+    IAuditService? auditService = null) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
 {
     public const string SystemUsername = "customer-link";
 
@@ -74,7 +74,7 @@ public class SubmitPublicOrderHandler(
     public async Task<PublicOrderDto?> Handle(SubmitPublicOrderCommand command, CancellationToken cancellationToken)
     {
         var access = await OrderLinkAccess.ResolveAsync(
-            db, command.Token, cancellationToken, timeProvider.GetUtcNow().UtcDateTime, tenantFeatures: tenantFeatures);
+            db, command.Token, cancellationToken, tenantFeatures, timeProvider.GetUtcNow().UtcDateTime);
         if (access == null)
         {
             return null;
@@ -226,7 +226,7 @@ public class SubmitPublicOrderHandler(
             .Include(o => o.OrderBundlePromotions)
             .FirstAsync(cancellationToken);
 
-        return (await PublicOrderMapping.ToDtosAsync(db, [order], httpContextAccessor, cancellationToken))[0];
+        return (await PublicOrderMapping.ToDtosAsync(db, [order], httpContextAccessor, tenantFeatures, cancellationToken))[0];
     }
 
     /// <summary>

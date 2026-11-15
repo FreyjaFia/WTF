@@ -158,7 +158,7 @@ public class TenantPhase2Tests
         var db = Anonymous(out var tenant);
         tenant.TenantId.ShouldBeNull();
 
-        var access = await OrderLinkAccess.ResolveAsync(db, "token-b", CancellationToken.None);
+        var access = await OrderLinkAccess.ResolveAsync(db, "token-b", CancellationToken.None, TestFakes.Features);
 
         access.ShouldNotBeNull();
         access.Customer.FirstName.ShouldBe("Ben");
@@ -171,7 +171,7 @@ public class TenantPhase2Tests
     {
         var db = Anonymous(out var tenant);
 
-        (await OrderLinkAccess.ResolveAsync(db, "nope", CancellationToken.None)).ShouldBeNull();
+        (await OrderLinkAccess.ResolveAsync(db, "nope", CancellationToken.None, TestFakes.Features)).ShouldBeNull();
 
         tenant.TenantId.ShouldBeNull();
         (await db.Customers.CountAsync()).ShouldBe(0);
