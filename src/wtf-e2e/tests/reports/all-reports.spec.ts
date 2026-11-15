@@ -235,7 +235,8 @@ test.describe('report totals match hand-worked answers @reports', () => {
     await api.orders.create({ items: [{ productId: product.id, quantity: 3 }] });
     const after = await api.client.json<DailyRow[]>('admin', 'GET', path('daily-sales'));
 
-    const sum = (rows: DailyRow[]): number => rows.reduce((total, row) => total + row.totalRevenue, 0);
+    // A refund made by a parallel test moves revenue into refundedAmount, so count both
+    const sum = (rows: DailyRow[]): number => rows.reduce((total, row) => total + row.totalRevenue + row.refundedAmount, 0);
     expect(sum(after)).toBeGreaterThanOrEqual(sum(before) + 300);
   });
 
