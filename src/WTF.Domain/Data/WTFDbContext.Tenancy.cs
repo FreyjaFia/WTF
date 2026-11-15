@@ -65,6 +65,8 @@ public partial class WTFDbContext
 
         modelBuilder.Entity<UserRole>().HasQueryFilter(r => !TenantFilterEnabled || r.TenantId == null || r.TenantId == CurrentTenantId);
         modelBuilder.Entity<RolePermission>().HasQueryFilter(p => !TenantFilterEnabled || p.Role.TenantId == null || p.Role.TenantId == CurrentTenantId);
+
+        modelBuilder.Entity<OrderItem>().ToTable(t => t.HasCheckConstraint("CK_OrderItems_Quantity_Range", "[Quantity] >= 1 AND [Quantity] <= 9999"));
     }
 
     private void ApplyTenantFilter<TEntity>(ModelBuilder modelBuilder)
