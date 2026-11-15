@@ -1,13 +1,9 @@
 import { Injector, inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService, PlanStore, SubscriptionService } from '@core/services';
+import { AuthService, PlanStore, SubscriptionService, notInPlanPath } from '@core/services';
 import { AppRole } from '@shared/constants/app-roles';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PermissionCatalog, PermissionKey } from '@shared/permissions';
-
-export function notInPlanPath(feature: string): string {
-  return `${AppRoutes.NotInPlan}?feature=${encodeURIComponent(feature)}`;
-}
 
 function fallbackRouteFor(auth: AuthService): string {
   if (auth.canReadOrders()) {

@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
+using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using System.Text.Json;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Calculations.Subscriptions;
@@ -73,9 +76,32 @@ public class PlanFeatureTests
         var outside = await RunAsync("stock.read");
         outside.HasSucceeded.ShouldBeFalse();
         outside.FailureReasons.Any(r => r.Message == PermissionAuthorizationHandler.NotInPlanMessage).ShouldBeTrue();
+        outside.FailureReasons.OfType<NotInPlanReason>().Single().Feature.ShouldBe("inventory");
 
         var either = await RunAsync("stock.read", "orders.read");
         either.HasSucceeded.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task NotInPlanAnswer_NamesTheFeature()
+    {
+        var reason = new NotInPlanReason(new PermissionAuthorizationHandler(), "customroles");
+        var failure = AuthorizationFailure.Failed([reason]);
+        var context = new DefaultHttpContext();
+        using var body = new MemoryStream();
+        context.Response.Body = body;
+
+        await new PlanAwareAuthorizationResultHandler().HandleAsync(
+            _ => Task.CompletedTask,
+            context,
+            new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build(),
+            PolicyAuthorizationResult.Forbid(failure));
+
+        context.Response.StatusCode.ShouldBe(StatusCodes.Status403Forbidden);
+        body.Position = 0;
+        using var json = await JsonDocument.ParseAsync(body);
+        json.RootElement.GetProperty("code").GetString().ShouldBe("not_in_plan");
+        json.RootElement.GetProperty("feature").GetString().ShouldBe("customroles");
     }
 
     [Fact]

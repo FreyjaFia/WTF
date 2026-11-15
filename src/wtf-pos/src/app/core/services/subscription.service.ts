@@ -26,6 +26,7 @@ export class SubscriptionService implements OnDestroy {
 
   private static readonly SHOP_TIME_ZONE = 'Asia/Manila';
   private static readonly TICK_MS = 60 * 1000;
+  private static readonly VISIBLE_REFRESH_MS = 60 * 1000;
 
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/subscription`;
@@ -39,6 +40,15 @@ export class SubscriptionService implements OnDestroy {
   private refreshedOnDay: string | null = null;
   private refreshInFlight = false;
   private readonly onlineHandler = (): void => this.refresh();
+  private lastVisibleRefresh = 0;
+  private readonly visibleHandler = (): void => {
+    const now = Date.now();
+
+    if (document.visibilityState === 'visible' && now - this.lastVisibleRefresh >= SubscriptionService.VISIBLE_REFRESH_MS) {
+      this.lastVisibleRefresh = now;
+      this.refresh();
+    }
+  };
 
   private readonly _maxUsers = signal<number | null>(null);
   private readonly _activeUsers = signal(0);
@@ -115,11 +125,13 @@ export class SubscriptionService implements OnDestroy {
       }, SubscriptionService.TICK_MS),
     );
     window.addEventListener('online', this.onlineHandler);
+    document.addEventListener('visibilitychange', this.visibleHandler);
   }
 
   public ngOnDestroy(): void {
     this.timers.forEach((t) => clearInterval(t));
     window.removeEventListener('online', this.onlineHandler);
+    document.removeEventListener('visibilitychange', this.visibleHandler);
   }
 
   public lastOnline(): string | null {

@@ -1,3 +1,4 @@
+import { backgroundRequest } from '@core/interceptors/background-request';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { HttpErrorMessages } from '@core/messages';
@@ -111,7 +112,7 @@ export class NotificationService implements OnDestroy {
 
   /** Reloads the counts. A failure leaves the old ones: a badge must never raise an error. */
   public refreshCounts(): void {
-    this.http.get<NotificationCountsDto>(`${this.baseUrl}/counts`).subscribe({
+    this.http.get<NotificationCountsDto>(`${this.baseUrl}/counts`, { context: backgroundRequest() }).subscribe({
       next: (counts) => this.setCounts(counts),
       error: () => undefined,
     });

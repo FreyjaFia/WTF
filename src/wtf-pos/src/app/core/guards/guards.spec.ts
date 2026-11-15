@@ -20,7 +20,7 @@ function routeWithRoles(roles?: AppRole[]): ActivatedRouteSnapshot {
 
 describe('route guards', () => {
   let auth: Record<string, ReturnType<typeof vi.fn>>;
-  let router: { navigateByUrl: ReturnType<typeof vi.fn> };
+  let router: { navigateByUrl: ReturnType<typeof vi.fn>; getCurrentNavigation: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     localStorage.clear();
@@ -36,7 +36,7 @@ describe('route guards', () => {
       canOpenManagementMenu: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false),
     };
-    router = { navigateByUrl: vi.fn().mockResolvedValue(true) };
+    router = { navigateByUrl: vi.fn().mockResolvedValue(true), getCurrentNavigation: vi.fn().mockReturnValue(null) };
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: auth },
@@ -276,7 +276,9 @@ describe('route guards', () => {
 
   describe('unsavedChangesGuard', () => {
     const run = (component: HasUnsavedChanges) =>
-      unsavedChangesGuard(component, {} as ActivatedRouteSnapshot, state, state);
+      TestBed.runInInjectionContext(() =>
+        unsavedChangesGuard(component, {} as ActivatedRouteSnapshot, state, state),
+      );
 
     it('defers to the component', () => {
       expect(run({ canDeactivate: () => false })).toBe(false);
@@ -285,6 +287,20 @@ describe('route guards', () => {
 
     it('supports async confirmation', async () => {
       await expect(run({ canDeactivate: () => Promise.resolve(false) })).resolves.toBe(false);
+    });
+
+    it('leaves without asking when the plan took the screen away', () => {
+      router.getCurrentNavigation.mockReturnValue({ extras: { info: { reason: 'not_in_plan', unsaved: true } } });
+      const canDeactivate = vi.fn().mockReturnValue(false);
+
+      expect(run({ canDeactivate })).toBe(true);
+      expect(canDeactivate).not.toHaveBeenCalled();
+    });
+
+    it('still asks on any other navigation', () => {
+      router.getCurrentNavigation.mockReturnValue({ extras: { info: { reason: 'something-else' } } });
+
+      expect(run({ canDeactivate: () => false })).toBe(false);
     });
 
     it('allows leaving when the component has no canDeactivate', () => {

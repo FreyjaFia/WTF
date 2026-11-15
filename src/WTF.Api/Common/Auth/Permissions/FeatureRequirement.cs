@@ -15,7 +15,7 @@ public class FeatureAuthorizationHandler : AuthorizationHandler<FeatureRequireme
     {
         if (!IsInPlan(context.User, requirement.Feature))
         {
-            context.Fail(new AuthorizationFailureReason(this, PermissionAuthorizationHandler.NotInPlanMessage));
+            context.Fail(new NotInPlanReason(this, requirement.Feature));
             return Task.CompletedTask;
         }
 

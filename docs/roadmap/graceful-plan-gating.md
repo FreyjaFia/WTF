@@ -1,6 +1,6 @@
-## Graceful Plan-Gating Failures [Planned, decisions open]
+## Graceful Plan-Gating Failures [Phases 1, 2, 3 and 5 built, not merged]
 
-Status: plan only, nothing built (15 Nov 2026). Written from the code on `main` at 1.21.0. Related:
+Status: built on branch `graceful-plan-gating-plan` on 15 Nov 2026 using the recommended answers to the open questions (redirect, typed input lost, background refusals silent, focus refresh once a minute). Unit and API tests pass; the Playwright spec (phase 4) and the phase 0 checks marked "to run" are still to do, because the cloud box had no SQL Server. Plan text written from the code on `main` at 1.21.0. Written from the code on `main` at 1.21.0. Related:
 [block-features-by-plan](block-features-by-plan.md) (the gating itself, built) and
 [role-based-access](role-based-access.md).
 
@@ -250,3 +250,12 @@ Audited on 15 Nov 2026 from `Endpoints/*.cs` and the Angular services. "Gated" m
 What this changes in the plan: the background-request token must cover the conversation inbox first (the real risk), then
 the waste count and stock badge as a safety net; the Playwright plan adds "chat removed while the cashier sits on the order
 editor" as a required case.
+
+### Build notes (15 Nov 2026)
+
+- API: `NotInPlanReason(feature)` carries the key; the 403 body is `{ message, code: "not_in_plan", feature }`; each refusal logs one Information line.
+- Client: `PlanGateService` (redirect once, marker in navigation `info`), `subscriptionInterceptor` (user requests redirect and return `EMPTY`, so no toast; requests tagged with `backgroundRequest()` only refresh the plan and still report the error), `unsavedChangesGuard` skips the Discard question for that one navigation, Not in your plan shows "Your changes were not saved." after a refused non-GET.
+- Tagged as background: conversation inbox poll, notification counts, pending waste count, stock attention badge, stock limits.
+- `SubscriptionService` also refreshes the plan when the tab becomes visible (at most once a minute).
+- Not done: reloading the client permission list on refresh (it is still loaded at sign-in; menus and guards use the plan store, so the visible effect is covered), the Playwright spec, and the "to run" rows of the trigger audit.
+- Logging: console sink in Development and a `Serilog` section in `appsettings.json`.

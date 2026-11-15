@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { AuthService, PlanStore } from '@core/services';
 import { SubscriptionDto } from '@shared/models/subscription.models';
 import { BehaviorSubject, of } from 'rxjs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotInPlanComponent } from './not-in-plan';
 
-function render(options: { feature: string | null; canUpgrade: boolean; plans?: Record<string, string[]> }) {
+function render(options: { feature: string | null; canUpgrade: boolean; plans?: Record<string, string[]>; unsaved?: boolean }) {
   localStorage.clear();
   TestBed.configureTestingModule({
     imports: [NotInPlanComponent],
@@ -25,6 +25,12 @@ function render(options: { feature: string | null; canUpgrade: boolean; plans?: 
     features: [],
     plansByFeature: options.plans ?? {},
   } as unknown as SubscriptionDto);
+  if (options.unsaved) {
+    vi.spyOn(TestBed.inject(Router), 'getCurrentNavigation').mockReturnValue({
+      extras: { info: { reason: 'not_in_plan', unsaved: true } },
+    } as ReturnType<Router['getCurrentNavigation']>);
+  }
+
   const fixture = TestBed.createComponent(NotInPlanComponent);
   fixture.detectChanges();
 
@@ -39,6 +45,12 @@ describe('NotInPlanComponent', () => {
 
     expect(el.querySelector('[data-testid="not-in-plan-title"]')?.textContent).toContain('Purchasing is not in your plan');
     expect(el.querySelector('[data-testid="not-in-plan-plans"]')?.textContent).toContain('Available in Business.');
+  });
+
+  it('says nothing was saved only after a refused save', () => {
+    expect(render({ feature: 'audit', canUpgrade: true, unsaved: true }).querySelector('[data-testid="not-in-plan-not-saved"]')).not.toBeNull();
+    TestBed.resetTestingModule();
+    expect(render({ feature: 'audit', canUpgrade: true }).querySelector('[data-testid="not-in-plan-not-saved"]')).toBeNull();
   });
 
   it('lists every plan that has it', () => {

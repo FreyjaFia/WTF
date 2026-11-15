@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { AuthService, PlanStore } from '@core/services';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService, PlanStore, isPlanGateInfo } from '@core/services';
 import { PlanFeatureCatalog } from '@shared/calculations/plan-features';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { map } from 'rxjs';
@@ -16,8 +16,15 @@ export class NotInPlanComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly plans = inject(PlanStore);
+  private readonly router = inject(Router);
 
   protected readonly routes = AppRoutes;
+
+  protected readonly changesNotSaved = (() => {
+    const info = this.router.getCurrentNavigation()?.extras.info;
+
+    return isPlanGateInfo(info) && info.unsaved;
+  })();
 
   private readonly featureKey = toSignal(
     this.route.queryParamMap.pipe(map((params) => params.get('feature'))),

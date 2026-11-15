@@ -1,3 +1,4 @@
+import { backgroundRequest } from '@core/interceptors/background-request';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { HttpErrorMessages } from '@core/messages';
@@ -100,7 +101,7 @@ export class StockWasteService implements OnDestroy {
   }
 
   public getPendingCount(): Observable<StockWastePendingCountDto> {
-    return this.http.get<StockWastePendingCountDto>(`${this.baseUrl}/pending-count`).pipe(
+    return this.http.get<StockWastePendingCountDto>(`${this.baseUrl}/pending-count`, { context: backgroundRequest() }).pipe(
       tap((result) => this._pendingCount.set(result.count)),
       catchError((error) => this.handleError(error, 'Unable to fetch the waste waiting for review.')),
     );
