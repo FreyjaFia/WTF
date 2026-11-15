@@ -1,3 +1,4 @@
+using WTF.Api.Common.DTOs;
 using WTF.Api.Features.Audit;
 using WTF.Api.Features.Audit.DTOs;
 using WTF.Domain.Entities;

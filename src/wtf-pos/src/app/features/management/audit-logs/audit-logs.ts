@@ -18,6 +18,7 @@ import {
 } from '@shared/components';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { AuditLogDto, AuditLogQuery } from '@shared/models';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
 import { Observable } from 'rxjs';
 
 interface AuditLogListState {
@@ -43,6 +44,7 @@ const DEFAULT_PAGE_SIZE = 10;
     ConnectionErrorComponent,
     PullToRefreshComponent,
     SideDrawerComponent,
+    PaginationComponent,
   ],
   templateUrl: './audit-logs.html',
   host: { class: 'flex-1 min-h-0' },
@@ -100,41 +102,12 @@ export class AuditLogsComponent implements OnInit {
     }
   }
 
-  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly page = signal(1);
   protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
   protected readonly totalCount = signal(0);
   protected readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.totalCount() / this.pageSize())),
   );
-  protected readonly firstRow = computed(() =>
-    this.totalCount() === 0 ? 0 : (this.page() - 1) * this.pageSize() + 1,
-  );
-  protected readonly lastRow = computed(() =>
-    Math.min(this.page() * this.pageSize(), this.totalCount()),
-  );
-
-  /** Page numbers to show; null stands for a gap (an ellipsis) between distant pages. */
-  protected readonly pageItems = computed<(number | null)[]>(() => {
-    const total = this.totalPages();
-    const current = this.page();
-
-    if (total <= 7) {
-      return Array.from({ length: total }, (_, i) => i + 1);
-    }
-
-    const pages = new Set([1, total, current - 1, current, current + 1]);
-    const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
-    const items: (number | null)[] = [];
-    for (const p of sorted) {
-      const previous = items[items.length - 1];
-      if (typeof previous === 'number' && p - previous > 1) {
-        items.push(null);
-      }
-      items.push(p);
-    }
-    return items;
-  });
 
   protected readonly availableActions = signal<string[]>([]);
   protected readonly selectedActions = signal<string[]>([]);
@@ -180,9 +153,8 @@ export class AuditLogsComponent implements OnInit {
     this.loadLogs();
   }
 
-  protected onPageSizeChange(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
-    if (!PAGE_SIZE_OPTIONS.some((option) => option === value) || value === this.pageSize()) {
+  protected changePageSize(value: number): void {
+    if (value === this.pageSize()) {
       return;
     }
 
