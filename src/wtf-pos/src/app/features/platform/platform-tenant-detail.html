@@ -143,13 +143,16 @@
           <section class="rounded-xl bg-surface p-4 shadow">
             <h2 class="mb-3 text-sm font-semibold text-gray-900">Subscription</h2>
             <form [formGroup]="billingForm" (ngSubmit)="saveBilling()" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <label class="text-sm">Plan
-                <select formControlName="planId" class="select select-bordered mt-1 w-full" (change)="previewPlanChange()">
-                  @for (plan of selectablePlans(); track plan.id) {
-                    <option [ngValue]="plan.id">{{ plan.name }} ({{ plan.monthlyPrice }}/month)</option>
-                  }
-                </select>
-              </label>
+              <div class="text-sm">
+                <span>Plan</span>
+                <app-select-dropdown
+                  class="mt-1"
+                  testId="billing-plan"
+                  [options]="planOptions()"
+                  [selectedId]="billingForm.controls.planId.value.toString()"
+                  (selectedIdChange)="choosePlan($event)"
+                />
+              </div>
               <label class="text-sm">Paid until
                 <input formControlName="periodEnd" type="date" class="input input-bordered mt-1 w-full" />
               </label>

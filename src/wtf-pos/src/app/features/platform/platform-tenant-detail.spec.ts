@@ -1,8 +1,8 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { AlertService, PlatformService } from '@core/services';
 import { PlatformTenantDto } from '@shared/models/platform.models';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { PlatformTenantDetailComponent } from './platform-tenant-detail';
 
@@ -79,6 +79,13 @@ function render(tenant: PlatformTenantDto, id = 't1') {
   };
 
   return { fixture, el, platform, buttonWith, tab, assign };
+}
+
+function pickPlan(fixture: ComponentFixture<PlatformTenantDetailComponent>, el: HTMLElement, index: number): void {
+  el.querySelector<HTMLButtonElement>('[data-testid="billing-plan"]')!.click();
+  fixture.detectChanges();
+  el.querySelectorAll<HTMLElement>('[data-testid="billing-plan-option"]')[index].click();
+  fixture.detectChanges();
 }
 
 describe('PlatformTenantDetailComponent', () => {
@@ -185,13 +192,29 @@ describe('PlatformTenantDetailComponent billing and plan features', () => {
   });
 
   it('does not offer a retired plan the shop is not on', () => {
-    const { el, tab } = render(shop({}));
+    const { fixture, el, tab } = render(shop({}));
 
     tab('billing');
 
-    const options = Array.from(el.querySelectorAll('select[formControlName="planId"] option')).map((o) => o.textContent);
+    el.querySelector<HTMLButtonElement>('[data-testid="billing-plan"]')!.click();
+    fixture.detectChanges();
+    const options = Array.from(el.querySelectorAll('[data-testid="billing-plan-option"]')).map((o) => o.textContent);
     expect(options.some((o) => o?.includes('Starter'))).toBe(true);
     expect(options.some((o) => o?.includes('Old'))).toBe(false);
+  });
+
+  it('drops a slow preview once the shop plan is picked again', () => {
+    const { fixture, el, tab, platform } = render(shop({}));
+    const slow = new Subject<unknown>();
+    platform.getPlanChangePreview.mockReturnValueOnce(slow);
+    tab('billing');
+
+    pickPlan(fixture, el, 0);
+    pickPlan(fixture, el, 1);
+    slow.next({ lostFeatures: [{ key: 'promotions', label: 'Promotions', dataCount: 3, dataLabel: 'promotions' }] });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="plan-change-warning"]')).toBeNull();
   });
 
   it('warns about the features and data a lower plan would take away', () => {
@@ -200,10 +223,7 @@ describe('PlatformTenantDetailComponent billing and plan features', () => {
     tab('billing');
     expect(el.querySelector('[data-testid="plan-change-warning"]')).toBeNull();
 
-    const select = el.querySelector<HTMLSelectElement>('select[formControlName="planId"]')!;
-    select.selectedIndex = 0;
-    select.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
+    pickPlan(fixture, el, 0);
 
     expect(platform.getPlanChangePreview).toHaveBeenCalledWith('t1', 1);
     const warning = el.querySelector('[data-testid="plan-change-warning"]')!;

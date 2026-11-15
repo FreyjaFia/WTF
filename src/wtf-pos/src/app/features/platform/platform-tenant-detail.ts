@@ -1,10 +1,12 @@
 import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, PlatformService } from '@core/services';
 import { PlanFeatureCatalog, isLiveShop, normalizeFeatures } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { SelectDropdownComponent, SelectDropdownOption } from '@shared/components/select-dropdown/select-dropdown';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
   DeletionPreviewDto,
@@ -15,7 +17,7 @@ import {
   PlatformTenantUserDto,
 } from '@shared/models/platform.models';
 import { BrandDto, PlanChangePreviewDto, PlanDto, TenantSubscriptionDto } from '@shared/models/subscription.models';
-import { Observable, forkJoin } from 'rxjs';
+import { Observable, Subject, catchError, forkJoin, of, switchMap } from 'rxjs';
 import { PlatformChipComponent } from './platform-chip';
 import { invoiceTone, statusTone, warningLabel, warningTone } from './platform-labels';
 import { PlatformSecret, PlatformSecretDialogComponent } from './platform-secret-dialog';
@@ -28,11 +30,12 @@ const INVOICE_PENDING = 1;
 
 @Component({
   selector: 'app-platform-tenant-detail',
-  imports: [ReactiveFormsModule, DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, IconComponent, PlatformChipComponent, PlatformSecretDialogComponent],
+  imports: [ReactiveFormsModule, DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, IconComponent, PlatformChipComponent, PlatformSecretDialogComponent, SelectDropdownComponent],
   templateUrl: './platform-tenant-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlatformTenantDetailComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly platform = inject(PlatformService);
   private readonly alerts = inject(AlertService);
   private readonly route = inject(ActivatedRoute);
@@ -76,11 +79,30 @@ export class PlatformTenantDetailComponent implements OnInit {
     return t !== null && (t.status === PLATFORM_STATUS.Suspended || t.status === PLATFORM_STATUS.Cancelled);
   });
   protected readonly planChange = signal<PlanChangePreviewDto | null>(null);
+
+  private readonly previewRequests = new Subject<{ tenantId: string; planId: number } | null>();
+  private readonly previewSubscription = this.previewRequests
+    .pipe(
+      // A slow answer for an earlier plan must not replace the preview of the plan picked since.
+      switchMap((request) =>
+        request
+          ? this.platform.getPlanChangePreview(request.tenantId, request.planId).pipe(catchError(() => of(null)))
+          : of(null),
+      ),
+      takeUntilDestroyed(),
+    )
+    .subscribe((preview) => this.planChange.set(preview));
   protected readonly selectablePlans = computed(() => {
     const currentId = this.billing()?.planId;
 
     return this.plans().filter((plan) => plan.isActive || plan.id === currentId);
   });
+  protected readonly planOptions = computed<SelectDropdownOption[]>(() =>
+    this.selectablePlans().map((plan) => ({
+      id: String(plan.id),
+      label: `${plan.name} (${plan.monthlyPrice}/month)`,
+    })),
+  );
   protected readonly billingFeatures = computed(() => {
     const plan = this.plans().find((p) => p.id === this.billing()?.planId);
     const held = normalizeFeatures(plan?.features ?? []);
@@ -165,7 +187,7 @@ export class PlatformTenantDetailComponent implements OnInit {
   protected reload(): void {
     const id = this.route.snapshot.paramMap.get('id');
 
-    this.platform.getTenants().subscribe({
+    this.platform.getTenants().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (tenants) => {
         const found = tenants.find((t) => t.id === id) ?? null;
 
@@ -227,7 +249,7 @@ export class PlatformTenantDetailComponent implements OnInit {
     }
 
     this.error.set(null);
-    this.platform.exportTenant(tenant.id).subscribe({
+    this.platform.exportTenant(tenant.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -308,6 +330,16 @@ export class PlatformTenantDetailComponent implements OnInit {
     });
   }
 
+  protected choosePlan(planId: string | null): void {
+    if (planId === null) {
+      return;
+    }
+
+    this.billingForm.controls.planId.setValue(Number(planId));
+    this.billingForm.controls.planId.markAsDirty();
+    this.previewPlanChange();
+  }
+
   protected previewPlanChange(): void {
     const tenant = this.tenant();
     const planId = Number(this.billingForm.controls.planId.value);
@@ -315,13 +347,11 @@ export class PlatformTenantDetailComponent implements OnInit {
     this.planChange.set(null);
 
     if (!tenant || planId === this.billing()?.planId) {
+      this.previewRequests.next(null);
       return;
     }
 
-    this.platform.getPlanChangePreview(tenant.id, planId).subscribe({
-      next: (preview) => this.planChange.set(preview),
-      error: () => this.planChange.set(null),
-    });
+    this.previewRequests.next({ tenantId: tenant.id, planId });
   }
 
   protected saveBilling(): void {
@@ -482,7 +512,7 @@ export class PlatformTenantDetailComponent implements OnInit {
   private run<T>(source: Observable<T>, onDone: (value: T) => void): void {
     this.busy.set(true);
     this.error.set(null);
-    source.subscribe({
+    source.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (value) => {
         this.busy.set(false);
         onDone(value);

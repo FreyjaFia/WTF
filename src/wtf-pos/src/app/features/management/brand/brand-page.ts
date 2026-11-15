@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AlertService, BrandService } from '@core/services';
@@ -34,6 +35,7 @@ const BRAND_FIELDS: BrandField[] = [
 export class BrandPageComponent implements OnInit {
   protected readonly shopRoute = AppRoutes.ManagementShop;
 
+  private readonly destroyRef = inject(DestroyRef);
   private readonly brandService = inject(BrandService);
   private readonly alertService = inject(AlertService);
   private readonly fb = inject(FormBuilder);
@@ -64,7 +66,7 @@ export class BrandPageComponent implements OnInit {
   private current: BrandDto | null = null;
 
   public ngOnInit(): void {
-    this.brandService.getForEdit().subscribe({
+    this.brandService.getForEdit().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (brand) => {
         this.current = brand;
         this.logoUrl.set(brand.logoUrl);
@@ -93,7 +95,7 @@ export class BrandPageComponent implements OnInit {
     }
 
     this.isUploading.set(true);
-    this.brandService.uploadLogo(file).subscribe({
+    this.brandService.uploadLogo(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (saved) => this.logoDone(saved, 'Logo saved.'),
       error: (err: unknown) => this.logoFailed(err),
     });
@@ -105,7 +107,7 @@ export class BrandPageComponent implements OnInit {
     }
 
     this.isUploading.set(true);
-    this.brandService.removeLogo().subscribe({
+    this.brandService.removeLogo().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (saved) => this.logoDone(saved, 'Logo removed.'),
       error: (err: unknown) => this.logoFailed(err),
     });
@@ -134,7 +136,7 @@ export class BrandPageComponent implements OnInit {
     };
 
     this.isSaving.set(true);
-    this.brandService.save(body).subscribe({
+    this.brandService.save(body).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (saved) => {
         this.current = saved;
         this.form.markAsPristine();

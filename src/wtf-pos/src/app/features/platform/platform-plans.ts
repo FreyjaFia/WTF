@@ -1,5 +1,6 @@
 import { CurrencyPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AlertService, PlatformService } from '@core/services';
 import { normalizeFeatures, toggleFeature } from '@shared/calculations/plan-features';
@@ -19,6 +20,7 @@ interface FeatureGroup {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlatformPlansComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly platform = inject(PlatformService);
   private readonly alerts = inject(AlertService);
 
@@ -59,7 +61,7 @@ export class PlatformPlansComponent implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    forkJoin([this.platform.getPlans(), this.platform.getPlanFeatures()]).subscribe({
+    forkJoin([this.platform.getPlans(), this.platform.getPlanFeatures()]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ([plans, catalog]) => {
         this.plans.set(plans);
         this.catalog.set(catalog);
@@ -129,6 +131,7 @@ export class PlatformPlansComponent implements OnInit {
         maxUsers: v.maxUsers === null || v.maxUsers === undefined || `${v.maxUsers}` === '' ? null : Number(v.maxUsers),
         isActive: v.isActive,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.busy.set(false);
