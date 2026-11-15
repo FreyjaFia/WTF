@@ -3,9 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
@@ -29,13 +28,17 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { ItemDto } from '@shared/models';
-import { debounceTime } from 'rxjs';
+import { debounceTime, Subscription } from 'rxjs';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, isPageSizeOption } from '@shared/calculations/pagination';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 
 type StockStatus = 'ok' | 'warning' | 'critical';
 
 interface ItemListState {
   searchTerm: string;
   selectedStatuses: StockStatus[];
+  pageSize?: number;
 }
 
 type ItemSortColumn = 'name' | 'stock' | 'status' | 'cost';
@@ -53,6 +56,7 @@ type ItemSortColumn = 'name' | 'stock' | 'status' | 'cost';
     BadgeComponent,
     ConfirmDialogComponent,
     ConnectionErrorComponent,
+    PaginationComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -68,9 +72,17 @@ export class ItemListComponent implements OnInit {
   private readonly listState = inject(ListStateService);
   private readonly modalStack = inject(ModalStackService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   protected readonly routes = AppRoutes;
 
   protected readonly items = signal<ItemDto[]>([]);
+  protected readonly totalCount = signal(0);
+  protected readonly facets = signal<Record<string, number>>({});
+  protected readonly page = signal(readPageParam(this.route));
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly isReloading = signal(false);
+  private loadRequest: Subscription | null = null;
   protected readonly isLoading = signal(false);
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
@@ -89,73 +101,14 @@ export class ItemListComponent implements OnInit {
     searchTerm: new FormControl(''),
   });
 
-  protected readonly statusCounts = computed(() => {
-    const items = this.items();
-    return {
-      ok: items.filter((item) => this.getStockStatus(item) === 'ok').length,
-      warning: items.filter((item) => this.getStockStatus(item) === 'warning').length,
-      critical: items.filter((item) => this.getStockStatus(item) === 'critical').length,
-    };
-  });
-
   protected readonly statusOptions = computed<FilterOption[]>(() => [
-    { id: 'ok', label: 'OK', count: this.statusCounts().ok },
-    { id: 'warning', label: 'Warning', count: this.statusCounts().warning },
-    { id: 'critical', label: 'Critical', count: this.statusCounts().critical },
+    { id: 'ok', label: 'OK', count: this.facets()['ok'] ?? 0 },
+    { id: 'warning', label: 'Warning', count: this.facets()['warning'] ?? 0 },
+    { id: 'critical', label: 'Critical', count: this.facets()['critical'] ?? 0 },
   ]);
-
-  // Mirrors the search box: a plain FormControl value is not a signal, so computeds cannot react to it.
-  private readonly searchTerm = signal('');
-
-  protected readonly filteredItems = computed(() => {
-    const search = this.searchTerm().trim().toLowerCase();
-    const selectedStatuses = this.selectedStatuses();
-    let items = [...this.items()];
-
-    if (selectedStatuses.length > 0) {
-      items = items.filter((item) => selectedStatuses.includes(this.getStockStatus(item)));
-    }
-
-    if (!search) {
-      return items;
-    }
-
-    return items.filter((item) =>
-      [item.name, item.sku, item.barcode]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(search)),
-    );
-  });
 
   protected readonly sortColumn = signal<ItemSortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
-
-  /** The filtered items in the order picked by the column headers (server order until one is picked). */
-  protected readonly sortedItems = computed(() => {
-    const column = this.sortColumn();
-    const items = [...this.filteredItems()];
-
-    if (!column) {
-      return items;
-    }
-
-    const statusRank = { critical: 0, warning: 1, ok: 2 } as const;
-    const direction = this.sortDirection() === 'asc' ? 1 : -1;
-    const compare = (a: ItemDto, b: ItemDto): number => {
-      switch (column) {
-        case 'name':
-          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        case 'stock':
-          return a.currentQuantity - b.currentQuantity;
-        case 'status':
-          return statusRank[this.getStockStatus(a)] - statusRank[this.getStockStatus(b)];
-        case 'cost':
-          return (a.costPrice ?? -1) - (b.costPrice ?? -1);
-      }
-    };
-
-    return items.sort((a, b) => compare(a, b) * direction);
-  });
 
   protected toggleSort(column: ItemSortColumn): void {
     if (this.sortColumn() === column) {
@@ -164,39 +117,75 @@ export class ItemListComponent implements OnInit {
       this.sortColumn.set(column);
       this.sortDirection.set('asc');
     }
-  }
 
-  constructor() {
-    this.filterForm.controls.searchTerm.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe((value) => this.searchTerm.set(value ?? ''));
+    this.reloadFromFirstPage();
   }
 
   public ngOnInit(): void {
     this.restoreState();
     this.loadInventory();
 
-    this.filterForm.valueChanges.pipe(debounceTime(200)).subscribe(() => {
+    this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
       this.saveState();
+      this.reloadFromFirstPage();
     });
   }
 
   protected loadInventory(): void {
-    this.isLoading.set(true);
+    const firstLoad = this.items().length === 0;
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
     this.connectionFailed.set(false);
-    this.inventoryService.getInventoryItems({ includeInactive: true }).subscribe({
-      next: (items) => {
-        this.items.set(items);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-      error: (err) => {
-        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
-        this.alertService.error(err.message);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-    });
+    this.loadRequest?.unsubscribe();
+
+    this.loadRequest = this.inventoryService
+      .getInventoryItemsPaged({
+        searchTerm: this.filterForm.controls.searchTerm.value?.trim() || null,
+        stockStatuses: this.selectedStatuses(),
+        sortBy: this.sortColumn(),
+        sortDirection: this.sortDirection(),
+        page: this.page(),
+        pageSize: this.pageSize(),
+      })
+      .subscribe({
+        next: (result) => {
+          this.items.set([...result.items]);
+          this.totalCount.set(result.totalCount);
+          this.facets.set(result.facets ?? {});
+          if (result.page !== this.page()) {
+            this.page.set(result.page);
+            writePageParam(this.router, this.route, result.page);
+          }
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+        },
+        error: (err) => {
+          this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
+          this.alertService.error(err.message);
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+        },
+      });
+  }
+
+  protected goToPage(page: number): void {
+    this.page.set(page);
+    writePageParam(this.router, this.route, page);
+    this.loadInventory();
+  }
+
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.saveState();
+    this.reloadFromFirstPage();
+  }
+
+  private reloadFromFirstPage(): void {
+    this.page.set(1);
+    writePageParam(this.router, this.route, 1);
+    this.loadInventory();
   }
 
   protected refresh(): void {
@@ -405,11 +394,13 @@ export class ItemListComponent implements OnInit {
         : [...selected, stockStatus],
     );
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected clearStatusSelections(): void {
     this.selectedStatuses.set([]);
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   private restoreState(): void {
@@ -424,14 +415,15 @@ export class ItemListComponent implements OnInit {
       },
       { emitEvent: false },
     );
-    this.searchTerm.set(state.searchTerm ?? '');
     this.selectedStatuses.set(state.selectedStatuses);
+    this.pageSize.set(isPageSizeOption(state.pageSize) ? (state.pageSize as number) : DEFAULT_PAGE_SIZE);
   }
 
   private saveState(): void {
     this.listState.save<ItemListState>(this.stateKey, {
       searchTerm: this.filterForm.controls.searchTerm.value ?? '',
       selectedStatuses: this.selectedStatuses(),
+      pageSize: this.pageSize(),
     });
   }
 

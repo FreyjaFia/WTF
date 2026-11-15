@@ -4,6 +4,7 @@ import { HttpErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
+  PagedResultDto,
   AddItemStockDto,
   AdjustItemStockDto,
   BulkAddIngredientsResultDto,
@@ -52,6 +53,36 @@ export class InventoryService {
 
     return this.http
       .get<ItemDto[]>(this.baseUrl, { params })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch items.')));
+  }
+
+  public getInventoryItemsPaged(query: {
+    searchTerm?: string | null;
+    stockStatuses?: string[] | null;
+    sortBy?: string | null;
+    sortDirection?: string | null;
+    page?: number;
+    pageSize?: number;
+  }): Observable<PagedResultDto<ItemDto>> {
+    let params = new HttpParams();
+
+    if (query.searchTerm) {
+      params = params.set('searchTerm', query.searchTerm);
+    }
+
+    if (query.stockStatuses?.length) {
+      params = params.set('stockStatuses', query.stockStatuses.join(','));
+    }
+
+    if (query.sortBy) {
+      params = params.set('sortBy', query.sortBy);
+      params = params.set('sortDirection', query.sortDirection ?? 'asc');
+    }
+
+    params = params.set('page', String(query.page ?? 1)).set('pageSize', String(query.pageSize ?? 25));
+
+    return this.http
+      .get<PagedResultDto<ItemDto>>(`${this.baseUrl}/paged`, { params })
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch items.')));
   }
 

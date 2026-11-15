@@ -1,6 +1,7 @@
 using MediatR;
 using System.Security.Claims;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.DTOs;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Inventory.Waste;
 using WTF.Api.Features.Items;
@@ -21,6 +22,19 @@ public static class ItemEndpoints
             {
                 var result = await sender.Send(query);
                 return Results.Ok(CostAccess.ForUser(result, user));
+            })
+            .RequireAuthorization(AppPolicies.ItemsRead);
+
+        itemGroup.MapGet("/paged",
+            async ([AsParameters] GetPagedItemsQuery query, ISender sender, ClaimsPrincipal user) =>
+            {
+                // Sorting by cost would leak the order of costs to someone who may not see them.
+                var allowed = CostAccess.CanReadCosts(user) || !string.Equals(query.SortBy, "cost", StringComparison.OrdinalIgnoreCase)
+                    ? query
+                    : query with { SortBy = null };
+                var result = await sender.Send(allowed);
+
+                return Results.Ok(result with { Items = CostAccess.ForUser(result.Items.ToList(), user) });
             })
             .RequireAuthorization(AppPolicies.ItemsRead);
 
