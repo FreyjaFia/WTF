@@ -69,8 +69,14 @@ export class OrdersApi {
   }
 
   public async withStatus(status: number): Promise<readonly Order[]> {
-    const page = await this.api.json<{ items: readonly Order[] }>('owner', 'GET', `orders/paged?status=${status}&page=1&pageSize=100`);
-    return page.items;
+    const orders: Order[] = [];
+    for (let page = 1; ; page++) {
+      const result = await this.api.json<{ items: readonly Order[]; totalCount: number }>('owner', 'GET', `orders/paged?status=${status}&page=${page}&pageSize=100`);
+      orders.push(...result.items);
+      if (orders.length >= result.totalCount || result.items.length === 0) {
+        return orders;
+      }
+    }
   }
 
   public async withStatusContaining(status: number, productId: string): Promise<readonly Order[]> {
