@@ -38,6 +38,12 @@ public static class SeniorPwdRules
     public static bool IsEligibleLine(bool productEligible, bool hasPromotion, bool isBundle) =>
         productEligible && !hasPromotion && !isBundle;
 
+    public static string NormalizeIdNumber(string? idNumber) =>
+        (idNumber ?? string.Empty).Trim().Replace(" ", string.Empty).ToUpperInvariant();
+
+    // Two spellings of one card (SC-123, sc123, SC 123) must count as the same person for the one-discount-a-day check.
+    public static string IdKey(string? idNumber) => NormalizeIdNumber(idNumber).Replace("-", string.Empty);
+
     public static bool IsAvailable(bool enabled, bool hasPermission) => enabled && hasPermission;
 
     private static decimal Round(decimal amount) => Math.Round(amount, 2, MidpointRounding.AwayFromZero);

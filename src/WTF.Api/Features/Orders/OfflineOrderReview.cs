@@ -84,7 +84,7 @@ internal static class OfflineOrderReview
 
         // A held order skips the permission check that blocks a live order, so a cashier without it is flagged here.
         if (httpContextAccessor is not null
-            && !PermissionChecks.Has(httpContextAccessor.HttpContext?.User, SeniorPwdOrders.ApplyPermission))
+            && !PermissionChecks.Has(httpContextAccessor.HttpContext?.User, PermissionKeys.OrdersSeniorPwdApply))
         {
             reasons.Add("The Senior/PWD discount was submitted by a user without the permission to apply it.");
         }

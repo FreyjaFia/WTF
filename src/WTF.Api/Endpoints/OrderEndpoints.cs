@@ -15,6 +15,8 @@ public record SyncOfflineOrdersRequest(List<CreateOrderCommand> Orders);
 
 public static class OrderEndpoints
 {
+    public const string IdCheckRateLimitPolicy = "senior-pwd-id-check";
+
     public static IEndpointRouteBuilder MapOrders(this IEndpointRouteBuilder app)
     {
         var orderGroup = app.MapGroup("/api/orders")
@@ -62,12 +64,14 @@ public static class OrderEndpoints
         // POST /api/orders/senior-pwd/id-check - Has this ID already been given the Senior/PWD discount today? (soft warning)
         orderGroup.MapPost("/senior-pwd/id-check",
             async (SeniorPwdIdCheckQuery query, ISender sender) => Results.Ok(await sender.Send(query)))
-            .RequireAuthorization(AppPolicies.SeniorPwdApply);
+            .RequireAuthorization(AppPolicies.SeniorPwdApply)
+            .RequireRateLimiting(IdCheckRateLimitPolicy);
 
         // GET /api/orders/senior-pwd/id-check - Kept for cached older clients; the ID number belongs in a POST body, not a URL
         orderGroup.MapGet("/senior-pwd/id-check",
             async (string idNumber, ISender sender) => Results.Ok(await sender.Send(new SeniorPwdIdCheckQuery(idNumber))))
-            .RequireAuthorization(AppPolicies.SeniorPwdApply);
+            .RequireAuthorization(AppPolicies.SeniorPwdApply)
+            .RequireRateLimiting(IdCheckRateLimitPolicy);
 
         // GET /api/orders/{id} - Get order by ID
         orderGroup.MapGet("/{id:guid}",

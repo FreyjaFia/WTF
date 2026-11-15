@@ -8,6 +8,12 @@ public static class RequestTimeZone
         return Resolve(timeZoneId);
     }
 
+    public static DateTime StartOfTodayUtc(TimeZoneInfo timeZone, DateTime utcNow)
+    {
+        var localToday = TimeZoneInfo.ConvertTimeFromUtc(utcNow, timeZone).Date;
+        return TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localToday, DateTimeKind.Unspecified), timeZone);
+    }
+
     public static TimeZoneInfo Resolve(string? timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(timeZoneId))

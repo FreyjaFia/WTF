@@ -229,6 +229,18 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 
+    options.AddPolicy(OrderEndpoints.IdCheckRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.Identity?.IsAuthenticated == true
+                ? $"user:{context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value}"
+                : context.Connection.RemoteIpAddress?.ToString() ?? "local",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30 * rateLimitMultiplier,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
     options.AddPolicy("loyalty-policy", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",

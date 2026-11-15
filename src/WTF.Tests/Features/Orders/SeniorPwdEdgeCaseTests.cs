@@ -360,18 +360,15 @@ public class SeniorPwdEdgeCaseTests
     }
 
     [Fact]
-    public async Task Create_TheSameIdForTwoPersonsOnOneOrder_IsAllowed_TheRegisterOnlyWarns()
+    public async Task Create_TheSameIdForTwoPersonsOnOneOrder_IsRefused()
     {
         await ConfigureShopAsync();
         var latte = _data.AddProduct("Latte", 100m);
         var cake = _data.AddProduct("Cake", 50m);
 
-        var dto = await CreateHandler().Handle(
+        await Should.ThrowAsync<InvalidOperationException>(CreateHandler().Handle(
             Sale([Covered(latte, 1, 0), Covered(cake, 1, 1)], [Person("SC-1", "Lola"), Person("SC-1", "Lola Again")]),
-            CancellationToken.None);
-
-        dto.SeniorPwdPersons!.Count.ShouldBe(2);
-        dto.TotalAmount.ShouldBe(120m);
+            CancellationToken.None));
     }
 
     [Fact]

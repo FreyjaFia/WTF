@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
@@ -12,9 +13,8 @@ namespace WTF.Api.Features.Orders;
 
 internal sealed class SeniorPwdOrders
 {
-    public const string ApplyPermission = "orders.seniorpwd.apply";
+    public const int MaxIdLength = 50;
 
-    private const int MaxIdLength = 50;
     private const int MaxNameLength = 100;
 
     private readonly List<SeniorPwdPersonRequestDto> _persons;
@@ -75,14 +75,19 @@ internal sealed class SeniorPwdOrders
                 throw new InvalidOperationException("The Senior/PWD discount is turned off for this shop.");
             }
 
-            if (!PermissionChecks.Has(httpContextAccessor.HttpContext?.User, ApplyPermission))
+            if (!PermissionChecks.Has(httpContextAccessor.HttpContext?.User, PermissionKeys.OrdersSeniorPwdApply))
             {
-                throw new InvalidOperationException("You are not allowed to apply the Senior/PWD discount.");
+                throw new ForbiddenActionException("You are not allowed to apply the Senior/PWD discount.");
             }
 
             foreach (var person in cleaned)
             {
                 Validate(person, isCustomerLinkOrder);
+            }
+
+            if (cleaned.Select(p => SeniorPwdRules.IdKey(p.IdNumber)).Distinct().Count() != cleaned.Count)
+            {
+                throw new InvalidOperationException("The same ID number cannot be used twice on one order.");
             }
         }
 
@@ -115,7 +120,7 @@ internal sealed class SeniorPwdOrders
     public static bool CanSeeFullId(IHttpContextAccessor? httpContextAccessor)
     {
         var user = httpContextAccessor?.HttpContext?.User;
-        return PermissionChecks.HasAny(user, [ApplyPermission, "orders.override"]);
+        return PermissionChecks.HasAny(user, [PermissionKeys.OrdersSeniorPwdApply, PermissionKeys.OrdersOverride]);
     }
 
     public static object AuditValues(OrderSeniorPwdDiscount row) => new
@@ -242,7 +247,7 @@ internal sealed class SeniorPwdOrders
 
     private static SeniorPwdPersonRequestDto Clean(SeniorPwdPersonRequestDto person, bool held)
     {
-        var idNumber = (person.IdNumber ?? string.Empty).Trim();
+        var idNumber = SeniorPwdRules.NormalizeIdNumber(person.IdNumber);
         var name = (person.CustomerName ?? string.Empty).Trim();
         if (held)
         {

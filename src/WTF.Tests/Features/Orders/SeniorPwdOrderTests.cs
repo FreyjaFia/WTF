@@ -161,7 +161,7 @@ public class SeniorPwdOrderTests
         await ConfigureShopAsync();
         var latte = _data.AddProduct("Latte", 100m);
 
-        var ex = await Should.ThrowAsync<InvalidOperationException>(
+        var ex = await Should.ThrowAsync<ForbiddenActionException>(
             CreateHandler(AppRoles.AdminViewer).Handle(Sale([Covered(latte)], [Person()]), CancellationToken.None));
 
         ex.Message.ShouldContain("not allowed");
@@ -379,6 +379,61 @@ public class SeniorPwdOrderTests
         }
 
         (await handler.Handle(new SeniorPwdIdCheckQuery("SC-77"), CancellationToken.None)).UsedToday.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Create_StoresTheIdTrimmedUpperCaseWithoutSpaces()
+    {
+        await ConfigureShopAsync();
+        var latte = _data.AddProduct("Latte", 100m);
+
+        var dto = await CreateHandler().Handle(Sale([Covered(latte)], [Person("  sc 123 456 ")]), CancellationToken.None);
+
+        dto.SeniorPwdPersons.ShouldHaveSingleItem().IdNumber.ShouldBe("SC123456");
+    }
+
+    [Fact]
+    public async Task Create_SameIdTwiceOnOneOrder_IsRefusedEvenWhenSpelledDifferently()
+    {
+        await ConfigureShopAsync();
+        var latte = _data.AddProduct("Latte", 100m);
+        var mocha = _data.AddProduct("Mocha", 100m);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(CreateHandler().Handle(
+            Sale([Covered(latte, person: 0), Covered(mocha, person: 1)], [Person("SC-77"), Person("sc 77", "Lolo Ben")]),
+            CancellationToken.None));
+
+        ex.Message.ShouldContain("same ID");
+    }
+
+    [Fact]
+    public async Task IdCheck_MatchesAnotherSpellingOfTheSameId()
+    {
+        await ConfigureShopAsync();
+        var latte = _data.AddProduct("Latte", 100m);
+        await CreateHandler().Handle(Sale([Covered(latte)], [Person("SC-77")]), CancellationToken.None);
+        var handler = new SeniorPwdIdCheckHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Cashier));
+
+        (await handler.Handle(new SeniorPwdIdCheckQuery("sc 77"), CancellationToken.None)).UsedToday.ShouldBeTrue();
+        (await handler.Handle(new SeniorPwdIdCheckQuery("SC77"), CancellationToken.None)).UsedToday.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task IdCheck_TooLongId_IsRefused()
+    {
+        var handler = new SeniorPwdIdCheckHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Cashier));
+
+        await Should.ThrowAsync<InvalidOperationException>(
+            handler.Handle(new SeniorPwdIdCheckQuery(new string('A', 51)), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task IdCheck_WithoutThePermission_IsForbidden()
+    {
+        var handler = new SeniorPwdIdCheckHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.AdminViewer));
+
+        await Should.ThrowAsync<ForbiddenActionException>(
+            handler.Handle(new SeniorPwdIdCheckQuery("SC-77"), CancellationToken.None));
     }
 
     [Fact]

@@ -9,8 +9,8 @@ public static class SystemRolePermissions
         [
             "orders.read",
             "orders.write",
-            "orders.override",
-            "orders.seniorpwd.apply",
+            PermissionKeys.OrdersOverride,
+            PermissionKeys.OrdersSeniorPwdApply,
             "chat.read",
             "chat.write",
             "orderlinks.manage",
@@ -66,7 +66,7 @@ public static class SystemRolePermissions
         [
             "orders.read",
             "orders.write",
-            "orders.seniorpwd.apply",
+            PermissionKeys.OrdersSeniorPwdApply,
             "chat.read",
             "chat.write",
             "orderlinks.manage",

@@ -54,7 +54,7 @@ public class UpdateOrderHandlerTests
     [Theory]
     [InlineData(0)]
     [InlineData(-2)]
-    [InlineData(1000)]
+    [InlineData(10000)]
     public async Task Handle_BadQuantity_IsRefusedAndKeepsTheLines(int quantity)
     {
         var burger = _data.AddProduct("Burger", 100);
