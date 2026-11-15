@@ -24,6 +24,17 @@ public static class CustomerEndpoints
             })
             .RequireAuthorization(AppPolicies.CustomersRead);
 
+        // GET /api/customers/paged - One page of customers, filtered, sorted and counted on the server
+        customerGroup.MapGet("/paged",
+            async (
+                [AsParameters] GetPagedCustomersQuery query,
+                ISender sender) =>
+            {
+                var result = await sender.Send(query);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.CustomersRead);
+
         // GET /api/customers/{id} - Get customer by ID
         customerGroup.MapGet("/{id:guid}",
             async (Guid id, ISender sender) =>

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AlertService, AuthService, CustomerService, ListStateService } from '@core/services';
-import { CustomerDto } from '@shared/models';
+import { CustomerDto, PagedResultDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -39,6 +39,13 @@ const DATA = [
 
 const ids = (list: CustomerDto[]) => list.map((x) => x.id);
 
+const paged = (
+  items: CustomerDto[],
+  page = 1,
+  totalCount = items.length,
+  facets?: Record<string, number>,
+): PagedResultDto<CustomerDto> => ({ items, page, pageSize: 25, totalCount, facets });
+
 describe('CustomerListComponent', () => {
   let fixture: ComponentFixture<CustomerListComponent>;
   let c: Internals;
@@ -46,15 +53,22 @@ describe('CustomerListComponent', () => {
   let service: Record<string, ReturnType<typeof vi.fn>>;
   let listState: ReturnType<typeof fakeListState>;
   let router: Router;
+  const lastQuery = () => service['getCustomersPaged'].mock.lastCall![0];
 
   function setup(
-    opts: { saved?: unknown; canWrite?: boolean; getCustomers?: ReturnType<typeof vi.fn> } = {},
+    opts: {
+      saved?: unknown;
+      canWrite?: boolean;
+      getCustomersPaged?: ReturnType<typeof vi.fn>;
+    } = {},
   ) {
     alert = fakeAlert();
     listState = fakeListState(opts.saved);
     const auth = { canWriteCustomers: vi.fn(() => opts.canWrite ?? true) };
     service = {
-      getCustomers: opts.getCustomers ?? vi.fn(() => of(DATA)),
+      getCustomersPaged:
+        opts.getCustomersPaged ??
+        vi.fn(() => of(paged([DATA[1], DATA[0]], 1, 2, { active: 2, inactive: 1 }))),
       deleteCustomer: vi.fn(() => of(void 0)),
       restoreCustomer: vi.fn(() => of(void 0)),
     };
@@ -69,6 +83,7 @@ describe('CustomerListComponent', () => {
     });
     router = TestBed.inject(Router);
     vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(CustomerListComponent);
     c = internals(fixture.componentInstance);
     fixture.detectChanges();
@@ -82,21 +97,31 @@ describe('CustomerListComponent', () => {
     vi.useRealTimers();
   });
 
-  it('loads customers and shows active ones sorted by name by default', () => {
+  it('loads the first page for active customers sorted by name by default', () => {
     setup();
-    expect(service['getCustomers']).toHaveBeenCalledTimes(1);
+    expect(service['getCustomersPaged']).toHaveBeenCalledTimes(1);
+    expect(lastQuery()).toEqual(
+      expect.objectContaining({
+        page: 1,
+        pageSize: 25,
+        isActive: true,
+        sortBy: 'name',
+        sortDirection: 'asc',
+      }),
+    );
     expect(c.isLoading()).toBe(false);
-    expect(ids(c.sortedCustomers())).toEqual(['2', '1']);
+    expect(ids(c.customers())).toEqual(['2', '1']);
     expect(c.statusCounts()).toEqual({ active: 2, inactive: 1 });
     expect(c.statusOptions().map((o: { count: number }) => o.count)).toEqual([2, 1]);
   });
 
-  it('renders rows and the Add button when allowed', () => {
+  it('renders rows, the Add button and the pagination bar when allowed', () => {
     setup();
     const text = (fixture.nativeElement as HTMLElement).textContent;
     expect(text).toContain('Alice Smith');
     expect(text).toContain('Add Customer');
-    expect(text).not.toContain('Carl Gone');
+    expect(text).toContain('1 – 2 of 2');
+    expect(fixture.nativeElement.querySelector('app-pagination nav')).not.toBeNull();
   });
 
   it('hides write UI without permission', () => {
@@ -107,113 +132,123 @@ describe('CustomerListComponent', () => {
   });
 
   it('shows the empty state when nothing matches', () => {
-    setup({ getCustomers: vi.fn(() => of([])) });
+    setup({ getCustomersPaged: vi.fn(() => of(paged([]))) });
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('No customers found');
   });
 
   it('alerts on load error and clears loading flags', () => {
-    setup({ getCustomers: vi.fn(() => throwError(() => new Error('boom'))) });
+    setup({ getCustomersPaged: vi.fn(() => throwError(() => new Error('boom'))) });
     expect(alert.error).toHaveBeenCalledWith('boom');
     expect(c.isLoading()).toBe(false);
     expect(c.isRefreshing()).toBe(false);
   });
 
   it('shows the spinner while loading', () => {
-    const subject = new Subject<CustomerDto[]>();
-    setup({ getCustomers: vi.fn(() => subject) });
+    const subject = new Subject<PagedResultDto<CustomerDto>>();
+    setup({ getCustomersPaged: vi.fn(() => subject) });
     expect(c.isLoading()).toBe(true);
     expect(fixture.nativeElement.querySelector('.loading-spinner')).not.toBeNull();
-    subject.next(DATA);
+    subject.next(paged(DATA));
     expect(c.isLoading()).toBe(false);
   });
 
   it('refresh reloads and clears the refreshing flag', () => {
     setup();
     c.refresh();
-    expect(service['getCustomers']).toHaveBeenCalledTimes(2);
+    expect(service['getCustomersPaged']).toHaveBeenCalledTimes(2);
     expect(c.isRefreshing()).toBe(false);
   });
 
-  it('restores persisted state', () => {
+  it('restores persisted state, including the rows per page', () => {
     setup({
       saved: {
         searchTerm: 'bob',
         selectedStatuses: ['inactive'],
         sortColumn: 'address',
         sortDirection: 'desc',
+        pageSize: 50,
       },
     });
     expect(c.filterForm.controls.searchTerm.value).toBe('bob');
     expect(c.selectedStatuses()).toEqual(['inactive']);
     expect(c.sortColumn()).toBe('address');
     expect(c.sortDirection()).toBe('desc');
+    expect(lastQuery()).toEqual(expect.objectContaining({ pageSize: 50, isActive: false }));
+  });
+
+  describe('paging', () => {
+    it('goes to a page, keeps the filters and writes the page to the address', () => {
+      setup({ getCustomersPaged: vi.fn((q: { page: number }) => of(paged(DATA, q.page, 120))) });
+      c.goToPage(3);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 3, isActive: true }));
+      expect(vi.mocked(router.navigate).mock.lastCall![1]!.queryParams).toEqual({ page: 3 });
+    });
+
+    it('a new page size, search, status or sort returns to page one', () => {
+      setup({ getCustomersPaged: vi.fn((q: { page: number }) => of(paged(DATA, q.page, 120))) });
+      c.goToPage(3);
+      c.changePageSize(50);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, pageSize: 50 }));
+      expect(listState.save).toHaveBeenLastCalledWith(
+        'management:customer-list',
+        expect.objectContaining({ pageSize: 50 }),
+      );
+      c.goToPage(2);
+      c.toggleSort('address');
+      expect(lastQuery().page).toBe(1);
+      c.goToPage(2);
+      c.toggleStatusSelection('inactive');
+      expect(lastQuery().page).toBe(1);
+      c.goToPage(2);
+      c.filterForm.controls.searchTerm.setValue('x');
+      fixture.destroy();
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      expect(lastQuery()).toEqual(expect.objectContaining({ page: 1, searchTerm: 'x' }));
+    });
+
+    it('follows the page the server says it returned', () => {
+      setup({ getCustomersPaged: vi.fn(() => of(paged(DATA, 2, 30))) });
+      expect(c.page()).toBe(2);
+    });
   });
 
   describe('filtering', () => {
-    it('search is debounced, case-insensitive, matches full name, and persists state', () => {
+    it('search is debounced and persists state', () => {
       setup();
+      service['getCustomersPaged'].mockClear();
       c.filterForm.controls.searchTerm.setValue('ALICE s');
       fixture.destroy();
       fixture.detectChanges();
       vi.advanceTimersByTime(299);
-      expect(c.customers().length).toBe(2);
+      expect(service['getCustomersPaged']).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1);
-      expect(ids(c.customers())).toEqual(['2']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ searchTerm: 'ALICE s', page: 1 }));
       expect(listState.save).toHaveBeenCalledWith(
         'management:customer-list',
         expect.objectContaining({ searchTerm: 'ALICE s' }),
       );
     });
 
-    it('finds a customer by contact number whatever the spacing or dashes', () => {
-      setup({
-        getCustomers: vi.fn(() =>
-          of([
-            { ...customer('1', 'Bob', 'Zed', true), contactNumber: '0917 123 4567' },
-            { ...customer('2', 'Alice', 'Smith', true), contactNumber: '(02) 8555-0000' },
-            customer('3', 'Carl', 'Gone', true),
-          ]),
-        ),
-      });
-      c.filterForm.controls.searchTerm.setValue('0917-123');
-      fixture.destroy();
-      fixture.detectChanges();
-      vi.advanceTimersByTime(300);
-      expect(ids(c.customers())).toEqual(['1']);
-
-      c.filterForm.controls.searchTerm.setValue('85550');
-      vi.advanceTimersByTime(300);
-      expect(ids(c.customers())).toEqual(['2']);
-    });
-
-    it('whitespace-only search does not filter', () => {
-      setup();
-      c.filterForm.controls.searchTerm.setValue('   ');
-      fixture.destroy();
-      fixture.detectChanges();
-      vi.advanceTimersByTime(300);
-      expect(c.customers().length).toBe(2);
-    });
-
-    it('toggling statuses filters and persists', () => {
+    it('toggling statuses asks the server and persists', () => {
       setup();
       c.toggleStatusSelection('inactive');
-      expect(c.customers().length).toBe(3);
+      expect(lastQuery().isActive).toBeUndefined();
       c.toggleStatusSelection('active');
-      expect(ids(c.customers())).toEqual(['3']);
+      expect(lastQuery().isActive).toBe(false);
       expect(c.isStatusSelected('inactive')).toBe(true);
       expect(c.isStatusSelected('active')).toBe(false);
       expect(listState.save).toHaveBeenCalledTimes(2);
     });
 
-    it('clearing statuses shows everything', () => {
+    it('clearing statuses asks for everything', () => {
       setup();
       c.clearStatusSelections();
-      expect(c.customers().length).toBe(3);
+      expect(lastQuery().isActive).toBeUndefined();
       c.onStatusFilterChange(['active']);
-      expect(c.customers().length).toBe(2);
+      expect(lastQuery().isActive).toBe(true);
       c.onStatusFilterReset();
-      expect(c.customers().length).toBe(3);
+      expect(lastQuery().isActive).toBeUndefined();
     });
 
     it('opens and closes the filters drawer', () => {
@@ -226,31 +261,19 @@ describe('CustomerListComponent', () => {
   });
 
   describe('sorting', () => {
-    it('toggles direction on the same column and resets on a new one', () => {
+    it('toggles direction on the same column and resets on a new one, on the server', () => {
       setup();
       c.toggleSort('name');
       expect(c.sortDirection()).toBe('desc');
-      expect(ids(c.sortedCustomers())).toEqual(['1', '2']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'name', sortDirection: 'desc' }));
       c.toggleSort('address');
       expect(c.sortColumn()).toBe('address');
       expect(c.sortDirection()).toBe('asc');
-      expect(ids(c.sortedCustomers())).toEqual(['2', '1']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'address', sortDirection: 'asc' }));
       expect(listState.save).toHaveBeenLastCalledWith(
         'management:customer-list',
         expect.objectContaining({ sortColumn: 'address', sortDirection: 'asc' }),
       );
-    });
-
-    it('handles missing addresses and no sort column', () => {
-      setup({
-        getCustomers: vi.fn(() =>
-          of([customer('1', 'A', 'A', true, ''), customer('2', 'B', 'B', true, 'x')]),
-        ),
-      });
-      c.sortColumn.set('address');
-      expect(ids(c.sortedCustomers())).toEqual(['1', '2']);
-      c.sortColumn.set(null);
-      expect(c.sortedCustomers().length).toBe(2);
     });
   });
 
@@ -289,7 +312,7 @@ describe('CustomerListComponent', () => {
       expect(service['deleteCustomer']).toHaveBeenCalledWith('1');
       expect(c.showDeleteModal()).toBe(false);
       expect(c.isDeleting()).toBe(false);
-      expect(service['getCustomers']).toHaveBeenCalledTimes(2);
+      expect(service['getCustomersPaged']).toHaveBeenCalledTimes(2);
     });
 
     it('does nothing when confirming with no selection', () => {
@@ -339,7 +362,7 @@ describe('CustomerListComponent', () => {
       expect(service['restoreCustomer']).toHaveBeenCalledWith('3');
       expect(alert.successRestored).toHaveBeenCalledWith('Customer');
       expect(c.showRestoreModal()).toBe(false);
-      expect(service['getCustomers']).toHaveBeenCalledTimes(2);
+      expect(service['getCustomersPaged']).toHaveBeenCalledTimes(2);
     });
 
     it('cancel closes the modal', () => {
