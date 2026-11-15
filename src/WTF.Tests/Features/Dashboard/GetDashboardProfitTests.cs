@@ -15,7 +15,7 @@ public class GetDashboardProfitTests
     private readonly string _dbName = TestDb.NewName();
 
     private GetDashboardHandler Handler(string role = AppRoles.Admin) =>
-        new(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), role, "Asia/Manila"));
+        new(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), role, "Asia/Manila"), TestFakes.Features);
 
     private static DateTime YesterdayNoonUtc() =>
         TimeZoneInfo.ConvertTimeToUtc(

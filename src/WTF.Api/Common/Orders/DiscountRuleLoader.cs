@@ -16,15 +16,21 @@ internal static class DiscountRuleLoader
     // The discounted-product rules that are on at that moment (dates, weekdays and hours in the shop's time zone), with
     // how many more items each promotion with a usage limit may still discount. exceptOrderId leaves out the uses of an
     // order that is being saved again.
+    private static Task<bool> HasPromotionsAsync(WTFDbContext db, ITenantFeatures? tenantFeatures, CancellationToken cancellationToken) =>
+        tenantFeatures is null
+            ? TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken)
+            : tenantFeatures.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken);
+
     public static async Task<Loaded> LoadAsync(
         WTFDbContext db,
         DateTime referenceUtc,
         TimeZoneInfo timeZone,
         Guid? exceptOrderId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ITenantFeatures? tenantFeatures = null)
     {
         // A plan without promotions sells at the normal price; the sale still saves.
-        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
+        if (!await HasPromotionsAsync(db, tenantFeatures, cancellationToken))
         {
             return new Loaded([], new DiscountBudget(new Dictionary<Guid, int>(), new Dictionary<Guid, int>()));
         }

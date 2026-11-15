@@ -15,7 +15,7 @@ public class GetDashboardInsightsTests
     private readonly string _dbName = TestDb.NewName();
 
     private GetDashboardHandler Handler() =>
-        new(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), timeZone: "Asia/Manila"));
+        new(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), timeZone: "Asia/Manila"), TestFakes.Features);
 
     private static DateTime LocalToday() => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Manila).Date;
 

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Services;
 using WTF.Calculations.Branding;
@@ -196,11 +197,11 @@ public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, S
 
 public record GetPublicBrandQuery(string Token) : IRequest<PublicBrandDto?>;
 
-public class GetPublicBrandHandler(WTFDbContext db, IHttpContextAccessor http) : IRequestHandler<GetPublicBrandQuery, PublicBrandDto?>
+public class GetPublicBrandHandler(WTFDbContext db, IHttpContextAccessor http, ITenantFeatures? tenantFeatures = null) : IRequestHandler<GetPublicBrandQuery, PublicBrandDto?>
 {
     public async Task<PublicBrandDto?> Handle(GetPublicBrandQuery request, CancellationToken cancellationToken)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken);
+        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, tenantFeatures: tenantFeatures);
         if (access is null)
         {
             return null;

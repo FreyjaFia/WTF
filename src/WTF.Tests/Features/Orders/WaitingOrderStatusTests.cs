@@ -310,7 +310,7 @@ public class WaitingOrderStatusTests
         var waiting = AddWaiting(createdAt: now);
         _data.AddLine(waiting, burger, 5);
 
-        var dto = await new GetDashboardHandler(_data.Open(), TestRequest.As(_userId, timeZone: "UTC"))
+        var dto = await new GetDashboardHandler(_data.Open(), TestRequest.As(_userId, timeZone: "UTC"), TestFakes.Features)
             .Handle(new GetDashboardQuery("last30days", null, null), CancellationToken.None);
 
         dto.RecentOrders.Select(o => o.Id).ShouldBe([done]);

@@ -14,7 +14,7 @@ public interface IStockAlertService
     Task EvaluateAsync(IEnumerable<Guid> itemIds, CancellationToken cancellationToken);
 }
 
-public class StockAlertService(WTFDbContext db, INotificationService notifications) : IStockAlertService
+public class StockAlertService(WTFDbContext db, INotificationService notifications, ITenantFeatures tenantFeatures) : IStockAlertService
 {
     private static readonly string[] DefaultRecipientRoles = SystemRolePermissions.RolesWith("stock.write");
 
@@ -22,7 +22,7 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
     // with one guarded UPDATE, so two registers that cross the level together alert once.
     public async Task EvaluateAsync(IEnumerable<Guid> itemIds, CancellationToken cancellationToken)
     {
-        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken))
+        if (!await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken))
         {
             return;
         }

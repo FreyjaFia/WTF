@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Inventory.DTOs;
 using WTF.Calculations.Inventory;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Inventory;
@@ -11,10 +13,15 @@ public record GetPosStockLimitsQuery : IRequest<PosStockLimitsDto>;
 // What the register needs to tell a cashier, before payment, that a cart cannot be sold: only the items that block sales
 // when they run short (active, "allow sales below zero" off), their balances and which products take them. Everything else
 // about stock stays with the stock roles.
-public class GetPosStockLimitsHandler(WTFDbContext db) : IRequestHandler<GetPosStockLimitsQuery, PosStockLimitsDto>
+public class GetPosStockLimitsHandler(WTFDbContext db, ITenantFeatures tenantFeatures) : IRequestHandler<GetPosStockLimitsQuery, PosStockLimitsDto>
 {
     public async Task<PosStockLimitsDto> Handle(GetPosStockLimitsQuery request, CancellationToken cancellationToken)
     {
+        if (!await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken))
+        {
+            return new PosStockLimitsDto([], [], DateTime.UtcNow, []);
+        }
+
         var items = await db.Items
             .AsNoTracking()
             .Where(item => item.IsActive && !item.AllowNegativeStock)

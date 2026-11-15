@@ -26,16 +26,14 @@ public interface IOrderStockService
         Guid orderId, Guid userId, IReadOnlySet<Guid> notReturnedLineIds, CancellationToken cancellationToken);
 }
 
-public class OrderStockService(WTFDbContext db, IAuditService auditService, IStockAlertService stockAlerts, ITenantFeatures? tenantFeatures = null) : IOrderStockService
+public class OrderStockService(WTFDbContext db, IAuditService auditService, IStockAlertService stockAlerts, ITenantFeatures tenantFeatures) : IOrderStockService
 {
     private const string NotResaleableNote = "Refunded, not resaleable";
     private const string BelowZeroNote = "Balance went below zero";
 
     // A plan without inventory keeps selling: the order saves, no stock moves and balances stay where they were.
-    private async Task<bool> IsInventoryOnAsync(CancellationToken cancellationToken) =>
-        tenantFeatures is null
-            ? await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken)
-            : await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken);
+    private Task<bool> IsInventoryOnAsync(CancellationToken cancellationToken) =>
+        tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken);
 
     public async Task<StockDeductionResult> DeductForOrderAsync(
         Guid orderId, Guid userId, StockDeductionOptions options, CancellationToken cancellationToken)

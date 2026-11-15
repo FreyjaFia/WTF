@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.DTOs;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
@@ -16,7 +17,7 @@ public record GetPublicOrderQuery(string Token, Guid OrderId) : IRequest<PublicO
 /// My orders. A customer sees the orders they placed through any of their links (so a regenerated link keeps the
 /// history), never POS orders and never another customer's orders.
 /// </summary>
-public class GetPublicOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null)
+public class GetPublicOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null, ITenantFeatures? tenantFeatures = null)
     : IRequestHandler<GetPublicOrdersQuery, PagedResultDto<PublicOrderDto>?>,
       IRequestHandler<GetPublicOrderQuery, PublicOrderDto?>
 {
@@ -25,7 +26,7 @@ public class GetPublicOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpC
     public async Task<PagedResultDto<PublicOrderDto>?> Handle(
         GetPublicOrdersQuery request, CancellationToken cancellationToken)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken);
+        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, tenantFeatures: tenantFeatures);
         if (access == null)
         {
             return null;
@@ -52,7 +53,7 @@ public class GetPublicOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpC
 
     public async Task<PublicOrderDto?> Handle(GetPublicOrderQuery request, CancellationToken cancellationToken)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken);
+        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, tenantFeatures: tenantFeatures);
         if (access == null)
         {
             return null;

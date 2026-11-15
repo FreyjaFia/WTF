@@ -128,7 +128,7 @@ public class PlanGatingDatabaseTests
         await using (var db = ShopContext(database))
         {
             withPromotions = await Handler(db, user.Id).Handle(Sale(latte.Id), CancellationToken.None);
-            (await new GetActiveDiscountedProductPromotionsHandler(db, accessor)
+            (await new GetActiveDiscountedProductPromotionsHandler(db, accessor, TestFakes.Features)
                 .Handle(new GetActiveDiscountedProductPromotionsQuery(null, false), CancellationToken.None)).Count.ShouldBe(1);
         }
 
@@ -139,9 +139,9 @@ public class PlanGatingDatabaseTests
         {
             var plain = await Handler(db, user.Id).Handle(Sale(latte.Id), CancellationToken.None);
             plain.TotalAmount.ShouldBe(150m);
-            (await new GetActiveDiscountedProductPromotionsHandler(db, accessor)
+            (await new GetActiveDiscountedProductPromotionsHandler(db, accessor, TestFakes.Features)
                 .Handle(new GetActiveDiscountedProductPromotionsQuery(null, false), CancellationToken.None)).ShouldBeEmpty();
-            var bundles = await new GetPosBundlesHandler(db, accessor).Handle(new GetPosBundlesQuery(), CancellationToken.None);
+            var bundles = await new GetPosBundlesHandler(db, accessor, TestFakes.Features).Handle(new GetPosBundlesQuery(), CancellationToken.None);
             bundles.FixedBundles.ShouldBeEmpty();
             bundles.MixMatch.ShouldBeEmpty();
 
@@ -258,7 +258,7 @@ public class PlanGatingDatabaseTests
         await SetPlanAsync(database, "inventory");
         await using (var db = ShopContext(database))
         {
-            var dto = await new GetDashboardHandler(db, accessor).Handle(new GetDashboardQuery("today", null, null), CancellationToken.None);
+            var dto = await new GetDashboardHandler(db, accessor, TestFakes.Features).Handle(new GetDashboardQuery("today", null, null), CancellationToken.None);
             dto.Insights!.OutOfStockCount.ShouldBe(1);
             dto.Profit.ShouldNotBeNull();
         }
@@ -266,10 +266,37 @@ public class PlanGatingDatabaseTests
         await SetPlanAsync(database, string.Empty);
         await using (var db = ShopContext(database))
         {
-            var dto = await new GetDashboardHandler(db, accessor).Handle(new GetDashboardQuery("today", null, null), CancellationToken.None);
+            var dto = await new GetDashboardHandler(db, accessor, TestFakes.Features).Handle(new GetDashboardQuery("today", null, null), CancellationToken.None);
             dto.Insights!.OutOfStockCount.ShouldBe(0);
             dto.Insights.LowStockCount.ShouldBe(0);
             dto.Profit.ShouldBeNull();
+        }
+    }
+
+    [SqlFact]
+    public async Task TheRegisterStockLimits_AreEmptyWithoutInventory()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        var user = await SqlSeed.UserAsync(database);
+        await using (var seed = database.CreateContext())
+        {
+            seed.Items.Add(new Item { Id = Guid.NewGuid(), Name = "Cups", UnitName = "pc", CurrentQuantity = 3m, AllowNegativeStock = false, IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id });
+            await seed.SaveChangesAsync();
+        }
+
+        await SetPlanAsync(database, "inventory");
+        await using (var db = ShopContext(database))
+        {
+            var limits = await new GetPosStockLimitsHandler(db, TestFakes.Features).Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
+            limits.Items.Single().Name.ShouldBe("Cups");
+        }
+
+        await SetPlanAsync(database, string.Empty);
+        await using (var db = ShopContext(database))
+        {
+            var limits = await new GetPosStockLimitsHandler(db, TestFakes.Features).Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
+            limits.Items.ShouldBeEmpty();
+            limits.Links.ShouldBeEmpty();
         }
     }
 

@@ -243,7 +243,7 @@ public class SizeAmountTests
         var line = _data.AddLine(order, _latte, 2);
         _data.AddLine(order, _large, 1, parentId: line);
 
-        await new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)))
+        await new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)), TestFakes.Features)
             .DeductForOrderAsync(order, _userId, new StockDeductionOptions(), CancellationToken.None);
 
         StockSeed.Balance(_db, _milk).ShouldBe(4400m);
@@ -256,7 +256,7 @@ public class SizeAmountTests
         var order = _data.AddOrder(WTF.Api.Features.Orders.Enums.OrderStatusEnum.Completed);
         _data.AddLine(order, _latte, 2);
 
-        await new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)))
+        await new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)), TestFakes.Features)
             .DeductForOrderAsync(order, _userId, new StockDeductionOptions(), CancellationToken.None);
 
         StockSeed.Balance(_db, _milk).ShouldBe(4600m);
@@ -268,7 +268,7 @@ public class SizeAmountTests
         var blocking = StockSeed.Item(_db, "Blocking Cup", 5m, allowNegative: false);
         await Save(_latte, Line(_milk, 200m), Line(blocking, 1m, new ProductSizeAmountInputDto(_large, 2m)));
 
-        var result = await new GetPosStockLimitsHandler(TestDb.Create(_db)).Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
+        var result = await new GetPosStockLimitsHandler(TestDb.Create(_db), TestFakes.Features).Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
 
         var amount = result.SizeAmounts!.Single();
         amount.ItemId.ShouldBe(blocking);

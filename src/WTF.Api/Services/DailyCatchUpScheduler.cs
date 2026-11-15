@@ -101,11 +101,11 @@ public abstract class DailyCatchUpScheduler(IServiceScopeFactory scopeFactory, I
             try
             {
                 using var scope = scopeFactory.CreateScope();
-                scope.ServiceProvider.GetService<WTFDbContext>()?.UseTenant(tenantId);
+                var tenantDb = scope.ServiceProvider.GetRequiredService<WTFDbContext>();
+                tenantDb.UseTenant(tenantId);
 
                 if (RequiredFeature is not null
-                    && scope.ServiceProvider.GetService<WTFDbContext>() is { } planDb
-                    && !await TenantPlanLookup.HasFeatureAsync(planDb, RequiredFeature, stoppingToken))
+                    && !await scope.ServiceProvider.GetRequiredService<ITenantFeatures>().HasFeatureAsync(tenantDb, RequiredFeature, stoppingToken))
                 {
                     continue;
                 }

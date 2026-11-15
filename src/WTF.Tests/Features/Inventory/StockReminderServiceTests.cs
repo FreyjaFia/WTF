@@ -78,7 +78,7 @@ public class StockReminderServiceTests
             await db.SaveChangesAsync();
         }
 
-        await new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push)).EvaluateAsync([itemId ?? _milk], CancellationToken.None);
+        await new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push), TestFakes.Features).EvaluateAsync([itemId ?? _milk], CancellationToken.None);
     }
 
     private async Task Backdate(int days = 1)

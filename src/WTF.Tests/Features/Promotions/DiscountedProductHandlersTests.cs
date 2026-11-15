@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Features.Promotions;
+using WTF.Api.Features.Promotions.DTOs;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Promotions;
@@ -374,7 +374,7 @@ public class DiscountedProductHandlersTests : IAsyncLifetime
             await PromotionSeed.AddDiscountAsync(seed, _burger, _cheese, 1, 5m, null, isActive: false, name: "inactive");
         }
 
-        var list = await new GetActiveDiscountedProductPromotionsHandler(TestDb.Create(_dbName), TestRequest.As(_userId))
+        var list = await new GetActiveDiscountedProductPromotionsHandler(TestDb.Create(_dbName), TestRequest.As(_userId), TestFakes.Features)
             .Handle(new GetActiveDiscountedProductPromotionsQuery(at), CancellationToken.None);
 
         list.Select(x => x.Name).ShouldBe(["in window", "open ended"]);

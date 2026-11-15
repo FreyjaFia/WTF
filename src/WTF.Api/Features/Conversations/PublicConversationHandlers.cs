@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders.Enums;
@@ -38,9 +39,9 @@ public record MarkPublicConversationReadCommand(string Token, Guid OrderId) : IR
 internal static class PublicChatAccess
 {
     public static async Task<(OrderLinkAccessResult Access, Order Order)?> ResolveAsync(
-        WTFDbContext db, string token, Guid orderId, bool track, CancellationToken cancellationToken)
+        WTFDbContext db, string token, Guid orderId, bool track, CancellationToken cancellationToken, ITenantFeatures? tenantFeatures = null)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, token, cancellationToken, alsoRequires: PlanFeatures.Chat);
+        var access = await OrderLinkAccess.ResolveAsync(db, token, cancellationToken, alsoRequires: PlanFeatures.Chat, tenantFeatures: tenantFeatures);
         if (access == null)
         {
             return null;
@@ -57,23 +58,23 @@ internal static class PublicChatAccess
     }
 }
 
-public class GetPublicConversationsHandler(WTFDbContext db)
+public class GetPublicConversationsHandler(WTFDbContext db, ITenantFeatures? tenantFeatures = null)
     : IRequestHandler<GetPublicConversationsQuery, ConversationListDto?>
 {
     public async Task<ConversationListDto?> Handle(GetPublicConversationsQuery request, CancellationToken cancellationToken)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, alsoRequires: PlanFeatures.Chat);
+        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, alsoRequires: PlanFeatures.Chat, tenantFeatures: tenantFeatures);
         return access == null ? null : await ConversationStore.ListAsync(db, access.Customer.Id, cancellationToken);
     }
 }
 
-public class GetPublicOrderConversationHandler(WTFDbContext db, IOptions<ChatRetentionOptions>? retention = null)
+public class GetPublicOrderConversationHandler(WTFDbContext db, IOptions<ChatRetentionOptions>? retention = null, ITenantFeatures? tenantFeatures = null)
     : IRequestHandler<GetPublicOrderConversationQuery, OrderConversationDto?>
 {
     public async Task<OrderConversationDto?> Handle(
         GetPublicOrderConversationQuery request, CancellationToken cancellationToken)
     {
-        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken);
+        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken, tenantFeatures);
         if (found == null)
         {
             return null;
@@ -108,11 +109,12 @@ public class SendPublicMessageHandler(
     IAuditService auditService,
     IConversationNotifier notifier,
     TimeProvider timeProvider,
-    IChatImageService? chatImages = null) : IRequestHandler<SendPublicMessageCommand, ConversationMessageDto?>
+    IChatImageService? chatImages = null,
+    ITenantFeatures? tenantFeatures = null) : IRequestHandler<SendPublicMessageCommand, ConversationMessageDto?>
 {
     public async Task<ConversationMessageDto?> Handle(SendPublicMessageCommand request, CancellationToken cancellationToken)
     {
-        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, true, cancellationToken);
+        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, true, cancellationToken, tenantFeatures);
         if (found == null)
         {
             return null;
@@ -289,12 +291,12 @@ public class SendPublicMessageHandler(
     }
 }
 
-public class MarkPublicConversationReadHandler(WTFDbContext db, TimeProvider timeProvider, IConversationNotifier notifier)
+public class MarkPublicConversationReadHandler(WTFDbContext db, TimeProvider timeProvider, IConversationNotifier notifier, ITenantFeatures? tenantFeatures = null)
     : IRequestHandler<MarkPublicConversationReadCommand, bool>
 {
     public async Task<bool> Handle(MarkPublicConversationReadCommand request, CancellationToken cancellationToken)
     {
-        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken);
+        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken, tenantFeatures);
         if (found == null)
         {
             return false;
@@ -319,13 +321,13 @@ public class MarkPublicConversationReadHandler(WTFDbContext db, TimeProvider tim
     }
 }
 
-public class GetPublicMessageImageHandler(WTFDbContext db, IChatImageService? chatImages = null)
+public class GetPublicMessageImageHandler(WTFDbContext db, IChatImageService? chatImages = null, ITenantFeatures? tenantFeatures = null)
     : IRequestHandler<GetPublicMessageImageQuery, ChatImageFile?>
 {
     public async Task<ChatImageFile?> Handle(GetPublicMessageImageQuery request, CancellationToken cancellationToken)
     {
         // Same checks as reading the messages: a working link, and an order that is this customer's.
-        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken);
+        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken, tenantFeatures);
         if (found == null || chatImages == null)
         {
             return null;
@@ -340,11 +342,12 @@ public class RemovePublicMessageImageHandler(
     IAuditService auditService,
     IConversationNotifier notifier,
     TimeProvider timeProvider,
-    IChatImageService? chatImages = null) : IRequestHandler<RemovePublicMessageImageCommand, ConversationMessageDto?>
+    IChatImageService? chatImages = null,
+    ITenantFeatures? tenantFeatures = null) : IRequestHandler<RemovePublicMessageImageCommand, ConversationMessageDto?>
 {
     public async Task<ConversationMessageDto?> Handle(RemovePublicMessageImageCommand request, CancellationToken cancellationToken)
     {
-        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken);
+        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken, tenantFeatures);
         if (found == null || chatImages == null)
         {
             return null;

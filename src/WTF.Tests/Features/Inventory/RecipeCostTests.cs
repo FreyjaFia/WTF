@@ -125,7 +125,7 @@ public class RecipeCostTests
         StockSeed.Link(_db, latte, milk, 200m, allowancePercent: 5m);
         var order = _data.AddOrder(OrderStatusEnum.Completed);
         _data.AddLine(order, latte, 2);
-        var service = new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)));
+        var service = new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)), TestFakes.Features);
 
         await service.DeductForOrderAsync(order, Guid.NewGuid(), new StockDeductionOptions(), CancellationToken.None);
 
@@ -142,7 +142,7 @@ public class RecipeCostTests
         var mocha = _data.AddProduct("Mocha", 160m);
         StockSeed.Link(_db, mocha, cup, 2m, allowancePercent: 50m);
 
-        var limits = await new GetPosStockLimitsHandler(TestDb.Create(_db))
+        var limits = await new GetPosStockLimitsHandler(TestDb.Create(_db), TestFakes.Features)
             .Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
 
         limits.Links.Single().QuantityPerSale.ShouldBe(3m);

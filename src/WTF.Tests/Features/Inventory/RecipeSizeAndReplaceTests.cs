@@ -19,7 +19,7 @@ public class RecipeSizeAndReplaceTests
         _data = new OrderSeed(_db);
     }
 
-    private OrderStockService Service() => new(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)));
+    private OrderStockService Service() => new(TestDb.Create(_db), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)), TestFakes.Features);
 
     private Task Deduct(Guid orderId) =>
         Service().DeductForOrderAsync(orderId, _userId, new StockDeductionOptions(), CancellationToken.None);
@@ -111,7 +111,7 @@ public class RecipeSizeAndReplaceTests
         StockSeed.Link(_db, latte, dairy, 200m);
         StockSeed.Link(_db, oatAddOn, oat, 200m, replacesItemId: dairy);
 
-        var limits = await new GetPosStockLimitsHandler(TestDb.Create(_db))
+        var limits = await new GetPosStockLimitsHandler(TestDb.Create(_db), TestFakes.Features)
             .Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
 
         limits.Links.Count.ShouldBe(2);

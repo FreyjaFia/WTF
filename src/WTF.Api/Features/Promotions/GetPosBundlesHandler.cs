@@ -17,12 +17,12 @@ public record GetPosBundlesQuery : IRequest<PosBundlesDto>;
 // Every active bundle with its items, for whoever sells at the POS. The management endpoints are for Admins only, so a
 // Cashier could not load a bundle through them. Dates, weekdays and hours are left for the POS to judge (it keeps this
 // list for offline use); the server checks them again when an order is saved.
-public sealed class GetPosBundlesHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
+public sealed class GetPosBundlesHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures)
     : IRequestHandler<GetPosBundlesQuery, PosBundlesDto>
 {
     public async Task<PosBundlesDto> Handle(GetPosBundlesQuery request, CancellationToken cancellationToken)
     {
-        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
+        if (!await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
         {
             return new PosBundlesDto([], []);
         }

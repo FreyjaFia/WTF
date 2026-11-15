@@ -9,7 +9,7 @@ public class GetPosStockLimitsHandlerTests
     private readonly string _db = TestDb.NewName();
 
     private Task<WTF.Api.Features.Inventory.DTOs.PosStockLimitsDto> Run() =>
-        new GetPosStockLimitsHandler(TestDb.Create(_db)).Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
+        new GetPosStockLimitsHandler(TestDb.Create(_db), TestFakes.Features).Handle(new GetPosStockLimitsQuery(), CancellationToken.None);
 
     [Fact]
     public async Task ListsOnlyActiveItemsThatBlockSales_WithTheirBalances()

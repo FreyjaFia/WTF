@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks.DTOs;
@@ -49,7 +50,8 @@ public class SubmitPublicOrderHandler(
     ILogger<SubmitPublicOrderHandler> logger,
     TimeProvider timeProvider,
     IHttpContextAccessor? httpContextAccessor = null,
-    IAuditService? auditService = null) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
+    IAuditService? auditService = null,
+    ITenantFeatures? tenantFeatures = null) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
 {
     public const string SystemUsername = "customer-link";
 
@@ -71,7 +73,7 @@ public class SubmitPublicOrderHandler(
     public async Task<PublicOrderDto?> Handle(SubmitPublicOrderCommand command, CancellationToken cancellationToken)
     {
         var access = await OrderLinkAccess.ResolveAsync(
-            db, command.Token, cancellationToken, timeProvider.GetUtcNow().UtcDateTime);
+            db, command.Token, cancellationToken, timeProvider.GetUtcNow().UtcDateTime, tenantFeatures: tenantFeatures);
         if (access == null)
         {
             return null;
@@ -410,7 +412,8 @@ public class SubmitPublicOrderHandler(
             DateTime.UtcNow,
             httpContextAccessor is null ? TimeZoneInfo.Utc : RequestTimeZone.ResolveFromRequest(httpContextAccessor),
             null,
-            cancellationToken);
+            cancellationToken,
+            tenantFeatures);
 
         var total = 0m;
         var notes = new List<string>();

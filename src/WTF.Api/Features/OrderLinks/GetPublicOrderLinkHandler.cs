@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Catalog;
 using WTF.Api.Features.OrderLinks.DTOs;
@@ -13,7 +14,7 @@ namespace WTF.Api.Features.OrderLinks;
 
 public record GetPublicOrderLinkQuery(string Token) : IRequest<PublicOrderLinkDto?>;
 
-public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
+public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures? tenantFeatures = null)
     : IRequestHandler<GetPublicOrderLinkQuery, PublicOrderLinkDto?>
 {
     // Opening the page repeatedly should not write to the database every time.
@@ -21,7 +22,7 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
 
     public async Task<PublicOrderLinkDto?> Handle(GetPublicOrderLinkQuery request, CancellationToken cancellationToken)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken);
+        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, tenantFeatures: tenantFeatures);
         if (access == null)
         {
             return null;
@@ -75,7 +76,8 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
             DateTime.UtcNow,
             RequestTimeZone.ResolveFromRequest(httpContextAccessor),
             null,
-            cancellationToken);
+            cancellationToken,
+            tenantFeatures);
 
         var shown = products.Select(p => p.Id).ToHashSet();
 

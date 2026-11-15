@@ -39,7 +39,7 @@ public class StockAlertDatabaseTests
         {
             await using var db = database.CreateContext();
             await StockBalance.ApplyAsync(db, itemId, -100m, true, CancellationToken.None);
-            await new StockAlertService(db, TestFakes.Notifications(db)).EvaluateAsync([itemId], CancellationToken.None);
+            await new StockAlertService(db, TestFakes.Notifications(db), TestFakes.Features).EvaluateAsync([itemId], CancellationToken.None);
         }));
 
         await using var check = database.CreateContext();

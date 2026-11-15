@@ -21,7 +21,8 @@ public sealed record OrderLinkAccessResult(ShortLink Link, Customer Customer);
 public static class OrderLinkAccess
 {
     public static async Task<OrderLinkAccessResult?> ResolveAsync(
-        WTFDbContext db, string? token, CancellationToken cancellationToken, DateTime? nowUtc = null, string? alsoRequires = null)
+        WTFDbContext db, string? token, CancellationToken cancellationToken, DateTime? nowUtc = null, string? alsoRequires = null,
+        ITenantFeatures? tenantFeatures = null)
     {
         var now = nowUtc ?? DateTime.UtcNow;
         if (string.IsNullOrWhiteSpace(token) || token.Length > 64)
@@ -50,10 +51,11 @@ public static class OrderLinkAccess
 
         // A suspended, cancelled or lapsed shop takes no orders from its customer page.
         // A shop whose plan has no order links takes no orders either; the link stays valid for when the plan returns.
+        TenantPlan? plan = null;
         if (db.TenantFilterEnabled
             && (!await TenantAccess.IsActiveAsync(db, link.TenantId, cancellationToken)
                 || await SubscriptionStateLoader.IsLockedAsync(db, link.TenantId, now, cancellationToken)
-                || !(await TenantPlanLookup.LoadAsync(db, link.TenantId, cancellationToken)).Features.Contains(PlanFeatures.OrderLinks)))
+                || !(plan = await LoadPlanAsync(db, link.TenantId, tenantFeatures, cancellationToken)).Features.Contains(PlanFeatures.OrderLinks)))
         {
             var brand = await BrandDefaults.LoadAsync(db, link.TenantId, cancellationToken);
             throw new ShopUnavailableException(brand.ShopName, brand.Phone);
@@ -67,13 +69,18 @@ public static class OrderLinkAccess
 
         // A part of the page that belongs to another feature (the chat) answers "not found" when that feature is off.
         if (alsoRequires != null && db.TenantFilterEnabled
-            && !(await TenantPlanLookup.LoadAsync(db, link.TenantId, cancellationToken)).Features.Contains(alsoRequires))
+            && !(plan ??= await LoadPlanAsync(db, link.TenantId, tenantFeatures, cancellationToken)).Features.Contains(alsoRequires))
         {
             return null;
         }
 
         return new OrderLinkAccessResult(link, customer);
     }
+
+    private static Task<TenantPlan> LoadPlanAsync(WTFDbContext db, Guid tenantId, ITenantFeatures? tenantFeatures, CancellationToken cancellationToken) =>
+        tenantFeatures is null
+            ? TenantPlanLookup.LoadAsync(db, tenantId, cancellationToken)
+            : tenantFeatures.GetAsync(db, tenantId, cancellationToken);
 
     /// <summary>
     /// Asks the database again, right now, whether this link may still be used. Call it immediately before an action

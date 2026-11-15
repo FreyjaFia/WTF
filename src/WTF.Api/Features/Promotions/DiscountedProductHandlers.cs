@@ -54,12 +54,12 @@ public sealed class GetDiscountedProductPromotionsHandler(WTFDbContext db, IHttp
 public record GetActiveDiscountedProductPromotionsQuery(DateTime? EvaluatedAtUtc, bool All = false)
     : IRequest<List<DiscountedProductPromotionDto>>;
 
-public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
+public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures)
     : IRequestHandler<GetActiveDiscountedProductPromotionsQuery, List<DiscountedProductPromotionDto>>
 {
     public async Task<List<DiscountedProductPromotionDto>> Handle(GetActiveDiscountedProductPromotionsQuery request, CancellationToken cancellationToken)
     {
-        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
+        if (!await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
         {
             return [];
         }

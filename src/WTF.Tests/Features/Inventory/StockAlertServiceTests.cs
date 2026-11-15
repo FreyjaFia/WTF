@@ -61,7 +61,7 @@ public class StockAlertServiceTests
         return user.Id;
     }
 
-    private StockAlertService Service() => new(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push));
+    private StockAlertService Service() => new(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push), TestFakes.Features);
 
     private async Task SetQuantityAndEvaluate(decimal quantity, Guid? itemId = null)
     {
@@ -223,7 +223,7 @@ public class StockAlertServiceTests
         StockSeed.Link(_db, latte, _milk, 200m);
         var order = data.AddOrder(WTF.Api.Features.Orders.Enums.OrderStatusEnum.Completed);
         data.AddLine(order, latte, 4);
-        var stock = new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push)));
+        var stock = new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push), TestFakes.Features), TestFakes.Features);
 
         await stock.DeductForOrderAsync(order, _admin, new StockDeductionOptions(), CancellationToken.None);
 

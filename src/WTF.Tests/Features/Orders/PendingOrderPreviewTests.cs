@@ -312,7 +312,7 @@ public class PendingOrderPreviewTests
         var order = _data.AddOrder(createdAt: DateTime.UtcNow.AddMinutes(-1));
         _data.AddLine(order, m.Product, 1);
 
-        var dto = await new GetDashboardHandler(_data.Open(), TestRequest.As(Guid.NewGuid(), timeZone: "UTC"))
+        var dto = await new GetDashboardHandler(_data.Open(), TestRequest.As(Guid.NewGuid(), timeZone: "UTC"), TestFakes.Features)
             .Handle(new GetDashboardQuery("last30days", null, null), CancellationToken.None);
 
         dto.RecentOrders.Single().TotalAmount.ShouldBe(60m);
