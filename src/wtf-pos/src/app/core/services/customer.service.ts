@@ -3,7 +3,12 @@ import { inject, Injectable } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
-import { CreateCustomerDto, CustomerDto, UpdateCustomerDto } from '@shared/models';
+import {
+  CreateCustomerDto,
+  CustomerDto,
+  PagedResultDto,
+  UpdateCustomerDto,
+} from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { extractHttpErrorMessage } from './http-error-message';
@@ -49,6 +54,44 @@ export class CustomerService {
     }
 
     return this.http.get<CustomerDto[]>(this.baseUrl, { params }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error fetching customers:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_FETCH_CUSTOMERS_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  public getCustomersPaged(query: {
+    searchTerm?: string | null;
+    isActive?: boolean | null;
+    sortBy?: string;
+    sortDirection?: string;
+    page: number;
+    pageSize: number;
+  }): Observable<PagedResultDto<CustomerDto>> {
+    let params = new HttpParams().set('page', String(query.page)).set('pageSize', String(query.pageSize));
+
+    if (query.searchTerm?.trim()) {
+      params = params.set('searchTerm', query.searchTerm.trim());
+    }
+
+    if (query.isActive !== undefined && query.isActive !== null) {
+      params = params.set('isActive', String(query.isActive));
+    }
+
+    if (query.sortBy) {
+      params = params.set('sortBy', query.sortBy).set('sortDirection', query.sortDirection ?? 'asc');
+    }
+
+    return this.http.get<PagedResultDto<CustomerDto>>(`${this.baseUrl}/paged`, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching customers:', error);
         return throwError(
