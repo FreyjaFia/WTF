@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { AlertService, AuthService, ExpenseService, ModalStackService } from '@core/services';
 import { ExpenseDto, ExpenseListDto } from '@shared/models';
 import { fakeAlert, internals } from '@app/testing/management-spec-helpers';
@@ -56,6 +57,7 @@ describe('ExpensesComponent', () => {
   function create() {
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ExpenseService, useValue: service },
         { provide: AlertService, useValue: alerts },
         { provide: ModalStackService, useValue: modalStack },
@@ -117,12 +119,19 @@ describe('ExpensesComponent', () => {
     ).map((h) => h.textContent?.trim());
     expect(headers).toEqual(['Date', 'Category', 'Amount']);
 
+    c.goToPage(3);
     c.toggleSort('amount');
-    expect(c.sortedItems().map((e: ExpenseDto) => e.amount)).toEqual([50, 800.5, 12000]);
+    expect(service.getExpenses).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sortBy: 'amount', sortDirection: 'asc', page: 1 }),
+    );
     c.toggleSort('amount');
-    expect(c.sortedItems().map((e: ExpenseDto) => e.amount)).toEqual([12000, 800.5, 50]);
+    expect(service.getExpenses).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sortBy: 'amount', sortDirection: 'desc' }),
+    );
     c.toggleSort('category');
-    expect(c.sortedItems()[0].categoryName).toBe('Rent');
+    expect(service.getExpenses).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sortBy: 'category', sortDirection: 'asc' }),
+    );
   });
 
   it('offers Edit and Delete for active expenses and Restore for deleted ones', () => {
@@ -175,6 +184,10 @@ describe('ExpensesComponent', () => {
       toDate: '2026-01-31',
       category: 3,
       includeDeleted: true,
+      sortBy: null,
+      sortDirection: null,
+      page: 1,
+      pageSize: 25,
     });
   });
 
@@ -392,5 +405,40 @@ describe('ExpensesComponent', () => {
     c.openAdd();
     c.closeDialog();
     expect(modalStack.remove).toHaveBeenCalledWith(7);
+  });
+  describe('paging', () => {
+    it('shows the pagination bar with the total count from the server', () => {
+      service.getExpenses.mockReturnValue(of({ ...LIST, page: 1, pageSize: 25, totalCount: 60 }));
+      const fixture = create();
+      expect(fixture.nativeElement.querySelector('app-pagination')).not.toBeNull();
+      expect(text(fixture)).toContain('60');
+    });
+
+    it('loads the chosen page and keeps the totals', () => {
+      const fixture = create();
+      const c = internals(fixture.componentInstance);
+      c.goToPage(2);
+      expect(service.getExpenses).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, pageSize: 25 }));
+    });
+
+    it('goes back to page 1 when the rows per page change or the filter is applied', () => {
+      const fixture = create();
+      const c = internals(fixture.componentInstance);
+      c.goToPage(2);
+      c.changePageSize(50);
+      expect(service.getExpenses).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, pageSize: 50 }));
+
+      c.goToPage(2);
+      c.applyFilter();
+      expect(service.getExpenses).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
+    });
+
+    it('follows the page the server returns when the page was past the end', () => {
+      const fixture = create();
+      const c = internals(fixture.componentInstance);
+      service.getExpenses.mockReturnValue(of({ ...LIST, page: 2, pageSize: 25, totalCount: 30 }));
+      c.goToPage(9);
+      expect(c.page()).toBe(2);
+    });
   });
 });

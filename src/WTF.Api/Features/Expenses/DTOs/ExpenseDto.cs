@@ -16,6 +16,9 @@ public sealed record ExpenseCategoryTotalDto(byte Category, string CategoryName,
 public sealed record ExpenseListDto(
     List<ExpenseDto> Items,
     decimal Total,
-    List<ExpenseCategoryTotalDto> ByCategory);
+    List<ExpenseCategoryTotalDto> ByCategory,
+    int Page = 1,
+    int PageSize = 25,
+    int TotalCount = 0);
 
 public sealed record ExpenseCategoryDto(byte Id, string Name, bool NeedsNote);

@@ -294,6 +294,54 @@ public class ExpenseHandlerTests
     }
 
     [Fact]
+    public async Task Get_Pages_ButTheTotalsCoverEveryMatchingExpense()
+    {
+        await SeedUsersAsync();
+        for (var day = 1; day <= 5; day++)
+        {
+            await Create().Handle(new CreateExpenseCommand(new DateOnly(2026, 3, day), 1, day * 100m, null), default);
+        }
+
+        var second = await Get().Handle(new GetExpensesQuery(null, null, null, null, Page: 2, PageSize: 2), default);
+
+        second.Items.Select(i => i.ExpenseDate.Day).ShouldBe([3, 2]);
+        second.TotalCount.ShouldBe(5);
+        second.Page.ShouldBe(2);
+        second.Total.ShouldBe(1500m);
+        second.ByCategory.Single().Count.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task Get_PageBeyondTheEnd_ReturnsTheLastPage()
+    {
+        await SeedUsersAsync();
+        for (var day = 1; day <= 3; day++)
+        {
+            await Create().Handle(new CreateExpenseCommand(new DateOnly(2026, 3, day), 1, 10m, null), default);
+        }
+
+        var result = await Get().Handle(new GetExpensesQuery(null, null, null, null, Page: 9, PageSize: 2), default);
+
+        result.Page.ShouldBe(2);
+        result.Items.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Get_SortByAmount_OrdersTheWholeListNotJustThePage()
+    {
+        await SeedUsersAsync();
+        await Create().Handle(new CreateExpenseCommand(Mar10, 1, 300m, null), default);
+        await Create().Handle(new CreateExpenseCommand(Mar10, 1, 100m, null), default);
+        await Create().Handle(new CreateExpenseCommand(Mar10, 1, 200m, null), default);
+
+        var ascending = await Get().Handle(new GetExpensesQuery(null, null, null, null, SortBy: "amount", SortDirection: "asc", PageSize: 2), default);
+        var descending = await Get().Handle(new GetExpensesQuery(null, null, null, null, SortBy: "amount", SortDirection: "desc", PageSize: 2), default);
+
+        ascending.Items.Select(i => i.Amount).ShouldBe([100m, 200m]);
+        descending.Items.Select(i => i.Amount).ShouldBe([300m, 200m]);
+    }
+
+    [Fact]
     public async Task Get_Nothing_ReturnsAnEmptyListWithAZeroTotal()
     {
         await SeedUsersAsync();

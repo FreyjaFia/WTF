@@ -38,6 +38,18 @@ export class ExpenseService {
       params = params.set('includeDeleted', 'true');
     }
 
+    if (query.sortBy) {
+      params = params.set('sortBy', query.sortBy).set('sortDirection', query.sortDirection ?? 'asc');
+    }
+
+    if (query.page) {
+      params = params.set('page', String(query.page));
+    }
+
+    if (query.pageSize) {
+      params = params.set('pageSize', String(query.pageSize));
+    }
+
     return this.http
       .get<ExpenseListDto>(this.baseUrl, { params })
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the expenses.')));
