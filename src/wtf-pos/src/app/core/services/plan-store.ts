@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { CORE_FEATURE } from '@shared/calculations/plan-features';
+import { CORE_FEATURE, GatedFeatureKey } from '@shared/calculations/plan-features';
 import { SubscriptionDto } from '@shared/models/subscription.models';
 import { currentTenantId } from './tenant-context';
 
@@ -34,7 +34,7 @@ export class PlanStore {
   public readonly isKnown = computed(() => this.snapshot()?.features != null);
   public readonly planName = computed(() => this.snapshot()?.planName ?? null);
 
-  public hasFeature(key: string): boolean {
+  public hasFeature(key: GatedFeatureKey): boolean {
     const features = this.snapshot()?.features;
 
     // Until the plan is known (or when the shop has no subscription row) the permission list is the only gate.

@@ -1,3 +1,4 @@
+import type { GatedFeatureKey } from '@shared/calculations/plan-features';
 import catalogJson from './permission-catalog.json';
 
 export const Permissions = {
@@ -49,7 +50,7 @@ export interface PermissionDefinition {
   readonly area: string;
   readonly label: string;
   readonly description: string;
-  readonly feature: string;
+  readonly feature: GatedFeatureKey;
   readonly requires: readonly PermissionKey[];
 }
 

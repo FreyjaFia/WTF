@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import cases from './calculation-cases.json';
 import {
   normalizeFeatures,
+  PLAN_FEATURE_KEYS,
   PlanFeatureCatalog,
   plansContaining,
   serializeFeatures,
@@ -25,6 +26,10 @@ interface ContainingCase {
 }
 
 describe('plan features: the cases shared with the API', () => {
+  it('the typed key list is the catalog, in the same order', () => {
+    expect([...PLAN_FEATURE_KEYS]).toEqual(PlanFeatureCatalog.map((f) => f.key));
+  });
+
   it('the catalog matches the shared file', () => {
     expect(PlanFeatureCatalog).toEqual(cases.planFeatureCatalog);
   });

@@ -8,6 +8,21 @@ export interface PlanFeatureDefinition {
 
 export const CORE_FEATURE = 'core';
 
+export const PLAN_FEATURE_KEYS = [
+  'expenses',
+  'inventory',
+  'purchasing',
+  'promotions',
+  'orderlinks',
+  'chat',
+  'workbook',
+  'audit',
+  'customroles',
+] as const;
+
+export type PlanFeatureKey = (typeof PLAN_FEATURE_KEYS)[number];
+export type GatedFeatureKey = PlanFeatureKey | typeof CORE_FEATURE;
+
 export const PlanFeatureCatalog: readonly PlanFeatureDefinition[] = [
   { key: 'expenses', label: 'Expenses', description: 'Record and review shop expenses.', group: 'Money', needs: [] },
   { key: 'inventory', label: 'Inventory', description: 'Items, stock, counts, waste and costs.', group: 'Stock', needs: [] },
