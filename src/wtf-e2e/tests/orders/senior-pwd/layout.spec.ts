@@ -1,4 +1,3 @@
-import { mkdirSync } from 'node:fs';
 import { expect, test } from '@fixtures/index';
 import { SeniorPwdShop } from '@api/senior-pwd';
 import { OrderDetailsPage } from '@pages/order-details.page';
@@ -6,7 +5,7 @@ import { LoginPage } from '@pages/login.page';
 import { SeniorPwdPage } from '@pages/senior-pwd.page';
 import { VIEWPORTS, measureOverflow, overflowProblem } from '@utils/layout';
 
-const SHOTS = process.env.E2E_SHOTS_DIR ?? '/mnt/project-files/senior-pwd/v3';
+const SHOTS = 'test-results/senior-pwd';
 
 test.describe('Senior / PWD layout @seniorpwd @layout', () => {
   for (const viewport of VIEWPORTS) {
@@ -37,7 +36,6 @@ test.describe('Senior / PWD layout @seniorpwd @layout', () => {
       await expect(register.apply).toBeInViewport();
       expect(overflowProblem(await measureOverflow(page))).toBeNull();
       const tag = String(viewport.width);
-      mkdirSync(SHOTS, { recursive: true });
       await page.screenshot({ path: `${SHOTS}/dialog-${tag}.png` });
 
       await register.apply.click();
@@ -65,7 +63,6 @@ test.describe('Senior / PWD layout @seniorpwd @layout', () => {
       await register.openCart();
       await expect(register.cartTotal).toHaveText('450.00');
       expect(overflowProblem(await measureOverflow(page))).toBeNull();
-      mkdirSync(SHOTS, { recursive: true });
       await page.screenshot({ path: `${SHOTS}/cart-promo-${viewport.width}.png` });
     });
 
@@ -117,7 +114,6 @@ test.describe('Senior / PWD layout @seniorpwd @layout', () => {
           el.style.zIndex = '9999';
           el.style.background = 'white';
         });
-        mkdirSync(SHOTS, { recursive: true });
         await receipt.screenshot({ path: `${SHOTS}/summary-${kind}-${viewport.width}.png` });
       });
     }
@@ -150,7 +146,6 @@ test.describe('Senior / PWD layout @seniorpwd @layout', () => {
       await expect(tag).toBeVisible();
       await tag.scrollIntoViewIfNeeded();
       expect(overflowProblem(await measureOverflow(page))).toBeNull();
-      mkdirSync(SHOTS, { recursive: true });
       await page.screenshot({ path: `${SHOTS}/details-${viewport.width}.png` });
     });
   }
