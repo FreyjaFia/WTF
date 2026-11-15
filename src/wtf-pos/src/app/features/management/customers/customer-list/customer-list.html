@@ -126,36 +126,14 @@
           <div
             class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 pb-5 bg-surface px-4 pt-3 lg:grid"
           >
-            <button
-              type="button"
-              class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
-              [class.text-gray-600]="sortColumn() !== 'name'"
-              [class.hover:text-gray-900]="sortColumn() !== 'name'"
-              [class.text-brand-ink]="sortColumn() === 'name'"
-              role="button"
-              tabindex="0"
-              (click)="toggleSort('name')"
-              (keydown.enter)="toggleSort('name')"
-              (keydown.space)="toggleSort('name')"
-              aria-label="Sort by customer name"
-            >
-              Name
-              <span
-                class="text-xs transition-opacity"
-                [class.opacity-0]="sortColumn() !== 'name'"
-                [class.opacity-100]="sortColumn() === 'name'"
-              >
-                <app-icon
-                  name="icon-arrow-up"
-                  [class]="
-                    sortDirection() === 'desc'
-                      ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
-                      : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
-                  "
-                  [fill]="'currentColor'"
-                />
-              </span>
-            </button>
+            <div class="col-span-4">
+              <app-sort-header
+                label="Name"
+                [active]="sortColumn() === 'name'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('name')"
+              />
+            </div>
 
             <div
               class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
@@ -169,36 +147,14 @@
               Contact
             </div>
 
-            <button
-              type="button"
-              class="col-span-3 flex cursor-pointer items-center justify-center gap-1 text-center text-xs font-semibold tracking-wider uppercase transition-colors"
-              [class.text-gray-600]="sortColumn() !== 'address'"
-              [class.hover:text-gray-900]="sortColumn() !== 'address'"
-              [class.text-brand-ink]="sortColumn() === 'address'"
-              role="button"
-              tabindex="0"
-              (click)="toggleSort('address')"
-              (keydown.enter)="toggleSort('address')"
-              (keydown.space)="toggleSort('address')"
-              aria-label="Sort by address"
-            >
-              Address
-              <span
-                class="text-xs transition-opacity"
-                [class.opacity-0]="sortColumn() !== 'address'"
-                [class.opacity-100]="sortColumn() === 'address'"
-              >
-                <app-icon
-                  name="icon-arrow-up"
-                  [class]="
-                    sortDirection() === 'desc'
-                      ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
-                      : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
-                  "
-                  [fill]="'currentColor'"
-                />
-              </span>
-            </button>
+            <div class="col-span-3">
+              <app-sort-header
+                label="Address" align="center"
+                [active]="sortColumn() === 'address'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('address')"
+              />
+            </div>
 
             <div class="col-span-1"></div>
           </div>

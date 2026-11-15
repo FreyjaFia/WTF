@@ -1,6 +1,7 @@
 import { HttpErrorMessages } from '@core/messages';
 import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { selectedFilterCount } from '@shared/utils/filter-count';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -41,6 +42,7 @@ interface CustomerListState {
 @Component({
   selector: 'app-customer-list',
   imports: [
+    SortHeaderComponent,
     FilterButtonComponent,
     CommonModule,
     ReactiveFormsModule,
