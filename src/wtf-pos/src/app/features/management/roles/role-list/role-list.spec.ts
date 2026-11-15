@@ -57,6 +57,21 @@ describe('RoleListComponent', () => {
     expect(c.isLoading()).toBe(false);
   });
 
+  it('pages the roles in the browser and returns to page 1 when the filter changes', () => {
+    const many = Array.from({ length: 30 }, (_, i) => role(200 + i, `Role ${String(i).padStart(2, '0')}`, false, 0, 1));
+    setup(vi.fn(() => of(many)));
+    fixture.detectChanges();
+    expect(c.pager.rows()).toHaveLength(25);
+    expect(c.pager.totalCount()).toBe(30);
+    expect(fixture.nativeElement.querySelector('app-pagination')).not.toBeNull();
+
+    c.pager.goTo(2);
+    expect(c.pager.rows()).toHaveLength(5);
+
+    c.toggleType('custom');
+    expect(c.pager.page()).toBe(1);
+  });
+
   it('sorts by every column and flips the direction on a second click', () => {
     setup();
     c.toggleSort('users');

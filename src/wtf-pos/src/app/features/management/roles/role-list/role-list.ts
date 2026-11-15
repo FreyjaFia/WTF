@@ -17,6 +17,8 @@ import { FilterButtonComponent } from '@shared/components/filter-button/filter-b
 import { SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { RoleDto } from '@shared/models';
+import { ClientPager } from '@shared/utils/client-pager';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
 import { selectedFilterCount } from '@shared/utils/filter-count';
 import { debounceTime } from 'rxjs';
 
@@ -35,6 +37,7 @@ interface RoleListState {
   imports: [
     BadgeComponent,
     ConfirmDialogComponent,
+    PaginationComponent,
     ConnectionErrorComponent,
     FilterButtonComponent,
     IconComponent,
@@ -117,12 +120,15 @@ export class RoleListComponent implements OnInit {
     });
   });
 
+  protected readonly pager = new ClientPager(this.sortedRoles, 'management:role-list');
+
   public ngOnInit(): void {
     this.restoreState();
     this.loadRoles();
 
     this.filterForm.controls.searchTerm.valueChanges.pipe(debounceTime(300)).subscribe((value) => {
       this.searchTerm.set(value ?? '');
+      this.pager.reset();
       this.saveState();
     });
   }
@@ -168,11 +174,13 @@ export class RoleListComponent implements OnInit {
     this.selectedTypes.set(
       current.includes(typeId) ? current.filter((id) => id !== typeId) : [...current, typeId],
     );
+    this.pager.reset();
     this.saveState();
   }
 
   protected clearTypes(): void {
     this.selectedTypes.set([]);
+    this.pager.reset();
     this.saveState();
   }
 
@@ -184,6 +192,7 @@ export class RoleListComponent implements OnInit {
       this.sortDirection.set('asc');
     }
 
+    this.pager.reset();
     this.saveState();
   }
 

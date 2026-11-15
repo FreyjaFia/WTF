@@ -15,6 +15,8 @@ import { BadgeComponent } from '@shared/components/badge/badge';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { SupplierSummaryDto } from '@shared/models';
+import { ClientPager } from '@shared/utils/client-pager';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
 
 @Component({
   selector: 'app-suppliers',
@@ -23,6 +25,7 @@ import { SupplierSummaryDto } from '@shared/models';
     ConnectionErrorComponent,
     FilterButtonComponent,
     IconComponent,
+    PaginationComponent,
     PullToRefreshComponent,
     ReactiveFormsModule,
     RouterLink,
@@ -54,6 +57,7 @@ export class SuppliersComponent implements OnInit {
       ),
     );
   });
+  protected readonly pager = new ClientPager(this.filteredSuppliers, 'inventory:suppliers', computed(() => [this.search(), this.showInactive()]));
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly connectionFailed = signal(false);

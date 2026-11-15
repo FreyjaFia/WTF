@@ -201,7 +201,7 @@
       }
 
       <ul class="space-y-2 pb-4">
-        @for (product of rows(); track product.productId) {
+        @for (product of pager.rows(); track product.productId) {
           <li class="bg-surface flex overflow-hidden rounded-xl shadow" data-testid="coverage-row">
             <span class="w-1.5 shrink-0" [class]="styleOf(product.status).bar"></span>
             <div class="flex min-w-0 flex-1 items-center gap-3 p-3 sm:p-4">
@@ -278,6 +278,15 @@
           </li>
         }
       </ul>
+
+      <app-pagination
+        label="Product pages"
+        [page]="pager.page()"
+        [pageSize]="pager.pageSize()"
+        [totalCount]="pager.totalCount()"
+        (pageChange)="pager.goTo($event)"
+        (pageSizeChange)="pager.setPageSize($event)"
+      />
     </app-pull-to-refresh>
   }
 </div>

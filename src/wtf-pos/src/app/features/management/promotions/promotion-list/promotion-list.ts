@@ -27,6 +27,8 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PromotionListItemDto, PromotionTypeEnum } from '@shared/models';
 import { debounceTime, forkJoin } from 'rxjs';
+import { ClientPager } from '@shared/utils/client-pager';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
 
 type SortColumn = 'name' | 'type';
 type SortDirection = 'asc' | 'desc';
@@ -42,6 +44,7 @@ interface PromotionListState {
 @Component({
   selector: 'app-promotion-list',
   imports: [
+    PaginationComponent,
     FilterButtonComponent,
     ConfirmDialogComponent,
     CommonModule,
@@ -142,6 +145,12 @@ export class PromotionListComponent implements OnInit {
 
     return items;
   });
+
+  protected readonly pager = new ClientPager(
+    this.sortedPromotions,
+    'management:promotion-list',
+    this.promotions,
+  );
 
   public ngOnInit(): void {
     this.restoreState();
