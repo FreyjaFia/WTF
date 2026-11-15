@@ -8,7 +8,6 @@ import {
   Component,
   computed,
   effect,
-  ElementRef,
   inject,
   OnDestroy,
   OnInit,
@@ -47,9 +46,19 @@ import {
   PaymentMethodEnum,
 } from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
-import { cartTotal } from '@shared/calculations';
+import {
+  cartTotal,
+  dateRangeBounds,
+  orderMatchesListFilter,
+  type OrderListFilter,
+} from '@shared/calculations';
+import { ListScrollService, type ListScrollPosition } from '@core/services/list-scroll.service';
+import { ScrollLoaderComponent } from '@shared/components/scroll-loader/scroll-loader';
 import { orderAddressOf } from '@shared/utils/order-address';
 import type { PendingOrder } from '@core/services/db';
+
+const PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
@@ -84,12 +93,14 @@ interface OrderGroup {
     PullToRefreshComponent,
     RejectOrderDialogComponent,
     SearchInputComponent,
+    ScrollLoaderComponent,
   ],
   templateUrl: './order-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderList implements OnInit, OnDestroy {
-  private readonly loadMoreSentinel = viewChild<ElementRef<HTMLElement>>('loadMoreSentinel');
+  private readonly pullToRefresh = viewChild(PullToRefreshComponent);
+  private readonly listScroll = inject(ListScrollService);
   private readonly stateKey = 'orders:order-list';
   private readonly orderService = inject(OrderService);
   private readonly router = inject(Router);
@@ -124,6 +135,10 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly ordersCache = signal<OrderDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isLoadingMore = signal(false);
+  protected readonly isReloading = signal(false);
+  protected readonly loadMoreFailed = signal(false);
+  private readonly endReachedSignal = signal(false);
+  protected readonly facets = signal<Record<string, number>>({});
   protected readonly isRefreshing = signal(false);
   protected readonly currentPage = signal(1);
   protected readonly pageSize = signal(20);
@@ -153,28 +168,12 @@ export class OrderList implements OnInit, OnDestroy {
   private readonly waitingForReconnectSync = signal(false);
   private wasOnline = this.connectivity.isOnline();
   private wasSyncingOffline = false;
+  private lastQueryKey = '';
+  private pendingRestore: ListScrollPosition | null = null;
+  private scrollOffset = 0;
+  private loadRequest: Subscription | null = null;
   private hubSub: Subscription | null = null;
   constructor() {
-    // Loads the next page of orders when the sentinel at the end of the list scrolls into view.
-    effect((onCleanup) => {
-      const sentinel = this.loadMoreSentinel()?.nativeElement;
-      if (!sentinel) {
-        return;
-      }
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          if (entries.some((entry) => entry.isIntersecting)) {
-            this.loadMoreOrders();
-          }
-        },
-        { root: null, rootMargin: '300px 0px', threshold: 0 },
-      );
-
-      observer.observe(sentinel);
-      onCleanup(() => observer.disconnect());
-    });
-
     effect(
       () => {
         const online = this.isOnline();
@@ -240,15 +239,13 @@ export class OrderList implements OnInit, OnDestroy {
   });
 
   protected readonly statusCounts = computed(() => {
-    const cache = this.ordersCache();
+    const facets = this.facets();
     return {
-      [OrderStatusEnum.All]: cache.length,
-      [OrderStatusEnum.Pending]: cache.filter((o) => o.status === OrderStatusEnum.Pending).length,
-      [OrderStatusEnum.Completed]: cache.filter((o) => o.status === OrderStatusEnum.Completed)
-        .length,
-      [OrderStatusEnum.Cancelled]: cache.filter((o) => o.status === OrderStatusEnum.Cancelled)
-        .length,
-      [OrderStatusEnum.Refunded]: cache.filter((o) => o.status === OrderStatusEnum.Refunded).length,
+      [OrderStatusEnum.All]: facets['all'] ?? 0,
+      [OrderStatusEnum.Pending]: facets[OrderStatusEnum.Pending] ?? 0,
+      [OrderStatusEnum.Completed]: facets[OrderStatusEnum.Completed] ?? 0,
+      [OrderStatusEnum.Cancelled]: facets[OrderStatusEnum.Cancelled] ?? 0,
+      [OrderStatusEnum.Refunded]: facets[OrderStatusEnum.Refunded] ?? 0,
     };
   });
 
@@ -287,10 +284,13 @@ export class OrderList implements OnInit, OnDestroy {
     return selected ? [selected] : [];
   });
   protected readonly PaymentMethodEnum = PaymentMethodEnum;
-  protected readonly hasMoreOrders = computed(() => this.ordersCache().length < this.totalCount());
+  protected readonly hasMoreOrders = computed(
+    () => !this.endReachedSignal() && this.ordersCache().length < this.totalCount(),
+  );
 
   public ngOnInit(): void {
     this.restoreState();
+    this.pendingRestore = this.listScroll.take(this.stateKey);
     this.resetAndLoadOrders();
     // The orders hub, not the dashboard one, so staff who cannot open the dashboard still see changes live.
     this.signalRService.startStaffOrdersHub();
@@ -305,6 +305,13 @@ export class OrderList implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    if (this.scrollOffset > 0 || this.currentPage() > 1) {
+      this.listScroll.save(this.stateKey, {
+        pages: this.currentPage(),
+        offset: this.scrollOffset,
+      });
+    }
+
     this.hubSub?.unsubscribe();
     this.signalRService.stopStaffOrdersHub();
   }
@@ -314,42 +321,50 @@ export class OrderList implements OnInit, OnDestroy {
       return;
     }
 
-    this.isLoading.set(true);
-    this.currentPage.set(1);
-    this.totalCount.set(0);
-    this.ordersCache.set([]);
-    this.orders.set([]);
+    this.loadRequest?.unsubscribe();
+    const restore = this.pendingRestore;
+    this.pendingRestore = null;
+    const firstLoad = this.ordersCache().length === 0;
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
+    this.isLoadingMore.set(false);
+    this.loadMoreFailed.set(false);
+    this.endReachedSignal.set(false);
+    this.lastQueryKey = this.queryKey();
     this.loadAwaitingOrders();
     this.loadHeldOrders();
 
-    this.orderService
-      .getOrdersPaged({
-        searchTerm: this.filterForm.controls.searchTerm.value,
-        source: this.sourceFilter(),
-        page: 1,
-        pageSize: this.pageSize(),
-      })
-      .subscribe({
-        next: (result) => {
-          this.currentPage.set(result.page);
-          this.totalCount.set(result.totalCount);
-          this.ordersCache.set(result.items);
-          this.applyFiltersToCache();
-          this.isLoading.set(false);
-          this.isRefreshing.set(false);
-        },
-        error: (err) => {
-          this.alertService.error(err.message || this.alertService.getLoadErrorMessage('orders'));
-          this.isLoading.set(false);
-          this.isRefreshing.set(false);
-        },
-      });
+    const pageSize = restore ? Math.min(restore.pages * PAGE_SIZE, MAX_PAGE_SIZE) : PAGE_SIZE;
+    this.loadRequest = this.orderService.getOrdersPaged(this.listQuery(1, pageSize)).subscribe({
+      next: (result) => {
+        this.currentPage.set(Math.max(1, Math.ceil(result.items.length / PAGE_SIZE)));
+        this.totalCount.set(result.totalCount);
+        this.facets.set(result.facets ?? {});
+        this.ordersCache.set(result.items);
+        this.applyFiltersToCache();
+        this.isLoading.set(false);
+        this.isReloading.set(false);
+        this.isRefreshing.set(false);
+        if (restore) {
+          this.restoreScroll(restore);
+        } else {
+          this.scrollToTopSoon();
+        }
+      },
+      error: (err) => {
+        this.alertService.error(err.message || this.alertService.getLoadErrorMessage('orders'));
+        this.isLoading.set(false);
+        this.isReloading.set(false);
+        this.isRefreshing.set(false);
+      },
+    });
   }
 
   protected loadMoreOrders(): void {
     if (
       !this.connectivity.isOnline() ||
       this.isLoading() ||
+      this.isReloading() ||
       this.isLoadingMore() ||
       !this.hasMoreOrders()
     ) {
@@ -357,28 +372,33 @@ export class OrderList implements OnInit, OnDestroy {
     }
 
     this.isLoadingMore.set(true);
+    this.loadMoreFailed.set(false);
     const nextPage = this.currentPage() + 1;
+    const queryKey = this.lastQueryKey;
 
-    this.orderService
-      .getOrdersPaged({
-        searchTerm: this.filterForm.controls.searchTerm.value,
-        source: this.sourceFilter(),
-        page: nextPage,
-        pageSize: this.pageSize(),
-      })
-      .subscribe({
-        next: (result) => {
-          this.currentPage.set(result.page);
-          this.totalCount.set(result.totalCount);
-          this.ordersCache.set([...this.ordersCache(), ...result.items]);
-          this.applyFiltersToCache();
-          this.isLoadingMore.set(false);
-        },
-        error: (err) => {
-          this.alertService.error(err.message || this.alertService.getLoadErrorMessage('orders'));
-          this.isLoadingMore.set(false);
-        },
-      });
+    this.orderService.getOrdersPaged(this.listQuery(nextPage, PAGE_SIZE)).subscribe({
+      next: (result) => {
+        if (queryKey !== this.lastQueryKey) {
+          return;
+        }
+
+        // A new order arriving while scrolling shifts the pages down by one, so drop rows already shown.
+        const known = new Set(this.ordersCache().map((order) => order.id));
+        const fresh = result.items.filter((order) => !known.has(order.id));
+        this.currentPage.set(result.page);
+        this.totalCount.set(result.totalCount);
+        this.facets.set(result.facets ?? this.facets());
+        this.ordersCache.set([...this.ordersCache(), ...fresh]);
+        this.endReachedSignal.set(fresh.length === 0 || result.page < nextPage);
+        this.applyFiltersToCache();
+        this.isLoadingMore.set(false);
+      },
+      error: (err) => {
+        this.alertService.error(err.message || this.alertService.getLoadErrorMessage('orders'));
+        this.loadMoreFailed.set(true);
+        this.isLoadingMore.set(false);
+      },
+    });
   }
 
   protected refresh(): void {
@@ -388,6 +408,69 @@ export class OrderList implements OnInit, OnDestroy {
 
     this.isRefreshing.set(true);
     this.resetAndLoadOrders();
+  }
+
+  private serverFilter(): OrderListFilter {
+    return {
+      statuses: this.selectedStatuses(),
+      bounds: dateRangeBounds(
+        this.selectedDateRanges()[0],
+        this.customStartDate(),
+        this.customEndDate(),
+      ),
+      source: this.sourceFilter(),
+    };
+  }
+
+  private serverSort(): { sortBy?: string; sortDirection?: string } {
+    const column = this.sortColumn();
+    if (column === 'orderNumber') {
+      return { sortBy: 'orderNumber', sortDirection: this.sortDirection() };
+    }
+
+    if (column === 'date') {
+      return { sortBy: 'createdAt', sortDirection: this.sortDirection() };
+    }
+
+    return {};
+  }
+
+  private listQuery(page: number, pageSize: number) {
+    const filter = this.serverFilter();
+    return {
+      searchTerm: this.filterForm.controls.searchTerm.value,
+      source: filter.source,
+      statuses: [...filter.statuses],
+      from: filter.bounds.from,
+      to: filter.bounds.to,
+      ...this.serverSort(),
+      page,
+      pageSize,
+    };
+  }
+
+  private queryKey(): string {
+    return JSON.stringify(this.listQuery(1, PAGE_SIZE));
+  }
+
+  private reloadIfQueryChanged(): void {
+    if (this.queryKey() !== this.lastQueryKey) {
+      this.loadOrders();
+    } else {
+      this.applyFiltersToCache();
+    }
+  }
+
+  private scrollToTopSoon(): void {
+    queueMicrotask(() => this.pullToRefresh()?.scrollToTop());
+  }
+
+  private restoreScroll(position: ListScrollPosition): void {
+    setTimeout(() => this.pullToRefresh()?.scrollToOffset(position.offset), 0);
+  }
+
+  protected rememberScroll(event: Event): void {
+    this.scrollOffset = (event.target as HTMLElement).scrollTop;
   }
 
   private resetAndLoadOrders(): void {
@@ -400,8 +483,8 @@ export class OrderList implements OnInit, OnDestroy {
       this.selectedDateRanges.set([]);
       this.customStartDate.set('');
       this.customEndDate.set('');
-      this.applyFiltersToCache();
       this.saveState();
+      this.reloadIfQueryChanged();
       return;
     }
 
@@ -410,16 +493,16 @@ export class OrderList implements OnInit, OnDestroy {
       this.customStartDate.set('');
       this.customEndDate.set('');
     }
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected onDateRangeFilterReset(): void {
     this.selectedDateRanges.set([]);
     this.customStartDate.set('');
     this.customEndDate.set('');
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected isDateRangeSelected(rangeId: string): boolean {
@@ -436,49 +519,49 @@ export class OrderList implements OnInit, OnDestroy {
       this.customStartDate.set('');
       this.customEndDate.set('');
     }
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected clearDateRangeSelections(): void {
     this.selectedDateRanges.set([]);
     this.customStartDate.set('');
     this.customEndDate.set('');
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected onCustomStartDateChanged(value: string): void {
     this.customStartDate.set(value);
     this.selectedDateRanges.set(['custom']);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected onCustomEndDateChanged(value: string): void {
     this.customEndDate.set(value);
     this.selectedDateRanges.set(['custom']);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected clearCustomDateRange(): void {
     this.customStartDate.set('');
     this.customEndDate.set('');
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected onStatusFilterChange(selectedIds: (string | number)[]): void {
     this.selectedStatuses.set(selectedIds as OrderStatusEnum[]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected onStatusFilterReset(): void {
     this.selectedStatuses.set([]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected isStatusSelected(statusId: number): boolean {
@@ -493,14 +576,14 @@ export class OrderList implements OnInit, OnDestroy {
     } else {
       this.selectedStatuses.set([...current, status]);
     }
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected clearStatusSelections(): void {
     this.selectedStatuses.set([]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   /** The one source to ask the server for. Both chosen, or none, means every order. */
@@ -551,8 +634,8 @@ export class OrderList implements OnInit, OnDestroy {
       this.sortColumn.set(column);
       this.sortDirection.set('desc');
     }
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
   }
 
   protected resetFilters(): void {
@@ -564,8 +647,8 @@ export class OrderList implements OnInit, OnDestroy {
     this.selectedDateRanges.set([]);
     this.customStartDate.set('');
     this.customEndDate.set('');
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadIfQueryChanged();
     this.resetAndLoadOrders();
   }
 
@@ -680,72 +763,14 @@ export class OrderList implements OnInit, OnDestroy {
   }
 
   private applyFiltersToCache(): void {
-    let items = [...this.ordersCache()];
+    const items = [...this.ordersCache()];
 
-    // Filter by status
-    const onlySource = this.sourceFilter();
-    if (onlySource !== undefined) {
-      items = items.filter((order) => (order.source ?? OrderSourceEnum.Pos) === onlySource);
-    }
-
-    const selectedStatuses = this.selectedStatuses();
-    if (selectedStatuses.length > 0) {
-      items = items.filter((order) => selectedStatuses.includes(order.status));
-    }
-
-    // Filter by date range
-    const selectedDateRange = this.selectedDateRanges()[0];
-    if (selectedDateRange && selectedDateRange !== 'custom') {
-      const now = new Date();
-      const start = new Date(now);
-      if (selectedDateRange === 'today') {
-        start.setHours(0, 0, 0, 0);
-        items = items.filter((order) => new Date(this.getOrderDate(order)) >= start);
-      } else if (selectedDateRange === '7d') {
-        start.setDate(now.getDate() - 7);
-        items = items.filter((order) => new Date(this.getOrderDate(order)) >= start);
-      } else if (selectedDateRange === '30d') {
-        start.setDate(now.getDate() - 30);
-        items = items.filter((order) => new Date(this.getOrderDate(order)) >= start);
-      }
-    }
-
-    const customStartDate = this.customStartDate();
-    const customEndDate = this.customEndDate();
-    if (selectedDateRange === 'custom' && customStartDate && customEndDate) {
-      const start = new Date(`${customStartDate}T00:00:00`);
-      const end = new Date(`${customEndDate}T23:59:59.999`);
-      items = items.filter((order) => {
-        const orderDate = new Date(this.getOrderDate(order));
-        return orderDate >= start && orderDate <= end;
-      });
-    }
-
-    // Sort
-    const sortColumn = this.sortColumn();
-    const sortDirection = this.sortDirection();
-
-    if (sortColumn === 'orderNumber') {
-      items.sort((a, b) =>
-        sortDirection === 'asc' ? a.orderNumber - b.orderNumber : b.orderNumber - a.orderNumber,
+    // The server filters and sorts by number and date; the total is a calculation, so it sorts the loaded rows only.
+    if (this.sortColumn() === 'totalAmount') {
+      const direction = this.sortDirection();
+      items.sort((x, y) =>
+        direction === 'asc' ? x.totalAmount - y.totalAmount : y.totalAmount - x.totalAmount,
       );
-    } else if (sortColumn === 'date') {
-      items.sort((a, b) => {
-        const dateA = new Date(this.getOrderDate(a) || 0).getTime();
-        const dateB = new Date(this.getOrderDate(b) || 0).getTime();
-        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-      });
-    } else if (sortColumn === 'totalAmount') {
-      items.sort((a, b) =>
-        sortDirection === 'asc' ? a.totalAmount - b.totalAmount : b.totalAmount - a.totalAmount,
-      );
-    } else {
-      // Default sort by date descending
-      items.sort((a, b) => {
-        const dateA = new Date(this.getOrderDate(a) || 0).getTime();
-        const dateB = new Date(this.getOrderDate(b) || 0).getTime();
-        return dateB - dateA;
-      });
     }
 
     this.orders.set(items);
@@ -782,24 +807,48 @@ export class OrderList implements OnInit, OnDestroy {
 
   /** Puts an order that changed (or was just accepted or rejected) into the normal list. */
   private mergeIntoList(order: OrderDto): void {
+    const matches = orderMatchesListFilter(order, this.serverFilter()) && this.matchesSearchTerm(order);
     const existingIndex = this.ordersCache().findIndex((item) => item.id === order.id);
+
     if (existingIndex >= 0) {
       const updated = [...this.ordersCache()];
-      updated[existingIndex] = order;
+      if (matches) {
+        updated[existingIndex] = order;
+      } else {
+        updated.splice(existingIndex, 1);
+      }
       this.ordersCache.set(updated);
       this.applyFiltersToCache();
+    } else if (matches && this.isNewestFirst()) {
+      this.ordersCache.set([order, ...this.ordersCache()]);
+      this.applyFiltersToCache();
+    }
+
+    this.refreshCounts();
+  }
+
+  private isNewestFirst(): boolean {
+    const column = this.sortColumn();
+    return column === null || column === 'totalAmount' || (column === 'date' && this.sortDirection() === 'desc');
+  }
+
+  private refreshCounts(): void {
+    if (!this.connectivity.isOnline()) {
       return;
     }
 
-    if (!this.matchesSearchTerm(order)) {
-      return;
-    }
-
-    this.ordersCache.set([order, ...this.ordersCache()]);
-    if (!this.filterForm.controls.searchTerm.value?.trim()) {
-      this.totalCount.set(this.totalCount() + 1);
-    }
-    this.applyFiltersToCache();
+    const queryKey = this.lastQueryKey;
+    this.orderService.getOrdersPaged(this.listQuery(1, 1)).subscribe({
+      next: (result) => {
+        if (queryKey === this.lastQueryKey) {
+          this.totalCount.set(result.totalCount);
+          this.facets.set(result.facets ?? {});
+        }
+      },
+      error: () => {
+        // The counts catch up on the next load.
+      },
+    });
   }
 
   // --- orders waiting for approval ---

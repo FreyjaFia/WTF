@@ -80,6 +80,11 @@ export class OrderService {
     searchTerm?: string | null;
     /** Only orders from this source; leave out for all. */
     source?: OrderSourceEnum | null;
+    statuses?: OrderStatusEnum[];
+    from?: string;
+    to?: string;
+    sortBy?: string;
+    sortDirection?: string;
     page?: number;
     pageSize?: number;
   }): Observable<PagedResultDto<OrderDto>> {
@@ -103,6 +108,17 @@ export class OrderService {
 
     if (query?.source !== undefined && query?.source !== null) {
       params = params.set('source', String(query.source));
+    }
+
+    query?.statuses?.forEach((status) => {
+      params = params.append('statuses', String(status));
+    });
+
+    for (const key of ['from', 'to', 'sortBy', 'sortDirection'] as const) {
+      const value = query?.[key];
+      if (value) {
+        params = params.set(key, value);
+      }
     }
 
     if (query?.page !== undefined && query?.page !== null) {

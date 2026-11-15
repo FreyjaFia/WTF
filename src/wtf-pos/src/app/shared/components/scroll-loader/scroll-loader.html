@@ -1,0 +1,17 @@
+<div #sentinel class="h-4 w-full"></div>
+@if (isLoading()) {
+  <div class="flex justify-center pt-3" role="status" aria-label="Loading more">
+    <span class="loading loading-spinner loading-sm"></span>
+  </div>
+} @else if (offline() && hasMore()) {
+  <p class="py-3 text-center text-xs text-gray-500">
+    Offline. Older orders load when you are back online.
+  </p>
+} @else if (error()) {
+  <p class="py-3 text-center text-xs text-gray-500">
+    Could not load more.
+    <a class="cursor-pointer font-semibold text-brand-ink underline" role="link" tabindex="0" (click)="retry()" (keydown.enter)="retry()">Tap to retry</a>
+  </p>
+} @else if (!hasMore() && showEnd()) {
+  <p class="py-3 text-center text-xs text-gray-500">You are all caught up</p>
+}

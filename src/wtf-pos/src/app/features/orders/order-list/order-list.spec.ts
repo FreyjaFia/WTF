@@ -145,12 +145,20 @@ describe('OrderList', () => {
     sortDirection: 'desc',
   };
 
-  const page = (items: OrderDto[], p = 1, total = items.length) => ({
+  const page = (
+    items: OrderDto[],
+    p = 1,
+    total = items.length,
+    facets?: Record<string, number>,
+  ) => ({
     items,
     page: p,
     pageSize: 20,
     totalCount: total,
+    facets,
   });
+
+  const lastQuery = () => orderService.getOrdersPaged.mock.lastCall![0];
 
   const init = (saved: object = defaultState) => {
     listState.load.mockReturnValue(saved);
@@ -333,11 +341,9 @@ describe('OrderList', () => {
     it('loads first page on init and starts hub', () => {
       orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 1, 50)));
       init();
-      expect(orderService.getOrdersPaged).toHaveBeenCalledWith({
-        searchTerm: '',
-        page: 1,
-        pageSize: 20,
-      });
+      expect(orderService.getOrdersPaged).toHaveBeenCalledWith(
+        expect.objectContaining({ searchTerm: '', page: 1, pageSize: 20, statuses: [] }),
+      );
       expect(signalR.startStaffOrdersHub).toHaveBeenCalled();
       expect(t.orders().length).toBe(1);
       expect(t.totalCount()).toBe(50);
@@ -378,19 +384,24 @@ describe('OrderList', () => {
       expect(alert.error).toHaveBeenCalledWith('boom');
     });
 
-    it('loads more pages and appends', () => {
-      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 1, 2)));
+    it('loads more pages, appends them and drops rows already shown', () => {
+      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 1, 3)));
       init();
-      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o2')], 2, 2)));
+      orderService.getOrdersPaged.mockReturnValue(
+        of(page([makeOrder('o1'), makeOrder('o2')], 2, 3)),
+      );
       t.loadMoreOrders();
-      expect(orderService.getOrdersPaged).toHaveBeenLastCalledWith({
-        searchTerm: '',
-        page: 2,
-        pageSize: 20,
-      });
+      expect(lastQuery()).toEqual(expect.objectContaining({ searchTerm: '', page: 2, pageSize: 20 }));
       expect(t.ordersCache().map((o) => o.id)).toEqual(['o1', 'o2']);
-      expect(t.hasMoreOrders()).toBe(false);
       expect(t.isLoadingMore()).toBe(false);
+    });
+
+    it('stops asking when a page adds nothing new', () => {
+      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 1, 5)));
+      init();
+      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 2, 5)));
+      t.loadMoreOrders();
+      expect(t.hasMoreOrders()).toBe(false);
     });
 
     it('does not load more when nothing remains, offline or already loading', () => {
@@ -441,11 +452,7 @@ describe('OrderList', () => {
       vi.advanceTimersByTime(299);
       expect(orderService.getOrdersPaged).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1);
-      expect(orderService.getOrdersPaged).toHaveBeenCalledWith({
-        searchTerm: 'burger',
-        page: 1,
-        pageSize: 20,
-      });
+      expect(lastQuery()).toEqual(expect.objectContaining({ searchTerm: 'burger', page: 1, pageSize: 20 }));
       expect(listState.save).toHaveBeenCalled();
     });
 
@@ -523,35 +530,42 @@ describe('OrderList', () => {
       expect(t.orders().map((o) => o.id)).toEqual(['o1', 'o2', 'o3', 'o4']);
     });
 
-    it('computes status counts and filter options', () => {
-      expect(t.statusCounts()).toEqual({ 0: 4, 1: 1, 2: 1, 3: 1, 4: 1 });
+    it('reads status counts from the server counts, not the loaded rows', () => {
+      orderService.getOrdersPaged.mockReturnValue(
+        of(page(orders, 1, 120, { all: 120, '1': 7, '2': 90, '3': 20, '4': 3 })),
+      );
+      t.loadOrders();
+      expect(t.statusCounts()).toEqual({ 0: 120, 1: 7, 2: 90, 3: 20, 4: 3 });
       expect(t.filterOptions().map((o) => o.id)).toEqual([1, 2, 3, 4]);
+      expect(t.filterOptions().map((o) => o.count)).toEqual([7, 90, 20, 3]);
     });
 
-    it('filters by status (toggle / change / reset / clear)', () => {
+    it('asks the server for the picked statuses (toggle / change / reset / clear)', () => {
       t.toggleStatusSelection(OrderStatusEnum.Pending);
-      expect(t.orders().map((o) => o.id)).toEqual(['o1']);
+      expect(lastQuery().statuses).toEqual([OrderStatusEnum.Pending]);
+      expect(lastQuery().page).toBe(1);
       expect(t.isStatusSelected(OrderStatusEnum.Pending)).toBe(true);
       t.toggleStatusSelection(OrderStatusEnum.Completed);
-      expect(t.orders().length).toBe(2);
+      expect(lastQuery().statuses).toEqual([OrderStatusEnum.Pending, OrderStatusEnum.Completed]);
       t.toggleStatusSelection(OrderStatusEnum.Pending);
-      expect(t.orders().map((o) => o.id)).toEqual(['o2']);
+      expect(lastQuery().statuses).toEqual([OrderStatusEnum.Completed]);
       t.clearStatusSelections();
-      expect(t.orders().length).toBe(4);
+      expect(lastQuery().statuses).toEqual([]);
       t.onStatusFilterChange([OrderStatusEnum.Refunded]);
-      expect(t.orders().map((o) => o.id)).toEqual(['o4']);
+      expect(lastQuery().statuses).toEqual([OrderStatusEnum.Refunded]);
       t.onStatusFilterReset();
-      expect(t.orders().length).toBe(4);
+      expect(lastQuery().statuses).toEqual([]);
       expect(listState.save).toHaveBeenCalled();
     });
 
-    it('filters by preset date ranges', () => {
+    it('asks the server for preset date ranges', () => {
       t.toggleDateRangeSelection('today');
-      expect(t.orders().map((o) => o.id)).toEqual(['o1']);
+      expect(new Date(lastQuery().from).getTime()).toBe(new Date(2026, 10, 15, 0, 0, 0).getTime());
+      expect(lastQuery().to).toBeUndefined();
       t.toggleDateRangeSelection('7d');
-      expect(t.orders().map((o) => o.id)).toEqual(['o1', 'o2']);
+      expect(new Date(lastQuery().from).getTime()).toBe(new Date(2026, 10, 8, 12, 0, 0).getTime());
       t.onDateRangeFilterChange(['30d']);
-      expect(t.orders().map((o) => o.id)).toEqual(['o1', 'o2', 'o3']);
+      expect(new Date(lastQuery().from).getTime()).toBe(new Date(2026, 9, 16, 12, 0, 0).getTime());
       expect(t.isDateRangeSelected('30d')).toBe(true);
       expect(t.selectedDateRangeId()).toEqual(['30d']);
     });
@@ -573,17 +587,17 @@ describe('OrderList', () => {
       expect(t.orders().length).toBe(4);
     });
 
-    it('custom range filters inclusively, needs both dates', () => {
-      const d = new Date(orders[1].createdAt);
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      t.onCustomStartDateChanged(day);
+    it('custom range needs both dates before it reloads', () => {
+      orderService.getOrdersPaged.mockClear();
+      t.onCustomStartDateChanged('2026-11-12');
       expect(t.selectedDateRanges()).toEqual(['custom']);
-      expect(t.orders().length).toBe(4);
-      t.onCustomEndDateChanged(day);
-      expect(t.orders().map((o) => o.id)).toEqual(['o2']);
+      expect(orderService.getOrdersPaged).not.toHaveBeenCalled();
+      t.onCustomEndDateChanged('2026-11-13');
+      expect(new Date(lastQuery().from).getTime()).toBe(new Date('2026-11-12T00:00:00').getTime());
+      expect(new Date(lastQuery().to).getTime()).toBe(new Date('2026-11-13T23:59:59.999').getTime());
       t.clearCustomDateRange();
-      expect(t.orders().length).toBe(4);
+      expect(lastQuery().from).toBeUndefined();
+      expect(lastQuery().to).toBeUndefined();
     });
 
     it('selecting a preset after custom clears custom dates', () => {
@@ -603,12 +617,12 @@ describe('OrderList', () => {
       expect(t.orders().map((o) => o.totalAmount)).toEqual([50, 100, 200, 300]);
       t.toggleSort('orderNumber');
       expect(t.sortDirection()).toBe('desc');
-      expect(t.orders().map((o) => o.orderNumber)).toEqual([4, 3, 2, 1]);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'orderNumber', sortDirection: 'desc', page: 1 }));
       t.toggleSort('orderNumber');
-      expect(t.orders().map((o) => o.orderNumber)).toEqual([1, 2, 3, 4]);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'orderNumber', sortDirection: 'asc' }));
       t.toggleSort('date');
       t.toggleSort('date');
-      expect(t.orders().map((o) => o.id)).toEqual(['o4', 'o3', 'o2', 'o1']);
+      expect(lastQuery()).toEqual(expect.objectContaining({ sortBy: 'createdAt', sortDirection: 'asc' }));
       expect(t.isSortActive('date')).toBe(true);
       expect(t.isSortActive('orderNumber')).toBe(false);
     });
@@ -657,11 +671,30 @@ describe('OrderList', () => {
       expect(t.totalCount()).toBe(1);
     });
 
-    it('prepends a new order and bumps total count', () => {
+    it('prepends a new order and re-reads the counts', () => {
       orderService.getOrder.mockReturnValue(of(makeOrder('o2', { orderNumber: 2 })));
+      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1'), makeOrder('o2')], 1, 2)));
       hubUpdates.next('o2');
       expect(t.ordersCache()[0].id).toBe('o2');
       expect(t.totalCount()).toBe(2);
+    });
+
+    it('does not add a new order that does not match the status filter', () => {
+      t.toggleStatusSelection(OrderStatusEnum.Refunded);
+      orderService.getOrder.mockReturnValue(of(makeOrder('o2', { orderNumber: 2 })));
+      hubUpdates.next('o2');
+      expect(t.ordersCache().map((o) => o.id)).not.toContain('o2');
+    });
+
+    it('drops a row whose status changed out of the filter', () => {
+      orderService.getOrder.mockReturnValue(
+        of(makeOrder('o1', { orderNumber: 1, status: OrderStatusEnum.Cancelled })),
+      );
+      t.toggleStatusSelection(OrderStatusEnum.Completed);
+      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 1, 1)));
+      t.loadOrders();
+      hubUpdates.next('o1');
+      expect(t.ordersCache().map((o) => o.id)).toEqual([]);
     });
 
     it('ignores a new order that does not match the search term', () => {
