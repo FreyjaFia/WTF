@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
+using WTF.Api.Common.DTOs;
 using WTF.Api.Features.Audit;
 using WTF.Api.Features.Audit.DTOs;
 

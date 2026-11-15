@@ -416,34 +416,17 @@ describe('AuditLogsComponent', () => {
       expect(lastPaging()).toEqual({ page: 1, pageSize: 10 });
     });
 
-    it('offers 10, 25, 50 and 100 rows per page', () => {
-      const { vm } = create();
-      expect(vm['pageSizeOptions']).toEqual([10, 25, 50, 100]);
-    });
-
     it('reports the total and the visible range', () => {
       service.getAuditLogs.mockReturnValue(of(pagedResult(95)));
       const { vm } = create();
       expect(vm['totalCount']()).toBe(95);
       expect(vm['totalPages']()).toBe(10);
-      expect(vm['firstRow']()).toBe(1);
-      expect(vm['lastRow']()).toBe(10);
     });
 
     it('reports a range of 0 when there are no logs, and one page', () => {
       service.getAuditLogs.mockReturnValue(of(pagedResult(0)));
       const { vm } = create();
-      expect(vm['firstRow']()).toBe(0);
-      expect(vm['lastRow']()).toBe(0);
       expect(vm['totalPages']()).toBe(1);
-    });
-
-    it('shows the last page range correctly', () => {
-      service.getAuditLogs.mockReturnValue(of(pagedResult(95, 10)));
-      const { vm } = create();
-      vm['page'].set(10);
-      expect(vm['firstRow']()).toBe(91);
-      expect(vm['lastRow']()).toBe(95);
     });
 
     it('goToPage loads that page and keeps the filters', () => {
@@ -485,7 +468,7 @@ describe('AuditLogsComponent', () => {
       vm['goToPage'](4);
       service.getAuditLogs.mockClear();
 
-      vm['onPageSizeChange']({ target: { value: '50' } } as unknown as Event);
+      vm['changePageSize'](50);
 
       expect(vm['pageSize']()).toBe(50);
       expect(vm['page']()).toBe(1);
@@ -493,13 +476,11 @@ describe('AuditLogsComponent', () => {
       expect(listState.save).toHaveBeenLastCalledWith(KEY, expect.objectContaining({ pageSize: 50 }));
     });
 
-    it('ignores a page size that is not offered or unchanged', () => {
+    it('ignores an unchanged page size', () => {
       const { vm } = create();
       service.getAuditLogs.mockClear();
 
-      vm['onPageSizeChange']({ target: { value: '7' } } as unknown as Event);
-      vm['onPageSizeChange']({ target: { value: 'abc' } } as unknown as Event);
-      vm['onPageSizeChange']({ target: { value: '10' } } as unknown as Event);
+      vm['changePageSize'](10);
 
       expect(vm['pageSize']()).toBe(10);
       expect(service.getAuditLogs).not.toHaveBeenCalled();
@@ -587,31 +568,11 @@ describe('AuditLogsComponent', () => {
       expect(vm['isLoading']()).toBe(false);
     });
 
-    describe('page number list', () => {
-      it.each([
-        [1, 1, [1]],
-        [7, 4, [1, 2, 3, 4, 5, 6, 7]],
-        [20, 1, [1, 2, null, 20]],
-        [20, 10, [1, null, 9, 10, 11, null, 20]],
-        [20, 20, [1, null, 19, 20]],
-        [20, 3, [1, 2, 3, 4, null, 20]],
-      ] as [number, number, (number | null)[]][])(
-        '%i pages, on page %i',
-        (total, current, expected) => {
-          service.getAuditLogs.mockReturnValue(of(pagedResult(total * 10)));
-          const { vm } = create();
-          vm['page'].set(current);
-
-          expect(vm['pageItems']()).toEqual(expected);
-        },
-      );
-    });
-
     describe('exports', () => {
       it('never send paging, so the file holds every matching log', () => {
         const { vm } = create();
         vm['goToPage'](1);
-        vm['onPageSizeChange']({ target: { value: '25' } } as unknown as Event);
+        vm['changePageSize'](25);
         vm['toggleActionSelection']('Create');
 
         vm['downloadExcel']();

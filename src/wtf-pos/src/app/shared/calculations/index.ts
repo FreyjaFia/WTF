@@ -17,3 +17,4 @@ export * from './receiving';
 export * from './reorder-text';
 export * from './senior-pwd';
 export * from './plan-features';
+export * from './pagination';
