@@ -12,7 +12,7 @@ describe('ClientPager', () => {
     const source = signal(Array.from({ length: rows }, (_, i) => i + 1));
     TestBed.configureTestingModule({
       providers: [
-        { provide: Router, useValue: { navigate } },
+        { provide: Router, useValue: { navigate, url: '/list?page=2', parseUrl: () => ({ queryParams: { page: '2' } }) } },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => page } } } },
         {
           provide: ListStateService,
@@ -73,7 +73,7 @@ describe('ClientPager', () => {
     const source = signal(Array.from({ length: 60 }, (_, i) => i));
     TestBed.configureTestingModule({
       providers: [
-        { provide: Router, useValue: { navigate } },
+        { provide: Router, useValue: { navigate, url: '/list?page=3', parseUrl: () => ({ queryParams: { page: '3' } }) } },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => '3' } } } },
         { provide: ListStateService, useValue: { load: (_k: string, f: unknown) => f, save: vi.fn() } },
       ],
