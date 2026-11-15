@@ -97,3 +97,24 @@ setting or a small rule, not a rewrite.
 
 ---
 
+
+### Review follow-ups (14 Nov 2026)
+
+- The ID check is `POST /api/orders/senior-pwd/id-check` with the ID in the body, under the `SeniorPwdApply` policy
+  (`orders.seniorpwd.apply`). The `GET` form stays for cached older POS bundles and can go once none are in use; the POS call
+  still has to move to the POST.
+- Full ID numbers appear only in a downloaded report file, only for a user who holds `reports.generate`; the endpoint decides
+  that and sets `IncludeFullIdNumbers` on the query. Each such download is written to the audit log as `SeniorPwdIdsExported`.
+  JSON replies and the monthly workbook always carry masked IDs. `GET /api/orders/{id}` still shows full IDs to users holding
+  `orders.seniorpwd.apply` or `orders.override`, without an audit entry.
+- Report columns that add the discount and the VAT removed are called "Senior/PWD relief" in exports; the daily close and
+  Senior/PWD reports show the 20% discount alone, labelled "Senior/PWD discount".
+- A public order's delivery address is limited to 150 characters, the same as a saved customer address. The order link page
+  still allows 300 until its limit is changed.
+- Release note for `20261121_add_senior_pwd_discount.sql`: it gives `orders.seniorpwd.apply` once to every custom role that
+  holds `orders.write`, the same as the system Cashier role has it. That also lets those roles see full ID numbers on an order.
+  Owners who want fewer people to hold it remove it on the Roles page after the script has run.
+- Release note for `20261130_plan_feature_catalog.sql`: the role copy and its audit marker are two separate statements. Run the
+  script in one `sqlcmd -b` call and stop on the first error; if it stops between the copy and the marker, check
+  `PlatformAuditLog` for `PlanFeatureCatalogRoleCopy` before running it again. The Pro plan update only runs when its text is
+  still the seeded text, and the Business plan is inserted inactive (the E2E seed makes it active so the specs can assign it).

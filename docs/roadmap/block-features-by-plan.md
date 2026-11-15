@@ -194,3 +194,24 @@ the rollout checklist (plan features must be set before the first paying shop is
 6. **No per-shop exceptions for now.**
 
 Still open: the exact bundle for each of the three plans, and what "block the last user" means in practice (see 4).
+
+### Hardening notes (review of 14 Nov 2026)
+
+- Feature keys are constants on `PlanFeatures` (`PlanFeatures.Inventory` and so on). `AppPolicies.RequireFeature` throws for a
+  key outside the catalog, so a typo fails at startup. The catalog words are also copied in `wtf-pos` (checked through
+  `calculation-cases.json`), in `tools/sql/20261130_plan_feature_catalog.sql` (checked by `PlanFeatureDriftTests`) and, built
+  from the constants, in the E2E seed. A new feature key means changing the catalog, the POS copy and that script's header
+  and plan lists together; the tests fail when one is missed.
+- Plan reads go through `ITenantFeatures` (20 second cache). The cache is per API process: a plan change is forgotten at once
+  on the instance that took the change, and other instances catch up when the entry expires, so a downgrade can take up to
+  20 seconds to reach a second instance. Only the schedulers and tests read the plan straight from the database.
+- A shop with no subscription row keeps every feature (single-shop installs from before the tenants script). That is
+  deliberate and unchanged; every shop created through the platform area gets a row.
+- A token issued before tenants (no tenant claim) is read as the first shop by both the data layer and the plan gate. After
+  every old token has been refreshed (refresh tokens last 7 days), set `Tenancy:LegacyTokensAreDefaultTenant` to `false` on
+  the server; a signed-in user with no shop then gets the core features only.
+- `/api/pos/stock-limits` answers an empty list when the plan has no inventory. The monthly workbook status and download
+  routes need `workbook`, profit and loss needs `expenses` as well as `inventory`, and the per-item supplier routes use the
+  Suppliers permissions (a role that only holds stock permissions no longer reads them).
+- `EveryRoute_HasAPlanDecision` accepts any permission policy whose feature is known, so it cannot tell a core permission
+  from a route that should be gated. New routes need a deliberate choice; `RouteTableTests` lists the policies per route.
