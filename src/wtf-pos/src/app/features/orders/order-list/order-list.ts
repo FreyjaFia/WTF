@@ -123,18 +123,6 @@ export class OrderList implements OnInit, OnDestroy {
   /** The waiting order an accept or reject request is running for. */
   protected readonly decidingOrderId = signal<string | null>(null);
   protected readonly orderToReject = signal<OrderDto | null>(null);
-
-  protected canChat(): boolean {
-    return this.authService.canReadChat();
-  }
-
-  protected openChat(order: OrderDto): void {
-    this.chatOrder.set(order);
-  }
-
-  protected closeChat(): void {
-    this.chatOrder.set(null);
-  }
   protected readonly canCreateOrders = computed(() => this.authService.canWriteOrders());
   protected readonly canDecideOrders = computed(() => this.authService.canWriteOrders());
   protected readonly ordersCache = signal<OrderDto[]>([]);
@@ -226,6 +214,18 @@ export class OrderList implements OnInit, OnDestroy {
       },
       { allowSignalWrites: true },
     );
+  }
+
+  protected canChat(): boolean {
+    return this.authService.canReadChat();
+  }
+
+  protected openChat(order: OrderDto): void {
+    this.chatOrder.set(order);
+  }
+
+  protected closeChat(): void {
+    this.chatOrder.set(null);
   }
 
   protected readonly groupedOrders = computed<OrderGroup[]>(() => {

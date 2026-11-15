@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { AuthService, PlanStore } from '@core/services';
 import { SubscriptionDto } from '@shared/models/subscription.models';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { NotInPlanComponent } from './not-in-plan';
 
@@ -68,5 +68,32 @@ describe('NotInPlanComponent', () => {
 
     expect(el.querySelector('[data-testid="not-in-plan-title"]')?.textContent).toContain('This feature is not in your plan');
     expect(el.querySelector('[data-testid="not-in-plan-plans"]')).toBeNull();
+  });
+
+  it('uses OnPush and still follows a changed feature in the URL', () => {
+    localStorage.clear();
+    const params = new BehaviorSubject(convertToParamMap({ feature: 'audit' }));
+    TestBed.configureTestingModule({
+      imports: [NotInPlanComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { canManageSubscription: () => false } },
+        { provide: ActivatedRoute, useValue: { queryParamMap: params } },
+      ],
+    });
+    const fixture = TestBed.createComponent(NotInPlanComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const title = () => el.querySelector('[data-testid="not-in-plan-title"]')?.textContent;
+    const first = title();
+
+    params.next(convertToParamMap({ feature: 'purchasing' }));
+    fixture.detectChanges();
+
+    expect(
+      (NotInPlanComponent as unknown as { ɵcmp: { onPush: boolean } }).ɵcmp.onPush,
+    ).toBe(true);
+    expect(title()).not.toBe(first);
+    expect(title()).toContain('Purchasing');
   });
 });

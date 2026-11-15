@@ -427,57 +427,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     return id ? this.conversationInbox.unreadFor(id) : 0;
   });
 
-  private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
-  private skipGuard = false;
-  private checkoutAttempt: { key: string; signature: string } | null = null;
-  private originalCartSnapshot = '';
-  private abandonModalStackId: number | null = null;
-  private cancelOrderModalStackId: number | null = null;
-  private overrideOrderModalStackId: number | null = null;
-  private createCustomerModalStackId: number | null = null;
-  private cartPersistenceReady = false;
-  private pendingOverridePayment: {
-    paymentMethod: PaymentMethodEnum;
-    amountReceived?: number;
-    changeAmount?: number;
-    tips?: number;
-  } | null = null;
-  private readonly activeOrderAction = signal<'save' | 'checkout' | null>(null);
-  private readonly pendingBundleSelection = signal<BundlePromotionSelection | null>(null);
-  private cartDragStartY = 0;
-  private quickPayHoldRaf: number | null = null;
-  private quickPayHoldStartMs: number | null = null;
-  private readonly quickPayHoldDurationMs = 1000;
-  private isProgrammaticSubCategoryScroll = false;
-  private programmaticSubCategoryScrollTimeout: number | null = null;
-  // The uses of limited discounts that the order being edited already holds. They are not gone for it: saving the order
-  // again moves them, so the cart may keep using them.
-  private readonly ownHeldUses = computed(() => {
-    const held = new Map<string, number>();
-    const order = this.currentOrder();
-    if (order?.status !== OrderStatusEnum.Pending) {
-      return held;
-    }
-
-    for (const line of order.items) {
-      if (line.discountPromotionId) {
-        held.set(line.discountPromotionId, (held.get(line.discountPromotionId) ?? 0) + line.quantity);
-      }
-    }
-
-    return held;
-  });
-  private discardOrderModalStackId: number | null = null;
-  private offlineEditSyncLockActive = false;
-
-  protected openChat(): void {
-    this.showChat.set(true);
-  }
-
-  protected closeChat(): void {
-    this.showChat.set(false);
-  }
-
   /** An accepted customer order that staff have not yet marked ready. */
   protected readonly canMarkReady = computed(() => {
     const order = this.currentOrder();
@@ -550,19 +499,6 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly itemCount = (): number => this.cart().reduce((s, i) => s + i.qty, 0);
   protected readonly totalPrice = (): number =>
     cartTotalAfterSeniorPwd(this.cart(), this.vatRegistered(), (line) => this.getLineDiscount(line));
-
-  protected getNameParts(name: string): { text: string; isMatch: boolean }[] {
-    return nameParts(name, this.filterForm.controls.searchTerm.value);
-  }
-
-  protected getCustomerDisplayName(customer: CustomerDto): string {
-    return customerDisplayName(customer);
-  }
-
-  protected getPaymentMethodLabel(method?: PaymentMethodEnum | null): string {
-    return paymentMethodLabel(method);
-  }
-
   protected readonly checkoutCartItems = computed<CartItemDto[]>(() =>
     this.cart().flatMap((item, index) => {
       const discount = this.getLineDiscount(item);
@@ -607,10 +543,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     const productsBySubCategory = this.productsBySubCategory();
     return this.subCategoryTabs().filter((tab) => (productsBySubCategory[tab.id]?.length ?? 0) > 0);
   });
-
-  // Mirrors the search box: a plain FormControl value is not a signal, so computeds cannot react to it.
-  private readonly catalogSearchTerm = signal('');
-
   protected readonly filteredBundlePromotions = computed(() => {
     const term = this.catalogSearchTerm().trim().toLowerCase();
     let items = this.bundlePromotions().filter(
@@ -656,6 +588,72 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly hasPromos = computed(
     () => this.filteredBundlePromotions().length > 0 || this.filteredDeals().length > 0,
   );
+
+  private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
+  private skipGuard = false;
+  private checkoutAttempt: { key: string; signature: string } | null = null;
+  private originalCartSnapshot = '';
+  private abandonModalStackId: number | null = null;
+  private cancelOrderModalStackId: number | null = null;
+  private overrideOrderModalStackId: number | null = null;
+  private createCustomerModalStackId: number | null = null;
+  private cartPersistenceReady = false;
+  private pendingOverridePayment: {
+    paymentMethod: PaymentMethodEnum;
+    amountReceived?: number;
+    changeAmount?: number;
+    tips?: number;
+  } | null = null;
+  private readonly activeOrderAction = signal<'save' | 'checkout' | null>(null);
+  private readonly pendingBundleSelection = signal<BundlePromotionSelection | null>(null);
+  private cartDragStartY = 0;
+  private quickPayHoldRaf: number | null = null;
+  private quickPayHoldStartMs: number | null = null;
+  private readonly quickPayHoldDurationMs = 1000;
+  private isProgrammaticSubCategoryScroll = false;
+  private programmaticSubCategoryScrollTimeout: number | null = null;
+  // The uses of limited discounts that the order being edited already holds. They are not gone for it: saving the order
+  // again moves them, so the cart may keep using them.
+  private readonly ownHeldUses = computed(() => {
+    const held = new Map<string, number>();
+    const order = this.currentOrder();
+    if (order?.status !== OrderStatusEnum.Pending) {
+      return held;
+    }
+
+    for (const line of order.items) {
+      if (line.discountPromotionId) {
+        held.set(line.discountPromotionId, (held.get(line.discountPromotionId) ?? 0) + line.quantity);
+      }
+    }
+
+    return held;
+  });
+  private discardOrderModalStackId: number | null = null;
+  private offlineEditSyncLockActive = false;
+
+  // Mirrors the search box: a plain FormControl value is not a signal, so computeds cannot react to it.
+  private readonly catalogSearchTerm = signal('');
+
+  protected openChat(): void {
+    this.showChat.set(true);
+  }
+
+  protected closeChat(): void {
+    this.showChat.set(false);
+  }
+
+  protected getNameParts(name: string): { text: string; isMatch: boolean }[] {
+    return nameParts(name, this.filterForm.controls.searchTerm.value);
+  }
+
+  protected getCustomerDisplayName(customer: CustomerDto): string {
+    return customerDisplayName(customer);
+  }
+
+  protected getPaymentMethodLabel(method?: PaymentMethodEnum | null): string {
+    return paymentMethodLabel(method);
+  }
 
   protected selectSubCategoryTab(tab: number): void {
     if ((this.productsBySubCategory()[tab]?.length ?? 0) === 0) {
