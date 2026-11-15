@@ -13,6 +13,9 @@
                     "test:management":  "playwright test tests/management",
                     "test:reports":  "playwright test tests/reports tests/dashboard",
                     "test:layout":  "playwright test tests/layout",
+                    "test:plans":  "playwright test tests/plans",
+                    "test:seniorpwd":  "playwright test tests/orders/senior-pwd",
+                    "test:customer-address":  "playwright test tests/orders/register/customer-address.spec.ts",
                     "typecheck":  "tsc --noEmit",
                     "report":  "playwright show-report"
                 },

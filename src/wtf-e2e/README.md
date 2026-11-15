@@ -15,9 +15,11 @@ tests/
   security/        api-access (who may call what), ui-access (pages and sidebar per role)
   dashboard/       dashboard, audit-log, notifications
   orders/
-    register/      checkout, lifecycle (edit, void, override, input rules), details-and-refund
+    register/      checkout, lifecycle (edit, void, override, input rules), details-and-refund, customer-address (`npm run test:customer-address`)
+    senior-pwd/    register, edge-cases, layout (`npm run test:seniorpwd`)
     offline/       sale-and-sync (sell without a connection, sync, held orders)
     customer-link/ ordering, edge-cases, chat
+  plans/           plan-gating (API refusals, platform plan editor rules, the Not in your plan page; `npm run test:plans`)
   promotions/      pricing
   inventory/
     items/         items-and-stock-in, lifecycle (delete, restore, stock rules on items), item-editor

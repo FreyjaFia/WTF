@@ -3,6 +3,8 @@
 #
 #   E2E_SQL='Server=localhost,1433;User Id=sa;Password=...;TrustServerCertificate=true;Encrypt=false' bash run.sh [playwright args]
 #
+# E2E_API_PORT, E2E_APP_PORT and E2E_DB_TAG (letters only) let several runs share one machine and one SQL Server.
+#
 # Creates WTF_E2E_<time>_<id> (src/WTF.E2E.Database), starts the API on 5290 against it and the app on 4300 (the "e2e"
 # configuration, which calls the API on 5290), runs the tests, then stops both and drops the database. Never uses the
 # real WTF database. Needs: dotnet 10, node, jq, curl, setsid (Linux).
@@ -10,9 +12,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 ROOT="$(cd ../.. && pwd)"
-API_PORT=5290
-APP_PORT=4300
-LOGS="${RUNNER_TEMP:-/tmp}/wtf-e2e"
+API_PORT="${E2E_API_PORT:-5290}"
+APP_PORT="${E2E_APP_PORT:-4300}"
+LOGS="${RUNNER_TEMP:-/tmp}/wtf-e2e${E2E_DB_TAG:+-$E2E_DB_TAG}"
 mkdir -p "$LOGS"
 
 : "${E2E_SQL:?Set E2E_SQL to the connection string of a SQL Server (the database name in it is ignored)}"
@@ -107,6 +109,11 @@ else
 fi
 APP_PID=$!
 wait_for "http://localhost:$APP_PORT" 300 "The app"
+
+if [ "$API_PORT" != "5290" ] || [ "$APP_PORT" != "4300" ]; then
+  # The app is built for 5290 (environment.e2e.ts); the tests send its API calls to this run's API instead (as run.ps1 does).
+  export E2E_API_ORIGIN="http://localhost:$API_PORT" E2E_APP_ORIGIN="http://localhost:$APP_PORT" E2E_APP_API_ORIGIN="http://localhost:5290"
+fi
 
 echo "Running the tests..."
 set +e
