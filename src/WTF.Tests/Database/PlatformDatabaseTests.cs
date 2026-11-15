@@ -477,26 +477,4 @@ public class PlatformDatabaseTests
         public WTF.Api.Features.Auth.LoginHandler Create() =>
             new(db, new JwtService(cfg, TestRequest.None()), new UserRoleService(db), cfg, TestFakes.Audit());
     }
-
-    private sealed class SwitchableTenant : ICurrentTenant, ITenantSwitch
-    {
-        private Guid? _id;
-
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => _id;
-
-        public Guid? StampTenantId => _id;
-
-        public void Use(Guid tenantId) => _id = tenantId;
-    }
-
-    private sealed class FixedTenant(Guid id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
-    }
 }

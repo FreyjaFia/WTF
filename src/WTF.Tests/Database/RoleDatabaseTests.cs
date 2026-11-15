@@ -6,7 +6,6 @@ using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Roles;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
@@ -166,14 +165,5 @@ public class RoleDatabaseTests
         }
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("tools/sql not found above the test output.");
-    }
-
-    private sealed class FixedTenant(Guid id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
     }
 }

@@ -10,43 +10,13 @@ using WTF.Api.Features.Subscriptions;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
 public class SubscriptionDatabaseTests
 {
-    private static readonly DateTime Today = new(2026, 11, 8, 6, 0, 0, DateTimeKind.Utc);
-
-    private sealed class FixedClock(DateTime utc) : TimeProvider
-    {
-        public DateTime Utc { get; set; } = utc;
-
-        public override DateTimeOffset GetUtcNow() => new(Utc, TimeSpan.Zero);
-    }
-
-    private sealed class SwitchableTenant : ICurrentTenant, ITenantSwitch
-    {
-        private Guid? _id;
-
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => _id;
-
-        public Guid? StampTenantId => _id;
-
-        public void Use(Guid tenantId) => _id = tenantId;
-    }
-
-    private sealed class FixedTenant(Guid id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
-    }
+    private static readonly DateTime Today = FixedClock.Today;
 
     private static WTFDbContext PlatformContext(SqlTestDatabase database) => database.CreateContext(new SwitchableTenant());
 

@@ -26,7 +26,7 @@ public class OfflineSyncTests
     {
         var db = TestDb.Create(_dbName);
         var accessor = TestRequest.As(_userId, AppRoles.Admin);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        var create = TestFakes.CreateOrderHandler(db, accessor, _audit);
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));

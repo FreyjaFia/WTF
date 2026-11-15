@@ -6,8 +6,8 @@ using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Services;
-using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
+using static WTF.Tests.Infrastructure.SeniorPwdTestKit;
 
 namespace WTF.Tests.Features.Orders;
 
@@ -24,45 +24,13 @@ public class SeniorPwdOrderTests
     }
 
     private CreateOrderHandler CreateHandler(string role = AppRoles.Cashier) =>
-        new(TestDb.Create(_dbName), TestRequest.As(_userId, role), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
+        TestFakes.CreateOrderHandler(TestDb.Create(_dbName), TestRequest.As(_userId, role), _audit);
 
     private UpdateOrderHandler UpdateHandler(string role = AppRoles.Admin) =>
-        new(TestDb.Create(_dbName), TestRequest.As(_userId, role), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
+        TestFakes.UpdateOrderHandler(TestDb.Create(_dbName), TestRequest.As(_userId, role), _audit);
 
-    private static SeniorPwdPersonRequestDto Person(string id = "SC-123456", string name = "Lola Remedios", SeniorPwdTypeEnum type = SeniorPwdTypeEnum.Senior) =>
-        new(type, id, name);
-
-    private static OrderItemRequestDto Covered(Guid productId, int quantity = 1, int person = 0) =>
-        new(productId, quantity, [], null, null, SeniorPwdPersonIndex: person);
-
-    private static OrderItemRequestDto Plain(Guid productId, int quantity = 1) =>
-        new(productId, quantity, [], null, null);
-
-    private static CreateOrderCommand Sale(
-        IEnumerable<OrderItemRequestDto> items,
-        IEnumerable<SeniorPwdPersonRequestDto> persons,
-        decimal? expectedTotal = null,
-        OrderStatusEnum status = OrderStatusEnum.Completed) =>
-        new() { Status = status, Items = [.. items], SeniorPwdPersons = [.. persons], ExpectedTotal = expectedTotal };
-
-    private async Task ConfigureShopAsync(bool enabled = true, bool vatRegistered = false)
-    {
-        await using var db = TestDb.Create(_dbName);
-        db.TenantSettings.RemoveRange(db.TenantSettings);
-        db.TenantSettings.Add(new TenantSetting
-        {
-            TenantId = Guid.NewGuid(),
-            ShopName = "Shop",
-            PrimaryColor = "#6f4e37",
-            TimeZone = "Asia/Manila",
-            CurrencySymbol = "P",
-            CurrencyCode = "PHP",
-            CurrencyDecimals = 2,
-            SeniorPwdEnabled = enabled,
-            VatRegistered = vatRegistered,
-        });
-        await db.SaveChangesAsync();
-    }
+    private Task ConfigureShopAsync(bool enabled = true, bool vatRegistered = false) =>
+        SeniorPwdTestKit.ConfigureShopAsync(_dbName, enabled, vatRegistered);
 
     [Fact]
     public async Task Create_NotVatRegistered_TakesTwentyPercentOffTheCoveredItem()

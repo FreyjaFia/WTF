@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
-using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
@@ -17,25 +16,25 @@ public class TenantIsolationDatabaseTests
         var user = await SqlSeed.UserAsync(database);
         await SeedTenantsAsync(database);
 
-        await using (var a = database.CreateContext(new Tenant(TenantA)))
+        await using (var a = database.CreateContext(new FixedTenant(TenantA)))
         {
             a.Customers.Add(NewCustomer("Ana", user.Id));
             await a.SaveChangesAsync();
         }
 
-        await using (var b = database.CreateContext(new Tenant(TenantB)))
+        await using (var b = database.CreateContext(new FixedTenant(TenantB)))
         {
             b.Customers.Add(NewCustomer("Ben", user.Id));
             await b.SaveChangesAsync();
         }
 
-        await using var readA = database.CreateContext(new Tenant(TenantA));
+        await using var readA = database.CreateContext(new FixedTenant(TenantA));
         (await readA.Customers.Select(c => c.FirstName).ToListAsync()).ShouldBe(["Ana"]);
 
-        await using var readB = database.CreateContext(new Tenant(TenantB));
+        await using var readB = database.CreateContext(new FixedTenant(TenantB));
         (await readB.Customers.Select(c => c.FirstName).ToListAsync()).ShouldBe(["Ben"]);
 
-        await using var nobody = database.CreateContext(new Tenant(null));
+        await using var nobody = database.CreateContext(new FixedTenant(null));
         (await nobody.Customers.CountAsync()).ShouldBe(0);
 
         await using var unfiltered = database.CreateContext();
@@ -48,19 +47,19 @@ public class TenantIsolationDatabaseTests
         await using var database = await SqlTestDatabase.CreateAsync();
         var user = await SqlSeed.UserAsync(database);
         await SeedTenantsAsync(database);
-        await using (var a = database.CreateContext(new Tenant(TenantA)))
+        await using (var a = database.CreateContext(new FixedTenant(TenantA)))
         {
             a.Customers.Add(NewCustomer("Ana", user.Id));
             await a.SaveChangesAsync();
         }
 
-        await using (var b = database.CreateContext(new Tenant(TenantB)))
+        await using (var b = database.CreateContext(new FixedTenant(TenantB)))
         {
             b.Customers.Add(NewCustomer("Ben", user.Id));
             await b.SaveChangesAsync();
         }
 
-        await using (var b = database.CreateContext(new Tenant(TenantB)))
+        await using (var b = database.CreateContext(new FixedTenant(TenantB)))
         {
             var changed = await b.Customers.ExecuteUpdateAsync(s => s.SetProperty(c => c.LastName, "Changed"));
             changed.ShouldBe(1);
@@ -79,7 +78,7 @@ public class TenantIsolationDatabaseTests
 
         foreach (var tenant in new[] { TenantA, TenantB, TenantA })
         {
-            await using var db = database.CreateContext(new Tenant(tenant));
+            await using var db = database.CreateContext(new FixedTenant(tenant));
             db.Orders.Add(new Order { Id = Guid.NewGuid(), StatusId = 1, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id });
             await db.SaveChangesAsync();
         }
@@ -108,13 +107,4 @@ public class TenantIsolationDatabaseTests
         CreatedAt = DateTime.UtcNow,
         CreatedBy = userId,
     };
-
-    private sealed class Tenant(Guid? id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
-    }
 }

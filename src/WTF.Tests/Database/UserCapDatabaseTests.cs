@@ -14,15 +14,6 @@ namespace WTF.Tests.Database;
 
 public class UserCapDatabaseTests
 {
-    private sealed class FixedTenant(Guid id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
-    }
-
     private static readonly FixedTenant Shop = new(TenantDefaults.DefaultTenantId);
 
     private static async Task SetCapAsync(SqlTestDatabase database, int? maxUsers)

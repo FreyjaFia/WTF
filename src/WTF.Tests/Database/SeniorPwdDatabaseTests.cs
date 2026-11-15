@@ -16,10 +16,10 @@ public class SeniorPwdDatabaseTests
     private static readonly Guid TenantB = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000002");
 
     private static CreateOrderHandler CreateHandler(WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        TestFakes.CreateOrderHandler(db, TestRequest.As(userId, AppRoles.Cashier));
 
     private static UpdateOrderHandler UpdateHandler(WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        TestFakes.UpdateOrderHandler(db, TestRequest.As(userId, AppRoles.Admin));
 
     private static async Task TurnOnAsync(SqlTestDatabase database, bool vatRegistered)
     {
@@ -229,14 +229,5 @@ public class SeniorPwdDatabaseTests
         });
         await db.SaveChangesAsync();
         return order.Id;
-    }
-
-    private sealed class FixedTenant(Guid id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
     }
 }

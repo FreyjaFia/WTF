@@ -9,7 +9,6 @@ using WTF.Api.Features.Users;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Roles;
@@ -316,14 +315,5 @@ public class RoleHandlerTests
 
         var delete = new DeleteUserHandler(Db(), TestRequest.As(owner, AppRoles.Owner), _audit, _cache);
         await Should.ThrowAsync<InvalidOperationException>(() => delete.Handle(new DeleteUserCommand(owner), CancellationToken.None));
-    }
-
-    private sealed class FixedTenant(Guid id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
     }
 }

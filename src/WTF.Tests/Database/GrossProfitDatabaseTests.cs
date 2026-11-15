@@ -48,7 +48,7 @@ public class GrossProfitDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            var create = new CreateOrderHandler(db, TestRequest.As(user.Id, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+            var create = TestFakes.CreateOrderHandler(db, TestRequest.As(user.Id, AppRoles.Admin, "UTC"));
             await create.Handle(new CreateOrderCommand
             {
                 Status = OrderStatusEnum.Completed,

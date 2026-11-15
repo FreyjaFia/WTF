@@ -18,7 +18,7 @@ public class CreateOrderBatchHandlerTests
     private CreateOrderBatchHandler Handler()
     {
         var db = TestDb.Create(_dbName);
-        var single = new CreateOrderHandler(db, TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        var single = TestFakes.CreateOrderHandler(db, TestRequest.As(_userId, AppRoles.Admin));
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
             .Returns(call => single.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));

@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Notifications;
+using WTF.Api.Features.Orders;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -27,6 +29,12 @@ internal static class TestFakes
     public static IConversationNotifier Conversations() => Substitute.For<IConversationNotifier>();
 
     public static IHubContext<DashboardHub> Hub() => Substitute.For<IHubContext<DashboardHub>>();
+
+    public static CreateOrderHandler CreateOrderHandler(WTFDbContext db, IHttpContextAccessor accessor, IAuditService? audit = null) =>
+        new(db, accessor, Hub(), audit ?? Audit(), Push(), Conversations(), Stock(db));
+
+    public static UpdateOrderHandler UpdateOrderHandler(WTFDbContext db, IHttpContextAccessor accessor, IAuditService? audit = null) =>
+        new(db, accessor, Hub(), audit ?? Audit(), Push(), Conversations(), Stock(db));
 }
 
 /// <summary>Reads the plan from the database every time, so a test that changes the plan sees it at once.</summary>

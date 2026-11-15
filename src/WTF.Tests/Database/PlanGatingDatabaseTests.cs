@@ -3,7 +3,6 @@ using WTF.Api.Common.Auth;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Dashboard;
-using WTF.Api.Features.Inventory;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
@@ -19,15 +18,6 @@ namespace WTF.Tests.Database;
 
 public class PlanGatingDatabaseTests
 {
-    private sealed class FixedTenant(Guid id) : ICurrentTenant
-    {
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => id;
-
-        public Guid? StampTenantId => id;
-    }
-
     private static WTFDbContext ShopContext(SqlTestDatabase database) =>
         database.CreateContext(new FixedTenant(TenantDefaults.DefaultTenantId));
 
@@ -44,10 +34,10 @@ public class PlanGatingDatabaseTests
             {
                 TenantId = TenantDefaults.DefaultTenantId,
                 PlanId = plan.Id,
-                CurrentPeriodStart = DateTime.UtcNow.AddDays(-5),
-                CurrentPeriodEnd = DateTime.UtcNow.AddDays(300),
+                CurrentPeriodStart = FixedClock.Today.AddDays(-5),
+                CurrentPeriodEnd = FixedClock.Today.AddDays(300),
                 GraceDays = 7,
-                UpdatedAt = DateTime.UtcNow,
+                UpdatedAt = FixedClock.Today,
             });
         }
         else
@@ -75,9 +65,9 @@ public class PlanGatingDatabaseTests
         var latte = await SqlSeed.ProductAsync(database, user.Id, "Latte", 150m);
         await using (var seed = database.CreateContext())
         {
-            var milk = new Item { Id = Guid.NewGuid(), Name = "Oat Milk", UnitName = "ml", CurrentQuantity = 1000m, AllowNegativeStock = true, IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id };
+            var milk = new Item { Id = Guid.NewGuid(), Name = "Oat Milk", UnitName = "ml", CurrentQuantity = 1000m, AllowNegativeStock = true, IsActive = true, CreatedAt = FixedClock.Today, CreatedBy = user.Id };
             seed.Items.Add(milk);
-            seed.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), ProductId = latte.Id, ItemId = milk.Id, QuantityPerSale = 200m, IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id });
+            seed.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), ProductId = latte.Id, ItemId = milk.Id, QuantityPerSale = 200m, IsActive = true, CreatedAt = FixedClock.Today, CreatedBy = user.Id });
             await seed.SaveChangesAsync();
         }
 
@@ -114,7 +104,7 @@ public class PlanGatingDatabaseTests
         var latte = await SqlSeed.ProductAsync(database, user.Id, "Latte", 150m);
         await using (var seed = database.CreateContext())
         {
-            var promo = new Promotion { Id = Guid.NewGuid(), Name = "Half off", TypeId = PromotionTypeIds.DiscountedProduct, IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id };
+            var promo = new Promotion { Id = Guid.NewGuid(), Name = "Half off", TypeId = PromotionTypeIds.DiscountedProduct, IsActive = true, CreatedAt = FixedClock.Today, CreatedBy = user.Id };
             promo.DiscountedProductPromotions.Add(new DiscountedProductPromotion { Id = Guid.NewGuid(), PromotionId = promo.Id, ProductId = latte.Id, PercentOff = 50m });
             seed.Promotions.Add(promo);
             await seed.SaveChangesAsync();
@@ -204,9 +194,9 @@ public class PlanGatingDatabaseTests
         var token = OrderLinkToken.Generate();
         await using (var seed = database.CreateContext())
         {
-            var customer = new Customer { Id = Guid.NewGuid(), FirstName = "C", LastName = "One", IsActive = true, AllowOrderingLink = true, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id };
+            var customer = new Customer { Id = Guid.NewGuid(), FirstName = "C", LastName = "One", IsActive = true, AllowOrderingLink = true, CreatedAt = FixedClock.Today, CreatedBy = user.Id };
             seed.Customers.Add(customer);
-            seed.ShortLinks.Add(new ShortLink { Id = Guid.NewGuid(), Token = token, TargetType = OrderLinkToken.TargetType, TargetId = customer.Id, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id });
+            seed.ShortLinks.Add(new ShortLink { Id = Guid.NewGuid(), Token = token, TargetType = OrderLinkToken.TargetType, TargetId = customer.Id, CreatedAt = FixedClock.Today, CreatedBy = user.Id });
             await seed.SaveChangesAsync();
         }
 
@@ -248,7 +238,7 @@ public class PlanGatingDatabaseTests
         var user = await SqlSeed.UserAsync(database);
         await using (var seed = database.CreateContext())
         {
-            seed.Items.Add(new Item { Id = Guid.NewGuid(), Name = "Beans", UnitName = "g", CurrentQuantity = 0m, WarningQuantity = 100m, CriticalQuantity = 10m, IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id });
+            seed.Items.Add(new Item { Id = Guid.NewGuid(), Name = "Beans", UnitName = "g", CurrentQuantity = 0m, WarningQuantity = 100m, CriticalQuantity = 10m, IsActive = true, CreatedAt = FixedClock.Today, CreatedBy = user.Id });
             await seed.SaveChangesAsync();
         }
 
@@ -299,16 +289,4 @@ public class PlanGatingDatabaseTests
         }
     }
 
-    private sealed class SwitchableTenant : ICurrentTenant, ITenantSwitch
-    {
-        private Guid? _id;
-
-        public bool FilterEnabled => true;
-
-        public Guid? TenantId => _id;
-
-        public Guid? StampTenantId => _id;
-
-        public void Use(Guid tenantId) => _id = tenantId;
-    }
 }
