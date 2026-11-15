@@ -50,7 +50,6 @@ import { debounceTime, Subscription } from 'rxjs';
 import { cartTotal } from '@shared/calculations';
 import { orderAddressOf } from '@shared/utils/order-address';
 import type { PendingOrder } from '@core/services/db';
-import { PosWasteSheetComponent } from '@features/orders/pos-waste-sheet/pos-waste-sheet';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
@@ -85,7 +84,6 @@ interface OrderGroup {
     PullToRefreshComponent,
     RejectOrderDialogComponent,
     SearchInputComponent,
-    PosWasteSheetComponent,
   ],
   templateUrl: './order-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -116,8 +114,6 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly isHeldExpanded = signal(true);
   protected readonly orderToRejectHeld = signal<OrderDto | null>(null);
   protected readonly canReviewHeld = computed(() => this.authService.canOverrideOrders());
-  protected readonly canRecordWaste = computed(() => this.authService.canWriteStockWaste());
-  protected readonly isWasteSheetOpen = signal(false);
   /** The order whose chat is open in the side panel. */
   protected readonly chatOrder = signal<OrderDto | null>(null);
   /** The waiting order an accept or reject request is running for. */

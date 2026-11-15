@@ -8,16 +8,6 @@
         <p class="text-xs text-gray-500 sm:text-sm">Manage your store transactions.</p>
       </div>
       <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
-        @if (canRecordWaste() && isOnline()) {
-          <button
-            type="button"
-            class="app-btn app-btn-secondary app-btn-sm"
-            (click)="isWasteSheetOpen.set(true)"
-          >
-            <app-icon name="icon-warning" [class]="'h-4 w-4'" />
-            Record Waste
-          </button>
-        }
         @if (canCreateOrders()) {
           <a
             draggable="false"
@@ -810,6 +800,3 @@
   />
 }
 
-@if (isWasteSheetOpen()) {
-  <app-pos-waste-sheet (closed)="isWasteSheetOpen.set(false)" />
-}

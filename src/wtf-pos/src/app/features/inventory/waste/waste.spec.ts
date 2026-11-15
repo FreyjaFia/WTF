@@ -61,7 +61,7 @@ describe('WasteComponent', () => {
   let alerts: ReturnType<typeof fakeAlert>;
   let modalStack: { push: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
   let router: { navigate: ReturnType<typeof vi.fn>; navigateByUrl: ReturnType<typeof vi.fn> };
-  let auth: { canReviewStockWaste: ReturnType<typeof vi.fn> };
+  let auth: { canReviewStockWaste: ReturnType<typeof vi.fn>; canWriteStockWaste: ReturnType<typeof vi.fn> };
   let queryParams: Record<string, string>;
   let route: { snapshot: { queryParamMap: ReturnType<typeof convertToParamMap> } };
 
@@ -118,8 +118,24 @@ describe('WasteComponent', () => {
     alerts = fakeAlert();
     modalStack = { push: vi.fn(() => 7), remove: vi.fn() };
     router = { navigate: vi.fn(() => Promise.resolve(true)), navigateByUrl: vi.fn() };
-    auth = { canReviewStockWaste: vi.fn(() => true) };
+    auth = { canReviewStockWaste: vi.fn(() => true), canWriteStockWaste: vi.fn(() => true) };
     queryParams = {};
+  });
+
+  describe('Record Waste button', () => {
+    const recordButton = (fixture: { nativeElement: HTMLElement }) =>
+      fixture.nativeElement.querySelector('[data-testid="record-waste-button"]');
+
+    it('is on the page for staff who can record waste', () => {
+      expect(recordButton(create())).not.toBeNull();
+    });
+
+    it('is hidden from staff who cannot record waste', () => {
+      auth.canWriteStockWaste.mockReturnValue(false);
+
+      expect(recordButton(create())).toBeNull();
+    });
+
   });
 
   describe('sorting from the column headers', () => {

@@ -26,6 +26,8 @@ export const AppRoutes = {
   InventoryIngredientsEditById: (productId: string) => `/inventory/ingredients/${productId}`,
   InventoryAttention: '/inventory/attention',
   InventoryWaste: '/inventory/waste',
+  InventoryWasteRecord: '/inventory/waste/record',
+  InventoryWasteRecordItem: (itemId: string) => `/inventory/waste/record/${itemId}`,
   InventoryCounts: '/inventory/counts',
   InventoryCountById: (countId: string) => `/inventory/counts/${countId}`,
   InventoryPurchaseOrders: '/inventory/purchase-orders',

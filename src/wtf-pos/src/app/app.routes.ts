@@ -22,6 +22,8 @@ import { SuggestedOrdersComponent } from '@features/inventory/purchase-orders/su
 import { ReceivingComponent } from '@features/inventory/receiving/receiving';
 import { SupplierDetailsComponent } from '@features/inventory/suppliers/supplier-details';
 import { SuppliersComponent } from '@features/inventory/suppliers/suppliers';
+import { RecordWasteComponent } from '@features/inventory/waste/record-waste/record-waste';
+import { RecordWasteEditorComponent } from '@features/inventory/waste/record-waste/record-waste-editor';
 import { WasteComponent } from '@features/inventory/waste/waste';
 import { Login } from '@features/login/login';
 import { AuditLogsComponent } from '@features/management/audit-logs/audit-logs';
@@ -250,6 +252,19 @@ export const routes: Routes = [
             component: WasteComponent,
             canActivate: [roleGuard],
             data: { permission: Permissions.StockRead },
+          },
+          {
+            path: 'waste/record',
+            component: RecordWasteComponent,
+            canActivate: [roleGuard],
+            data: { permission: Permissions.StockWasteRecord },
+          },
+          {
+            path: 'waste/record/:itemId',
+            component: RecordWasteEditorComponent,
+            canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
+            data: { permission: Permissions.StockWasteRecord },
           },
           {
             path: 'alerts',

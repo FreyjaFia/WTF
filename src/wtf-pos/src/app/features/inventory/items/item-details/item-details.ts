@@ -278,6 +278,10 @@ export class ItemDetailsComponent implements OnInit {
     return this.authService.canWriteStockWaste();
   }
 
+  protected hasWasteableStock(item: ItemDto): boolean {
+    return item.currentQuantity > 0;
+  }
+
   protected recordWaste(): void {
     if (!this.canRecordWaste()) {
       this.alertService.errorUnauthorized();

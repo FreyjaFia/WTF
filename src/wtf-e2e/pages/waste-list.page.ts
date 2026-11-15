@@ -28,7 +28,7 @@ export class WasteListPage {
 
   public async openFilters(): Promise<void> {
     await this.filtersButton.click();
-    await this.page.getByText('Waste Filters').waitFor();
+    await this.page.getByRole('heading', { name: 'Waste Filters' }).waitFor();
   }
 
   public async closeFilters(): Promise<void> {

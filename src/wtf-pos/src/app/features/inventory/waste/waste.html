@@ -5,6 +5,17 @@
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Waste</h1>
         <p class="text-xs text-gray-500 sm:text-sm">Stock that left without a sale, with its reason</p>
       </div>
+      @if (auth.canWriteStockWaste()) {
+        <a
+          draggable="false"
+          class="app-btn app-btn-primary app-btn-sm"
+          data-testid="record-waste-button"
+          [routerLink]="routes.InventoryWasteRecord"
+        >
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          Record Waste
+        </a>
+      }
     </div>
 
     <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">

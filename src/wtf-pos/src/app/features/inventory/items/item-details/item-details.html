@@ -39,7 +39,7 @@
 
     @if (item() && (canWriteItems() || canWriteStock() || canRecordWaste())) {
       <div class="flex shrink-0 flex-wrap justify-end gap-2">
-        @if (item()!.isActive && canRecordWaste()) {
+        @if (item()!.isActive && canRecordWaste() && hasWasteableStock(item()!)) {
           <button
             type="button"
             class="app-btn app-btn-outline-danger app-btn-sm gap-2"

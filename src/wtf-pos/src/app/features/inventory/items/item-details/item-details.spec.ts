@@ -252,6 +252,15 @@ describe('ItemDetailsComponent', () => {
       expect(vm['getStockStatus'](makeItem({ currentQuantity: qty }))).toBe(status);
     });
 
+    it.each([
+      [5, true],
+      [0, false],
+      [-3, false],
+    ])('stock %i can record waste: %s', (qty, expected) => {
+      const { vm } = create();
+      expect(vm['hasWasteableStock'](makeItem({ currentQuantity: qty, allowNegativeStock: true }))).toBe(expected);
+    });
+
     it('is ok without thresholds', () => {
       const { vm } = create();
       expect(

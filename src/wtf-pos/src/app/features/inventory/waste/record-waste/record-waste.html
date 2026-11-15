@@ -1,0 +1,66 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 items-start gap-2 sm:mb-6">
+    <a
+      draggable="false"
+      class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
+      aria-label="Back to Waste"
+      title="Back"
+      [routerLink]="backLink"
+    >
+      <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+    </a>
+    <div class="flex min-w-0 flex-col gap-1">
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Record Waste</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">Pick the item that left without a sale.</p>
+    </div>
+  </div>
+
+  @if (!isOnline()) {
+    <div role="status" class="mb-3 flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-xs text-gray-700">
+      <app-icon name="icon-warning" class="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+      <span>Recording waste needs a connection. It is turned off while you are offline.</span>
+    </div>
+  }
+
+  <div class="mb-4 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:max-w-104">
+    <app-search-input
+      placeholder="Search items"
+      ariaLabel="Search items"
+      [value]="searchTerm()"
+      (valueChange)="searchTerm.set($event)"
+    />
+  </div>
+
+  <div class="min-h-0 flex-1 overflow-y-auto pb-6">
+    @if (isLoading()) {
+      <div class="flex justify-center py-10">
+        <span class="loading loading-md loading-spinner text-gray-400"></span>
+      </div>
+    } @else if (loadError()) {
+      <div class="flex flex-col items-center gap-3 py-8 text-center">
+        <p class="text-sm text-error">{{ loadError() }}</p>
+        <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="load()">Try Again</button>
+      </div>
+    } @else if (filteredItems().length === 0) {
+      <p class="py-10 text-center text-sm text-gray-500" data-testid="record-waste-empty">
+        No items with stock found.
+      </p>
+    } @else {
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @for (item of filteredItems(); track item.id) {
+          <a
+            draggable="false"
+            class="flex min-w-0 flex-col items-start gap-1.5 rounded-xl border border-gray-200 bg-surface p-4 text-left transition hover:border-gray-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary"
+            data-testid="record-waste-item"
+            [class.pointer-events-none]="!isOnline()"
+            [class.opacity-50]="!isOnline()"
+            [routerLink]="routes.InventoryWasteRecordItem(item.id)"
+          >
+            <span class="w-full text-base font-semibold wrap-break-word text-gray-900">{{ item.name }}</span>
+            <span class="text-sm text-gray-500">{{ item.currentQuantity }} {{ unitOf(item) }} in stock</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+</div>

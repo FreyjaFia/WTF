@@ -2,7 +2,7 @@ import { HttpErrorMessages } from '@core/messages';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
@@ -63,6 +63,7 @@ const STATUS_BARS: Record<StockWasteStatus, string> = {
     IconComponent,
     PullToRefreshComponent,
     ReactiveFormsModule,
+    RouterLink,
     SearchInputComponent,
     SideDrawerComponent,
     SortHeaderComponent,
@@ -102,6 +103,7 @@ export class WasteComponent implements OnInit, OnDestroy {
   protected readonly itemFilter = signal<{ id: string; name: string } | null>(null);
   protected readonly search = signal('');
   protected readonly isFiltersOpen = signal(false);
+  protected readonly routes = AppRoutes;
   protected readonly activeFilterCount = computed(
     () =>
       (this.datePreset() !== DEFAULT_DATE_PRESET ? 1 : 0) +
