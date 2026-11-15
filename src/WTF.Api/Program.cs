@@ -42,7 +42,6 @@ builder.Host.UseSerilog();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.Configure<TenancyOptions>(builder.Configuration.GetSection(TenancyOptions.SectionName));
 builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
 
 builder.Services.AddDbContext<WTFDbContext>(options =>
@@ -154,6 +153,15 @@ builder.Services.AddAuthentication(options =>
     // Allow SignalR clients to send the JWT via query string
     options.Events = new JwtBearerEvents
     {
+        OnTokenValidated = context =>
+        {
+            if (context.Principal is null || !TenantTokenRule.IsAccepted(context.Principal))
+            {
+                context.Fail("The token names no shop.");
+            }
+
+            return Task.CompletedTask;
+        },
         OnMessageReceived = context =>
         {
             var accessToken = context.Request.Query["access_token"];

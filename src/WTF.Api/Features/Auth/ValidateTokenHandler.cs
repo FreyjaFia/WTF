@@ -37,7 +37,7 @@ public class ValidateTokenHandler(WTFDbContext db, IJwtService jwtService) : IRe
             .FirstOrDefaultAsync(u => u.Id == userId && u.IsActive, cancellationToken);
 
         var tokenTenant = principal.FindFirst(TenantDefaults.ClaimType)?.Value;
-        if (user is not null && tokenTenant is not null && !string.Equals(tokenTenant, user.TenantId.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (user is not null && !string.Equals(tokenTenant, user.TenantId.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             return new ValidateTokenDto(false);
         }

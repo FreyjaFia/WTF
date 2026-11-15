@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using System.Security.Claims;
 using WTF.Api.Common.Auth;
@@ -12,7 +11,7 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Tenancy;
 
-public class LegacyTokenPlanTests
+public class TokenPlanTests
 {
     private static async Task<(string Db, Guid UserId)> SeedAsync(string planFeatures)
     {
@@ -48,7 +47,7 @@ public class LegacyTokenPlanTests
         return (name, userId);
     }
 
-    private static async Task<ClaimsPrincipal> RunAsync(string dbName, Guid userId, bool legacyTokens, bool withTenantClaim)
+    private static async Task<ClaimsPrincipal> RunAsync(string dbName, Guid userId, bool withTenantClaim)
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         Claim[] claims = [new(ClaimTypes.NameIdentifier, userId.ToString()), new(ClaimTypes.Role, AppRoles.Owner)];
@@ -59,7 +58,7 @@ public class LegacyTokenPlanTests
 
         var context = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test")) };
         accessor.HttpContext.Returns(context);
-        var tenant = new CurrentTenant(Options.Create(new TenancyOptions { LegacyTokensAreDefaultTenant = legacyTokens }), accessor);
+        var tenant = new CurrentTenant(accessor);
         context.RequestServices = new ServiceCollection().AddScoped(_ => TestDb.Create(dbName, tenant)).BuildServiceProvider();
 
         await new PermissionClaimsMiddleware(_ => Task.CompletedTask)
@@ -68,35 +67,11 @@ public class LegacyTokenPlanTests
     }
 
     [Fact]
-    public async Task ALegacyTokenWithNoTenantClaim_IsGatedByTheFirstShopsPlan()
-    {
-        var (db, userId) = await SeedAsync(string.Empty);
-
-        var user = await RunAsync(db, userId, legacyTokens: true, withTenantClaim: false);
-
-        user.HasClaim(c => c.Type == PermissionClaimsMiddleware.PlanLoadedClaim).ShouldBeTrue();
-        PermissionChecks.Has(user, "orders.read").ShouldBeTrue();
-        PermissionChecks.Has(user, "items.read").ShouldBeFalse();
-        FeatureAuthorizationHandler.IsInPlan(user, "inventory").ShouldBeFalse();
-    }
-
-    [Fact]
-    public async Task ALegacyTokenOnAPlanWithInventory_KeepsInventory()
-    {
-        var (db, userId) = await SeedAsync("inventory");
-
-        var user = await RunAsync(db, userId, legacyTokens: true, withTenantClaim: false);
-
-        PermissionChecks.Has(user, "items.read").ShouldBeTrue();
-        FeatureAuthorizationHandler.IsInPlan(user, "inventory").ShouldBeTrue();
-    }
-
-    [Fact]
     public async Task ATokenWithNoShopAtAll_GetsTheCoreFeaturesOnly_NotEverything()
     {
         var (db, userId) = await SeedAsync("inventory,promotions");
 
-        var user = await RunAsync(db, userId, legacyTokens: false, withTenantClaim: false);
+        var user = await RunAsync(db, userId, withTenantClaim: false);
 
         user.HasClaim(c => c.Type == PermissionClaimsMiddleware.PlanLoadedClaim).ShouldBeTrue();
         PermissionChecks.Has(user, "items.read").ShouldBeFalse();
@@ -108,7 +83,7 @@ public class LegacyTokenPlanTests
     {
         var (db, userId) = await SeedAsync(string.Empty);
 
-        var user = await RunAsync(db, userId, legacyTokens: false, withTenantClaim: true);
+        var user = await RunAsync(db, userId, withTenantClaim: true);
 
         PermissionChecks.Has(user, "items.read").ShouldBeFalse();
         PermissionChecks.Has(user, "orders.read").ShouldBeTrue();

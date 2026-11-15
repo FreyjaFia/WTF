@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using System.Security.Claims;
 using WTF.Api.Common.Auth;
@@ -115,10 +114,10 @@ public class TenantRequestGuardTests
     }
 
     [Fact]
-    public void PlatformToken_IsNeverTreatedAsTheFirstShop()
+    public void TokensWithoutATenantClaim_NeverBecomeTheFirstShop()
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
-        var tenant = new CurrentTenant(Options.Create(new TenancyOptions { LegacyTokensAreDefaultTenant = true }), accessor);
+        var tenant = new CurrentTenant(accessor);
 
         accessor.HttpContext.Returns(new DefaultHttpContext
         {
@@ -130,6 +129,6 @@ public class TenantRequestGuardTests
         {
             User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Role, AppRoles.Admin)], "test", ClaimTypes.Name, ClaimTypes.Role)),
         });
-        tenant.TenantId.ShouldBe(TenantDefaults.DefaultTenantId);
+        tenant.TenantId.ShouldBeNull();
     }
 }

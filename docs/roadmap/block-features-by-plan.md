@@ -208,9 +208,9 @@ Still open: the exact bundle for each of the three plans, and what "block the la
   20 seconds to reach a second instance. Only the schedulers and tests read the plan straight from the database.
 - A shop with no subscription row keeps every feature (single-shop installs from before the tenants script). That is
   deliberate and unchanged; every shop created through the platform area gets a row.
-- A token issued before tenants (no tenant claim) is read as the first shop by both the data layer and the plan gate. After
-  every old token has been refreshed (refresh tokens last 7 days), set `Tenancy:LegacyTokensAreDefaultTenant` to `false` on
-  the server; a signed-in user with no shop then gets the core features only.
+- Every token is multi-tenant: a token with no tenant claim is refused with 401 when it is validated (platform admin tokens
+  are the only ones outside shops). There is no default-shop fallback and no setting for one, so old tokens from before
+  tenants stop working at deploy and those users sign in again once.
 - `/api/pos/stock-limits` answers an empty list when the plan has no inventory. The monthly workbook status and download
   routes need `workbook`, profit and loss needs `expenses` as well as `inventory`, and the per-item supplier routes use the
   Suppliers permissions (a role that only holds stock permissions no longer reads them).

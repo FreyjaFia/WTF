@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -33,7 +32,7 @@ public class TenantPhase2Tests
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) });
-        return new CurrentTenant(Options.Create(new TenancyOptions()), accessor);
+        return new CurrentTenant(accessor);
     }
 
     private static CurrentTenant NewSignedInTenant(Guid tenantId)
@@ -41,7 +40,7 @@ public class TenantPhase2Tests
         var accessor = Substitute.For<IHttpContextAccessor>();
         var identity = new ClaimsIdentity([new Claim(TenantDefaults.ClaimType, tenantId.ToString())], "test");
         accessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(identity) });
-        return new CurrentTenant(Options.Create(new TenancyOptions()), accessor);
+        return new CurrentTenant(accessor);
     }
 
     private WTFDbContext Anonymous(out CurrentTenant tenant)
@@ -437,7 +436,6 @@ public class TenantSchedulerTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
-        services.AddSingleton(Options.Create(new TenancyOptions()));
         services.AddScoped<ICurrentTenant, CurrentTenant>();
         services.AddScoped(sp => TestDb.Create(name, sp.GetRequiredService<ICurrentTenant>()));
         var provider = services.BuildServiceProvider();

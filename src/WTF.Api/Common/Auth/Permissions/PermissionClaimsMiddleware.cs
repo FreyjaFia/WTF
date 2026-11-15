@@ -60,9 +60,8 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
         await next(context);
     }
 
-    // The shop is resolved the way the data layer resolves it (a token from before tenants belongs to the first shop), so a
-    // legacy token is gated by that shop's plan. When shops are filtered but this user has none, only the core features
-    // apply. A database that does not filter by shop (unit tests) has no plan to read.
+    // The shop is resolved the way the data layer resolves it. When shops are filtered but this user has none, only the core
+    // features apply. A database that does not filter by shop (unit tests) has no plan to read.
     private static async Task<TenantPlan?> LoadPlanAsync(HttpContext context, WTFDbContext db, ITenantFeatures tenantFeatures, ClaimsIdentity identity)
     {
         var shopId = db.StampTenantId;

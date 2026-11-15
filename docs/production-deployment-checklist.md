@@ -38,7 +38,7 @@ Calls that do not block (the app works either way; say yes, no or later):
 
 - [ ] Pick a quiet time. Tell the shop the POS will be offline for about 30 minutes (28 scripts, a deploy, checks).
 - [ ] Have server access ready: SQL Server (`.\SQLEXPRESS`), the host's settings, and the CI release page.
-- [ ] Everyone signs in again after the deploy (the SuperAdmin to Owner rename invalidates old tokens). Tell the staff.
+- [ ] Everyone signs in again after the deploy (the SuperAdmin to Owner rename invalidates old tokens). Tokens with no tenant claim are refused with 401 (no default-shop fallback, no setting). Tell the staff.
 - [ ] CI is green on the commit you will tag (including the real SQL Server tests and the browser tests).
 
 ## 1. Back up and verify

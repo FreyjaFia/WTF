@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using WTF.Api.Features.Auth;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
+using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Auth;
@@ -32,7 +33,8 @@ public class ValidateTokenHandlerTests
         PasswordHash = "h",
         IsActive = active,
         RoleId = 1,
-        CreatedAt = DateTime.UtcNow
+        CreatedAt = DateTime.UtcNow,
+        TenantId = TenantDefaults.DefaultTenantId
     };
 
     private async Task Seed(bool active = true)
@@ -53,6 +55,19 @@ public class ValidateTokenHandlerTests
         var result = await Handler().Handle(new ValidateTokenQuery(token), CancellationToken.None);
 
         result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_TokenWithoutATenantClaim_IsInvalid()
+    {
+        await Seed();
+        var noShop = SeedUser();
+        noShop.TenantId = Guid.Empty;
+        var token = Jwt().GenerateAccessToken(noShop, "Admin");
+
+        var result = await Handler().Handle(new ValidateTokenQuery(token), CancellationToken.None);
+
+        result.IsValid.ShouldBeFalse();
     }
 
     [Fact]
