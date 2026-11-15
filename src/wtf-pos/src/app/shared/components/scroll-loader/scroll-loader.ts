@@ -19,7 +19,9 @@ export class ScrollLoaderComponent {
   constructor() {
     effect((onCleanup) => {
       const element = this.sentinel()?.nativeElement;
-      if (!element) {
+      // Read so the observer is made again when these change: a sentinel that stays in view fires no new event.
+      const busy = this.isLoading() || this.error() || this.offline() || !this.hasMore();
+      if (!element || busy) {
         return;
       }
 
@@ -29,7 +31,7 @@ export class ScrollLoaderComponent {
             this.requestMore();
           }
         },
-        { root: null, rootMargin: this.rootMargin(), threshold: 0 },
+        { root: scrollParent(element), rootMargin: this.rootMargin(), threshold: 0 },
       );
 
       observer.observe(element);
@@ -48,4 +50,19 @@ export class ScrollLoaderComponent {
 
     this.loadMore.emit();
   }
+}
+
+// rootMargin only reaches past a scroll container when that container is the observer's root.
+function scrollParent(element: HTMLElement): HTMLElement | null {
+  let parent = element.parentElement;
+  while (parent) {
+    const overflowY = getComputedStyle(parent).overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      return parent;
+    }
+
+    parent = parent.parentElement;
+  }
+
+  return null;
 }

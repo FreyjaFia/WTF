@@ -659,6 +659,8 @@
                     class="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
                     role="button"
                     tabindex="0"
+                    data-testid="order-row"
+                    [attr.data-order-number]="order.orderNumber"
                     (click)="openOrder(order)"
                     (keydown.enter)="openOrder(order)"
                     (keydown.space)="openOrder(order)"
@@ -775,7 +777,7 @@
 
             <app-scroll-loader
               [hasMore]="hasMoreOrders()"
-              [isLoading]="isLoadingMore()"
+              [isLoading]="isLoadingMore() || isReloading()"
               [error]="loadMoreFailed()"
               [offline]="!isOnline()"
               (loadMore)="loadMoreOrders()"
