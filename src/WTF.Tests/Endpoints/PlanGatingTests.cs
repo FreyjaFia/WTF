@@ -89,20 +89,22 @@ public class PlanGatingTests : IDisposable
         used.ShouldAllBe(f => PlanFeatures.IsKnown(f));
     }
 
+    public static TheoryData<string> GateableFeatures => [.. PlanFeatures.Gateable];
+
     [Theory]
-    [InlineData("inventory")]
-    [InlineData("promotions")]
-    [InlineData("orderlinks")]
-    public async Task FeaturePolicy_IsRefusedOnStarter_AllowedOnProAndBusiness_AndOnAShopWithoutPlanInfo(string feature)
+    [MemberData(nameof(GateableFeatures))]
+    public async Task FeaturePolicy_IsRefusedWithoutTheFeature_AllowedWithIt_AndAllowedOnAShopWithoutPlanInfo(string feature)
     {
         var policy = AppPolicies.RequireFeature(feature);
-        var starter = OnPlan(string.Empty, "Starter");
-        var pro = OnPlan("inventory,promotions,orderlinks", "Pro");
+        var without = OnPlan(string.Join(",", PlanFeatures.Gateable.Where(f => !PlanFeatures.Normalize([f]).Contains(feature))), "Without");
+        var with = OnPlan(feature, "With");
         var business = OnPlan(string.Join(",", PlanFeatures.Gateable), "Business");
+        var starter = OnPlan(string.Empty, "Starter");
         var noPlanInfo = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Role, AppRoles.Owner)], "test"));
 
         (await IsAllowedAsync(policy, starter)).ShouldBeFalse();
-        (await IsAllowedAsync(policy, pro)).ShouldBeTrue();
+        (await IsAllowedAsync(policy, without)).ShouldBeFalse();
+        (await IsAllowedAsync(policy, with)).ShouldBeTrue();
         (await IsAllowedAsync(policy, business)).ShouldBeTrue();
         (await IsAllowedAsync(policy, noPlanInfo)).ShouldBeTrue();
     }
@@ -114,7 +116,7 @@ public class PlanGatingTests : IDisposable
         var business = OnPlan(string.Join(",", PlanFeatures.Gateable), "Business");
         var mixed = _host.Routes.Where(r => r.Policies.Any(p => p.StartsWith(AppPolicies.FeaturePrefix, StringComparison.Ordinal))).ToList();
 
-        mixed.Count.ShouldBeGreaterThanOrEqualTo(8);
+        mixed.ShouldNotBeEmpty();
         foreach (var route in mixed)
         {
             foreach (var policy in route.Policies)
@@ -174,7 +176,7 @@ public class PlanGatingTests : IDisposable
     }
 
     [Fact]
-    public void TheNewKeys_FollowTheirFeatures()
+    public void PermissionKeys_MapToTheirPlanFeature()
     {
         PermissionCatalog.FeatureOf("purchasing.read").ShouldBe("purchasing");
         PermissionCatalog.FeatureOf("suppliers.write").ShouldBe("purchasing");
@@ -182,5 +184,15 @@ public class PlanGatingTests : IDisposable
         PermissionCatalog.FeatureOf("expenses.read").ShouldBe("expenses");
         PermissionCatalog.FeatureOf("audit.read").ShouldBe("audit");
         PermissionCatalog.FeatureOf("roles.manage").ShouldBe("customroles");
+    }
+
+    [Theory]
+    [MemberData(nameof(GateableFeatures))]
+    public void EveryGateableFeature_IsEnforcedByAPermissionOrAFeaturePolicy(string feature)
+    {
+        var byPermission = PermissionCatalog.All.Any(p => PermissionCatalog.FeatureOf(p.Key) == feature);
+        var byRoute = _host.Routes.SelectMany(r => r.Policies).Contains(AppPolicies.RequireFeature(feature));
+
+        (byPermission || byRoute).ShouldBeTrue($"nothing enforces {feature}");
     }
 }
