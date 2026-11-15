@@ -47,8 +47,9 @@ test.describe('paginated lists: customers @management @paging', () => {
     await expect(page).toHaveURL(/[?&]page=2/);
     await expect(bar(page)).toContainText(`26 – 50 of ${COUNT}`);
     await expect(rows(page)).toHaveCount(25);
-    const secondPage = await rows(page).allInnerTexts();
-    expect(secondPage.filter((row) => firstPage.includes(row))).toEqual([]);
+    await expect
+      .poll(async () => (await rows(page).allInnerTexts()).filter((row) => firstPage.includes(row)))
+      .toEqual([]);
 
     await bar(page).getByRole('button', { name: 'Page 3', exact: true }).click();
     await expect(rows(page)).toHaveCount(COUNT - 50);
