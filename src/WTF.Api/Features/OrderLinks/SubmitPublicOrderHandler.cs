@@ -5,10 +5,11 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Customers;
 using WTF.Api.Features.OrderLinks.DTOs;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Services;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
@@ -61,7 +62,7 @@ public class SubmitPublicOrderHandler(
     public const int MaxLines = 30;
     public const int MaxQuantity = 99;
     public const int MaxAddOnsPerLine = 20;
-    public const int MaxAddressLength = 300;
+    public const int MaxAddressLength = CustomerValidation.MaxAddressLength;
     public const int MaxContactLength = 30;
     public const int MaxWaitingOrders = 5;
     public const decimal MaxCashAmount = 1_000_000m;
@@ -106,7 +107,7 @@ public class SubmitPublicOrderHandler(
 
             if (address.Length > MaxAddressLength)
             {
-                throw new InvalidOperationException($"The delivery address cannot be longer than {MaxAddressLength} characters.");
+                throw new InvalidOperationException($"The delivery address cannot be longer than {MaxAddressLength} characters. Please shorten it.");
             }
         }
 

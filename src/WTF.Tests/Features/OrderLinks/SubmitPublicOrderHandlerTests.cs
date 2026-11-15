@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
@@ -501,6 +501,21 @@ public class SubmitPublicOrderHandlerTests
     }
 
     [Fact]
+    public async Task Submit_AnAddressAtTheCustomerLimit_IsSavedWithTheContactNumber()
+    {
+        var address = new string('b', SubmitPublicOrderHandler.MaxAddressLength);
+
+        await SubmitWithAudit(
+            Request(fulfillment: FulfillmentTypeEnum.Delivery, address: address) with { SaveAddress = true, SaveContactNumber = true });
+
+        await using var db = TestDb.Create(_db);
+        var customer = await db.Customers.SingleAsync();
+        customer.Address.ShouldBe(address);
+        customer.ContactNumber.ShouldNotBeNull();
+        SubmitPublicOrderHandler.MaxAddressLength.ShouldBe(150);
+    }
+
+    [Fact]
     public async Task Submit_SaveAddress_OnPickupHasNoAddressToKeep()
     {
         await SubmitWithAudit(
@@ -735,7 +750,7 @@ public class SubmitPublicOrderHandlerTests
         await ShouldRejectAsync(Request(fulfillment: FulfillmentTypeEnum.Delivery, address: null), "delivery address");
         await ShouldRejectAsync(Request(fulfillment: FulfillmentTypeEnum.Delivery, address: "   "), "delivery address");
         await ShouldRejectAsync(
-            Request(fulfillment: FulfillmentTypeEnum.Delivery, address: new string('a', 301)), "300 characters");
+            Request(fulfillment: FulfillmentTypeEnum.Delivery, address: new string('a', 151)), "150 characters");
     }
 
     [Fact]
