@@ -21,11 +21,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Hubs;
 
-/// <summary>
-/// Chat and order news from the server to real SignalR clients, through the real hubs and notifier on a test server.
-/// The unit tests check what the notifier asks the hubs to send; these check that it actually arrives, at the right
-/// people only: the staff, the customer who owns the order, and nobody else.
-/// </summary>
 public sealed class ChatRealTimeTests : IAsyncLifetime
 {
     private static readonly TimeSpan Wait = TimeSpan.FromSeconds(5);
@@ -67,7 +62,6 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
         await _app.DisposeAsync();
     }
 
-    /// <summary>Everybody who asks with a staff token is a cashier; anyone else is anonymous.</summary>
     // One fixed identity: SignalR refuses a connection whose user differs from the user who negotiated it.
     private static readonly string StaffUserId = Guid.NewGuid().ToString();
 
@@ -166,7 +160,6 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
         public HubConnection Connection { get; }
         public Listener(HubConnection connection) => Connection = connection;
 
-        /// <summary>Listens for an event with exactly the arguments the server sends for it.</summary>
         public void Listen(string name, params Type[] arguments)
         {
             Connection.On(name, arguments, _ =>
@@ -208,7 +201,6 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
             return false;
         }
 
-        /// <summary>Gives the server a moment, then says whether the event never came.</summary>
         public async Task<bool> StayedSilentAsync(string name) => !await HeardAsync(name, TimeSpan.FromMilliseconds(400));
     }
 

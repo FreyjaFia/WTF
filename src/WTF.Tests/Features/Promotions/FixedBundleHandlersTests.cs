@@ -13,7 +13,6 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     private readonly Guid _cheese = Guid.NewGuid();
     private readonly Guid _bacon = Guid.NewGuid();
 
-    /// <summary>The handlers check that every product in a bundle exists, so the three products are saved first.</summary>
     public async Task InitializeAsync()
     {
         await using var db = TestDb.Create(_dbName);

@@ -12,7 +12,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Plans.MaxUsers against a real SQL Server: create and re-activate stop at the cap, existing users are never disabled.</summary>
 public class UserCapDatabaseTests
 {
     private sealed class FixedTenant(Guid id) : ICurrentTenant

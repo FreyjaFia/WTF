@@ -7,7 +7,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Product handlers against a real SQL Server: unique keys, foreign keys, collation and SQL translation.</summary>
 public class ProductDatabaseTests
 {
     private static CreateProductHandler Create(WTFDbContext db, Guid userId) =>

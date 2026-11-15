@@ -9,7 +9,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Order, line and promotion rows the order/promotion database tests share. Foreign keys are real, so parents come first.</summary>
 internal static class DbOrderSeed
 {
     public static async Task<Guid> OrderAsync(SqlTestDatabase database, Guid userId, OrderStatusEnum status = OrderStatusEnum.Pending,
@@ -93,10 +92,6 @@ internal static class DbOrderSeed
     }
 }
 
-/// <summary>
-/// Updating an order against a real SQL Server: the line replace and the order save are one SaveChanges
-/// transaction, and the unique index and foreign keys are enforced by the database.
-/// </summary>
 public class UpdateOrderDatabaseTests
 {
     private static UpdateOrderHandler Handler(WTF.Domain.Data.WTFDbContext db, Guid userId) =>

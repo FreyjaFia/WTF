@@ -4,7 +4,6 @@ using WTF.Domain.Entities;
 
 namespace WTF.Tests.Features.Promotions;
 
-/// <summary>Seeding helpers shared by the promotion handler tests.</summary>
 internal static class PromotionSeed
 {
     public static readonly DateTime Now = new(2026, 6, 15, 12, 0, 0, DateTimeKind.Utc);

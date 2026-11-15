@@ -3,7 +3,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Products;
 
-/// <summary>Seeding helpers shared by the product handler tests. Every value is set explicitly (no SQL defaults in-memory).</summary>
 internal static class ProductSeed
 {
     public static Product NewProduct(string name = "Latte", string code = "LAT", decimal price = 100m,
@@ -58,6 +57,5 @@ internal static class ProductSeed
         return new ProductImage { ProductId = productId, ImageId = image.ImageId };
     }
 
-    /// <summary>Saves the entities through their own context so handlers under test start from clean state.</summary>
     public static Task SeedAsync(string dbName, params object[] entities) => TestDb.SaveAsync(dbName, entities);
 }

@@ -3,12 +3,8 @@ using WTF.Domain.Entities;
 
 namespace WTF.Tests.Features.Pricing;
 
-/// <summary>A promotion rule described independently of the three handler-specific record types.</summary>
 internal sealed record RuleSpec(decimal? FixedPrice, decimal? PercentOff, params (Guid AddOnId, int Qty)[] AddOns);
 
-/// <summary>
-/// Adapters that run test inputs through <see cref="PromotionPricing"/>, the one shared implementation of the pricing rules,.
-/// </summary>
 internal static class PricingTestHelpers
 {
     public static readonly Guid Product = new("11111111-0000-0000-0000-000000000001");

@@ -5,7 +5,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Customer queries against a real SQL Server: SQL translation and collation.</summary>
 public class CustomerDatabaseTests
 {
     private static async Task SeedAsync(SqlTestDatabase database, Guid userId, string first, string last,

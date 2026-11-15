@@ -39,7 +39,6 @@ public class ChatImageTests
         return codec.EncodedFormat;
     }
 
-    /// <summary>A JPEG that carries an Exif block (inserted right after the start marker) with the given tags.</summary>
     private static byte[] WithExif(byte[] jpeg, string note, ushort? orientation = null)
     {
         var text = System.Text.Encoding.ASCII.GetBytes(note + "\0");

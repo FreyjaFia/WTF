@@ -17,7 +17,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>What a plan without a feature does to the work behind the screens, against a real SQL Server. A sale always saves.</summary>
 public class PlanGatingDatabaseTests
 {
     private sealed class FixedTenant(Guid id) : ICurrentTenant

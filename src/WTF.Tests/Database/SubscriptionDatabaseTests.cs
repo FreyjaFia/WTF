@@ -15,7 +15,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Plans, subscriptions, invoices, the lapsed-shop rules and the brand against a real SQL Server.</summary>
 public class SubscriptionDatabaseTests
 {
     private static readonly DateTime Today = new(2026, 11, 8, 6, 0, 0, DateTimeKind.Utc);

@@ -11,7 +11,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Custom roles against a real SQL Server: the id sequence, the per-shop unique names, the shop filter, and the role script.</summary>
 public class RoleDatabaseTests
 {
     private static readonly Guid ShopA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");

@@ -10,11 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Reports;
 
-/// <summary>
-/// The scheduler reads the system clock directly (no seam), so ExecuteAsync is driven in real time with
-/// a UTC schedule and expectations are derived from the clock at the moment the test runs. The long sleep
-/// between runs is never waited out: the host is stopped as soon as the first catch-up pass has finished.
-/// </summary>
 public class MonthlyReportWorkbookSchedulerTests
 {
     private readonly IMonthlyReportWorkbookService _service = Substitute.For<IMonthlyReportWorkbookService>();
@@ -40,7 +35,6 @@ public class MonthlyReportWorkbookSchedulerTests
     private static MonthlyReportWorkbookStatusDto Status(DateTime now, bool exists, DateTime? generatedAtUtc) =>
         new(now.Year, now.Month, exists, "x.xlsx", generatedAtUtc, exists ? 10 : null);
 
-    /// <summary>Runs the scheduler until <paramref name="isDone"/> is true (or 5 s pass), then stops it.</summary>
     private static async Task RunUntilAsync(MonthlyReportWorkbookScheduler scheduler, Func<bool> isDone)
     {
         await scheduler.StartAsync(CancellationToken.None);

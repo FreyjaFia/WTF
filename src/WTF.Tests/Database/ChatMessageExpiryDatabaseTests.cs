@@ -10,10 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>
-/// Chat message expiry against a real SQL Server: the batch delete with its joins to the order, the foreign keys when
-/// a conversation goes, and that an order is left exactly as it was.
-/// </summary>
 public class ChatMessageExpiryDatabaseTests
 {
     private static ChatMessageExpiryService Service(WTF.Domain.Data.WTFDbContext db, ChatRetentionOptions options, IChatImageService? images = null) =>

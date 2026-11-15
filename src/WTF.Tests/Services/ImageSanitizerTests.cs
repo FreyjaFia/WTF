@@ -6,7 +6,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Services;
 
-/// <summary>The one engine behind every picture upload: the staff uploads (ImageUploads) and the chat (via ChatImageProcessor).</summary>
 public class ImageSanitizerTests
 {
     private static readonly ImageRules Chat = new(5 * 1024 * 1024, 4096, 4096L * 4096, 1600, 82, ForceJpeg: true);

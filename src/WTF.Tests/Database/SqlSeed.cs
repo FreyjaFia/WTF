@@ -3,7 +3,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Seeds the rows the database tests need. Every foreign key is enforced here, so parents must exist first.</summary>
 internal static class SqlSeed
 {
     public static async Task<User> UserAsync(

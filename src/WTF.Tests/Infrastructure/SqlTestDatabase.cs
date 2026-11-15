@@ -8,18 +8,12 @@ using WTF.Domain.Tenancy;
 
 namespace WTF.Tests.Infrastructure;
 
-/// <summary>
-/// A throw-away SQL Server database named WTF_Test_&lt;random&gt;, built from the EF model (tables, keys, unique
-/// indexes, the OrderNumberSeq sequence and column defaults) and dropped on dispose. Use it for behavior that
-/// the in-memory provider cannot show: transactions, constraints, collation, SQL translation, defaults.
-///
-/// <code>
-/// await using var database = await SqlTestDatabase.CreateAsync();
-/// await using var db = database.CreateContext();
-/// </code>
-///
-/// The schema comes from the EF model, not from tools/sql (those scripts are incremental, there is no baseline).
-/// </summary>
+// A throw-away SQL Server database named WTF_Test_<random>, built from the EF model (tables, keys, unique
+// indexes, the OrderNumberSeq sequence and column defaults) and dropped on dispose. Use it for behavior that
+// the in-memory provider cannot show: transactions, constraints, collation, SQL translation, defaults.
+//
+//
+// The schema comes from the EF model, not from tools/sql (those scripts are incremental, there is no baseline).
 internal sealed class SqlTestDatabase : IAsyncDisposable
 {
     private const string Prefix = "WTF_Test_";
@@ -35,7 +29,6 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
 
     public string Name { get; }
 
-    /// <summary>Creates the database and its tables, and seeds the lookup rows the enums describe.</summary>
     public static async Task<SqlTestDatabase> CreateAsync(bool seedLookups = true)
     {
         await DropStaleDatabasesOnceAsync();
@@ -80,7 +73,6 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
         }
     }
 
-    /// <summary>A new context over this database. Create one per "request" to avoid shared change tracking.</summary>
     public WTFDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<WTFDbContext>()
@@ -101,7 +93,6 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
         return new SqlServerWtfDbContext(options, tenant);
     }
 
-    /// <summary>Statuses, payment methods, categories, roles and add-on types with the ids the API enums use.</summary>
     private async Task SeedLookupsAsync()
     {
         await using var db = CreateContext();
@@ -118,7 +109,6 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
             (id, name) => new UserRole { Id = id, Name = name, IsSystem = true }));
     }
 
-    /// <summary>Inserts rows with explicit ids, switching IDENTITY_INSERT on for tables whose id is an identity column.</summary>
     private static async Task InsertAsync<TEntity>(WTFDbContext db, List<TEntity> rows)
         where TEntity : class
     {
@@ -171,7 +161,6 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
         new SqlConnectionStringBuilder(SqlServerAvailability.ServerConnectionString) { InitialCatalog = "master" }
             .ConnectionString;
 
-    /// <summary>Removes WTF_Test_* databases left behind by killed runs (older than an hour), once per test process.</summary>
     private static async Task DropStaleDatabasesOnceAsync()
     {
         if (Interlocked.Exchange(ref _staleDatabasesDropped, 1) == 1)
@@ -208,7 +197,6 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
         }
     }
 
-    /// <summary>WTFDbContext.OnConfiguring always points at the configured connection string name; use ours.</summary>
     private sealed class SqlServerWtfDbContext : WTFDbContext
     {
         public SqlServerWtfDbContext(DbContextOptions<WTFDbContext> options)

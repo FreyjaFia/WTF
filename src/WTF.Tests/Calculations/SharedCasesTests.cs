@@ -9,11 +9,9 @@ using WTF.Domain.Entities;
 
 namespace WTF.Tests.Calculations;
 
-/// <summary>
-/// Runs the sample orders and discounts in <c>calculation-cases.json</c> through the API calculators. The Angular specs in
-/// <c>shared/calculations</c> run the same file through their own calculators, so the POS and the API cannot quietly
-/// disagree: a rule changed on one side without the other fails one of the two test runs.
-/// </summary>
+// Runs the sample orders and discounts in calculation-cases.json through the API calculators. The Angular specs in
+// shared/calculations run the same file through their own calculators, so the POS and the API cannot quietly
+// disagree: a rule changed on one side without the other fails one of the two test runs.
 public class SharedCasesTests
 {
     private static readonly IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> NoOverrides =
@@ -279,7 +277,6 @@ public class SharedCasesTests
 
     public static IEnumerable<object[]> RecipePreviewCaseNames() => Loaded.Value.RecipePreview.Select(c => new object[] { c.Name });
 
-    /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
 
     private static (OrderItem Parent, List<OrderItem> Children) BuildLine(Order order, LineCase line, Guid? bundleId = null)

@@ -44,7 +44,6 @@ public class ChatMessageExpiryTests
         new(TestDb.Create(_db), _reports, Options.Create(options ?? Live()), NullLogger<ChatMessageExpiryService>.Instance,
             withImages ? _images : null);
 
-    /// <summary>A customer, an order in the given status and its chat with one message per given age (in days).</summary>
     private async Task<(Order Order, Conversation Conversation, List<ConversationMessage> Messages)> ChatAsync(
         OrderStatusEnum status, params int[] ageDays)
     {

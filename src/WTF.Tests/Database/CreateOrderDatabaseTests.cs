@@ -10,10 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>
-/// Order creation against a real SQL Server: the order number sequence and the transactions that undo a
-/// half-finished order. The in-memory provider can show neither.
-/// </summary>
 public class CreateOrderDatabaseTests
 {
     private static CreateOrderHandler Handler(WTFDbContext db, Guid userId) =>
@@ -49,10 +45,6 @@ public class CreateOrderDatabaseTests
         numbers[1].ShouldBe(numbers[0] + 1);
     }
 
-    /// <summary>
-    /// A sender that runs each order through the real create-order handler on the SAME context, the way the request
-    /// scope does in the API, so the batch's transaction and the orders' transactions meet on one connection.
-    /// </summary>
     private static ISender SameContextSender(WTFDbContext db, Guid userId)
     {
         var sender = Substitute.For<ISender>();

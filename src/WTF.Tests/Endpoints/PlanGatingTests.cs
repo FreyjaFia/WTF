@@ -10,10 +10,6 @@ using WTF.Calculations.Subscriptions;
 
 namespace WTF.Tests.Endpoints;
 
-/// <summary>
-/// Plan gating at the API door: a route whose permission is core but whose data belongs to a switchable feature, the 403
-/// answer, and the safety net that fails when a route is added without a plan decision.
-/// </summary>
 public class PlanGatingTests : IDisposable
 {
     private static readonly string[] Public = ["/api/public/", "/api/loyalty/"];

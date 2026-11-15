@@ -5,7 +5,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Orders;
 
-/// <summary>Seeds products, orders and promotions for the order update, void and read handler tests.</summary>
 internal sealed class OrderSeed(string dbName)
 {
     private static int _orderNumber = 1000;
@@ -160,7 +159,6 @@ internal sealed class OrderSeed(string dbName)
         return id;
     }
 
-    /// <summary>A "discounted product" promotion that applies when the product is ordered with exactly the given add-on.</summary>
     public void AddDiscountedProductPromo(Guid productId, Guid requiredAddOnId, decimal? percentOff, decimal? fixedPrice = null)
     {
         using var db = Open();

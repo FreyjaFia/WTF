@@ -3,7 +3,6 @@ using NSubstitute;
 
 namespace WTF.Tests.Endpoints;
 
-/// <summary>Request validation done inside the endpoint delegates, before any handler or database is touched.</summary>
 public class EndpointValidationTests : IDisposable
 {
     private readonly EndpointTestHost _host = new();

@@ -3,7 +3,6 @@ using WTF.Domain.Entities;
 
 namespace WTF.Tests.Features.Reports;
 
-/// <summary>Seeding helpers shared by the report and dashboard tests. Nothing is saved until the caller saves.</summary>
 internal static class SalesSeed
 {
     public static readonly Guid StaffA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
@@ -110,7 +109,6 @@ internal static class SalesSeed
             UnitPrice = unitPrice,
         });
 
-    /// <summary>A completed order worth exactly <paramref name="amount"/> (one item priced at that amount).</summary>
     public static Order Sale(
         WTFDbContext db, Product product, DateTime createdAtUtc, decimal amount, int status = Completed,
         Guid? by = null, int? payment = Cash, decimal? tips = null)

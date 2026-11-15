@@ -13,11 +13,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Orders;
 
-/// <summary>
-/// Orders a customer placed through their link wait for approval (status PendingApproval) and must not behave like
-/// ordinary open orders: not in the normal lists, not editable, not voidable, not creatable by staff, not in the
-/// dashboard. These tests pin each place that treats "not completed" as "open".
-/// </summary>
 public class WaitingOrderStatusTests
 {
     private readonly Guid _userId = Guid.NewGuid();

@@ -11,7 +11,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>User, login and user-search handlers against a real SQL Server: collation, unique index, foreign keys, SQL translation.</summary>
 public class UserDatabaseTests
 {
     private static IConfiguration Config() => new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>

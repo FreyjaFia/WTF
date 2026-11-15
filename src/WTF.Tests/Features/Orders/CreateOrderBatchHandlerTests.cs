@@ -15,7 +15,6 @@ public class CreateOrderBatchHandlerTests
     private readonly Guid _userId = Guid.NewGuid();
     private readonly string _dbName = TestDb.NewName();
 
-    /// <summary>Wires the batch handler to the real single-order handler, sharing one context as a scoped request would.</summary>
     private CreateOrderBatchHandler Handler()
     {
         var db = TestDb.Create(_dbName);

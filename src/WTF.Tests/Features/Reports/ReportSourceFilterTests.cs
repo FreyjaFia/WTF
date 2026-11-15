@@ -5,7 +5,6 @@ using static WTF.Tests.Features.Reports.SalesSeed;
 
 namespace WTF.Tests.Features.Reports;
 
-/// <summary>Every report can be limited to orders the shop took itself or orders customers placed through their link.</summary>
 public class ReportSourceFilterTests
 {
     private static readonly DateTime Day = new(2026, 3, 10);
@@ -15,8 +14,6 @@ public class ReportSourceFilterTests
 
     private static byte Of(OrderSourceEnum source) => (byte)source;
 
-    /// <summary>Shop: 100 and 200 completed, 900 cancelled. Customer link: 300 completed (cash), 50 completed (card),
-    /// 700 cancelled. Bundles and tips on both sides.</summary>
     private async Task Seed()
     {
         await using var db = TestDb.Create(_dbName);

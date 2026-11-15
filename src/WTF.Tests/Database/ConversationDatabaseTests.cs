@@ -10,10 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>
-/// Order chat against a real SQL Server: the list query (unread first, counts and last message in one round trip), the
-/// foreign keys, and the rule that an order has at most one conversation.
-/// </summary>
 public class ConversationDatabaseTests
 {
     private sealed record Setup(SqlTestDatabase Database, User Staff, Customer Customer, ShortLink Link, Order Order);

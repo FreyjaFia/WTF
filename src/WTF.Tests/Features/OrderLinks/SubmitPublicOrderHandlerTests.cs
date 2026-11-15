@@ -133,7 +133,6 @@ public class SubmitPublicOrderHandlerTests
         return sender;
     }
 
-    /// <summary>A clock that answers each call with the next time in the list (and the last one from then on).</summary>
     private sealed class SteppingTimeProvider(params DateTimeOffset[] times) : TimeProvider
     {
         private int _next;

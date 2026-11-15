@@ -10,10 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>
-/// Order-time stock against a real SQL Server: the guarded balance update, the rollback of a refused sale and registers
-/// completing sales at the same moment. The in-memory provider shows none of them.
-/// </summary>
 public class OrderStockDatabaseTests
 {
     private static CreateOrderHandler Handler(WTFDbContext db, Guid userId) =>

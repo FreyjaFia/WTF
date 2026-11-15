@@ -13,10 +13,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>
-/// Customer ordering links against a real SQL Server: what the in-memory provider cannot show (case-insensitive text
-/// compare, the unique token index, foreign keys, the subquery of the link re-check, and the new status row).
-/// </summary>
 public class OrderLinkDatabaseTests
 {
     private sealed record Setup(SqlTestDatabase Database, User Staff, User SystemUser, Customer Customer, ShortLink Link, Product Latte);

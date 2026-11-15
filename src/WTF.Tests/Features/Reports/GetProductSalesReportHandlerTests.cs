@@ -29,8 +29,6 @@ public class GetProductSalesReportHandlerTests
 
     private static readonly DateTime Noon = Utc(2026, 3, 10, 4);
 
-    /// <summary>Burger (food/burgers) 100 x3 = 300, Fries (food/sides) 40 x1 = 40, Cola (drinks) 20 x2 = 40,
-    /// a fixed bundle (60 x1) and a mix and match bundle (30 x2 = 60), all completed.</summary>
     private async Task SeedCatalogSales()
     {
         await using var db = TestDb.Create(_dbName);

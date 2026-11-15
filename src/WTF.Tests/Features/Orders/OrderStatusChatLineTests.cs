@@ -10,7 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Orders;
 
-/// <summary>Paying, cancelling and refunding an order write a line into its chat and tell open screens, like accepting does.</summary>
 public class OrderStatusChatLineTests
 {
     private readonly Guid _userId = Guid.NewGuid();

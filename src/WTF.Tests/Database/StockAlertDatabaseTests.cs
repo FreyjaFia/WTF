@@ -5,7 +5,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Stock alerts against a real SQL Server: registers crossing a level together must alert once, not once each.</summary>
 public class StockAlertDatabaseTests
 {
     [SqlFact]

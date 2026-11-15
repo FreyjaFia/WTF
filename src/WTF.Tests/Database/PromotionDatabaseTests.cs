@@ -5,7 +5,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Fixed bundle promotions against a real SQL Server: nested rows, foreign keys and the order references.</summary>
 public class PromotionDatabaseTests
 {
     private static UpdateFixedBundlePromotionHandler Update(WTF.Domain.Data.WTFDbContext db, Guid userId) =>

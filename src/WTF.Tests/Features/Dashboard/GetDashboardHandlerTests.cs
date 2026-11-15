@@ -4,10 +4,6 @@ using static WTF.Tests.Features.Reports.SalesSeed;
 
 namespace WTF.Tests.Features.Dashboard;
 
-/// <summary>
-/// The handler reads DateTime.UtcNow, so every date here is derived from the same clock, in the request time zone.
-/// Orders are seeded on past days, so the assertions hold whatever the time of day.
-/// </summary>
 public class GetDashboardHandlerTests
 {
     private static readonly TimeZoneInfo Manila = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
@@ -20,7 +16,6 @@ public class GetDashboardHandlerTests
     private static DateTime LocalToday(TimeZoneInfo? tz = null) =>
         TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz ?? Manila).Date;
 
-    /// <summary>The UTC instant of a local wall-clock time in the given zone.</summary>
     private static DateTime At(DateTime localDate, int hour, int minute = 0, TimeZoneInfo? tz = null) =>
         TimeZoneInfo.ConvertTimeToUtc(
             DateTime.SpecifyKind(localDate.Date.AddHours(hour).AddMinutes(minute), DateTimeKind.Unspecified),

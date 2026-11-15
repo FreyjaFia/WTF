@@ -6,7 +6,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Voiding an order against a real SQL Server: the status change and price snapshot are one transaction.</summary>
 public class VoidOrderDatabaseTests
 {
     private static VoidOrderHandler Handler(WTF.Domain.Data.WTFDbContext db, Guid userId) =>

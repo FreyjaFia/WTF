@@ -7,7 +7,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Customers;
 
-/// <summary>Also proves the in-memory database setup end to end with a small real handler.</summary>
 public class CreateCustomerHandlerTests
 {
     private readonly Guid _userId = Guid.NewGuid();

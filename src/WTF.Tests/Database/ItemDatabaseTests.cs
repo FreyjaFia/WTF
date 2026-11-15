@@ -7,7 +7,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Item creation against a real SQL Server: the transaction and the filtered unique indexes.</summary>
 public class ItemDatabaseTests
 {
     private const string MovementRule =

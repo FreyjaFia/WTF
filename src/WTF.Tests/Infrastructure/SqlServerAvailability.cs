@@ -2,13 +2,11 @@ using Microsoft.Data.SqlClient;
 
 namespace WTF.Tests.Infrastructure;
 
-/// <summary>
-/// Finds the SQL Server the database tests run against and says whether it can be reached.
-///
-/// The server comes from the WTF_TEST_SQL environment variable (a connection string WITHOUT a database,
-/// e.g. "Server=localhost,1433;User Id=sa;Password=...;TrustServerCertificate=true"). CI sets it to a SQL Server
-/// container. When it is not set, LocalDB is used, which is installed with Visual Studio and SQL Server Express.
-/// </summary>
+// Finds the SQL Server the database tests run against and says whether it can be reached.
+//
+// The server comes from the WTF_TEST_SQL environment variable (a connection string WITHOUT a database,
+// e.g. "Server=localhost,1433;User Id=sa;Password=...;TrustServerCertificate=true"). CI sets it to a SQL Server
+// container. When it is not set, LocalDB is used, which is installed with Visual Studio and SQL Server Express.
 internal static class SqlServerAvailability
 {
     public const string EnvironmentVariable = "WTF_TEST_SQL";
@@ -18,13 +16,11 @@ internal static class SqlServerAvailability
 
     private static readonly Lazy<(bool Available, string Reason)> Probe = new(CheckServer);
 
-    /// <summary>Connection string of the server (no database selected).</summary>
     public static string ServerConnectionString { get; } =
         Environment.GetEnvironmentVariable(EnvironmentVariable) is { Length: > 0 } configured ? configured : LocalDb;
 
     public static bool IsAvailable => Probe.Value.Available;
 
-    /// <summary>Shown as the skip reason when no server can be reached.</summary>
     public static string SkipReason =>
         $"No SQL Server is reachable ({Probe.Value.Reason}). Set {EnvironmentVariable} to a connection string, or install LocalDB.";
 
@@ -57,7 +53,6 @@ internal static class SqlServerAvailability
     }
 }
 
-/// <summary>A [Fact] that is skipped (with a clear message) when no SQL Server can be reached.</summary>
 [AttributeUsage(AttributeTargets.Method)]
 internal sealed class SqlFactAttribute : FactAttribute
 {
@@ -70,7 +65,6 @@ internal sealed class SqlFactAttribute : FactAttribute
     }
 }
 
-/// <summary>A [Theory] that is skipped (with a clear message) when no SQL Server can be reached.</summary>
 [AttributeUsage(AttributeTargets.Method)]
 internal sealed class SqlTheoryAttribute : TheoryAttribute
 {

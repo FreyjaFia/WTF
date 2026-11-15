@@ -17,7 +17,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>The platform area (shops created, suspended, exported, deleted) against a real SQL Server.</summary>
 public class PlatformDatabaseTests
 {
     private const string AdminPassword = "correct horse battery";

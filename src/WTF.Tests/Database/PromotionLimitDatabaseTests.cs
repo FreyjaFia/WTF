@@ -10,10 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>
-/// Limited promotions and the total check against a real SQL Server: a refused sale must leave nothing behind (the
-/// in-memory provider ignores transactions), and registers completing sales at the same moment must not take the same use.
-/// </summary>
 public class PromotionLimitDatabaseTests
 {
     private static CreateOrderHandler Handler(WTFDbContext db, Guid userId) =>

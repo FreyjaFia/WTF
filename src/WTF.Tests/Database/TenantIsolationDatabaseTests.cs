@@ -5,7 +5,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>Tenant query filter and stamping against a real SQL Server (the filter runs as SQL, not in memory).</summary>
 public class TenantIsolationDatabaseTests
 {
     private static readonly Guid TenantA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");

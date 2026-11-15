@@ -10,7 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>The Senior/PWD discount against a real SQL Server: foreign keys, column defaults and the tenant filter.</summary>
 public class SeniorPwdDatabaseTests
 {
     private static readonly Guid TenantA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");

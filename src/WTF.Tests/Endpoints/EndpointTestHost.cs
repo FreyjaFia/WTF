@@ -17,12 +17,10 @@ using WTF.Domain.Data;
 
 namespace WTF.Tests.Endpoints;
 
-/// <summary>Builds the real route table and authorization policies in memory (no server, no database).</summary>
 internal sealed class EndpointTestHost : IDisposable
 {
     public sealed record Route(string Method, string Pattern, string[] Policies, bool RequiresAuth, bool AllowsAnonymous)
     {
-        /// <summary>"GET /api/orders/ => OrdersRead", "... => authenticated" or "... => anonymous".</summary>
         public string Description => $"{Method} {Pattern} => {Access}";
 
         public string Access => Policies.Length > 0
@@ -72,7 +70,6 @@ internal sealed class EndpointTestHost : IDisposable
             .ToList();
     }
 
-    /// <summary>Calls the real endpoint delegate with a fake request and returns the status and body.</summary>
     public async Task<(int Status, string Body)> InvokeAsync(
         string method,
         string pattern,

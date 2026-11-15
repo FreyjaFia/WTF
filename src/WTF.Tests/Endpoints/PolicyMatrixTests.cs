@@ -5,7 +5,6 @@ using WTF.Api.Common.Auth;
 
 namespace WTF.Tests.Endpoints;
 
-/// <summary>Which roles each authorization policy admits, evaluated by the real authorization service.</summary>
 public class PolicyMatrixTests : IDisposable
 {
     private static readonly string[] AllRoles =

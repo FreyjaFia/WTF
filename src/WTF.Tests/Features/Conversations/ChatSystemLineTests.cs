@@ -7,10 +7,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Conversations;
 
-/// <summary>
-/// A system line ("Order accepted") is the shop speaking. Staff see which staff member made the change; the customer
-/// is never told a staff member's name, not even a first name.
-/// </summary>
 public class ChatSystemLineTests
 {
     private readonly string _db = TestDb.NewName();

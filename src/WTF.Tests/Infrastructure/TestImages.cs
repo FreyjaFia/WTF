@@ -2,7 +2,6 @@ using SkiaSharp;
 
 namespace WTF.Tests.Infrastructure;
 
-/// <summary>Small real pictures for upload tests, and files that only pretend to be pictures.</summary>
 internal static class TestImages
 {
     public static byte[] Png(int width = 40, int height = 30, SKColor? colour = null) =>
@@ -14,10 +13,8 @@ internal static class TestImages
     public static byte[] Webp(int width = 40, int height = 30, SKColor? colour = null) =>
         Make(SKEncodedImageFormat.Webp, width, height, colour);
 
-    /// <summary>A script, as it would arrive renamed to a picture's name.</summary>
     public static byte[] Script() => "<script>alert(1)</script>"u8.ToArray();
 
-    /// <summary>Not a picture, and bigger than the upload limit.</summary>
     public static byte[] OverTheLimit() => new byte[(5 * 1024 * 1024) + 1];
 
     public static SKEncodedImageFormat FormatOf(byte[] data)

@@ -9,7 +9,6 @@ using WTF.Domain.Data;
 
 namespace WTF.Tests.Infrastructure;
 
-/// <summary>Substitutes for the services handlers call out to. Assert on them with Received()/DidNotReceive().</summary>
 internal static class TestFakes
 {
     public static ITenantFeatures Features { get; } = new UncachedTenantFeatures();
@@ -27,7 +26,6 @@ internal static class TestFakes
 
     public static IConversationNotifier Conversations() => Substitute.For<IConversationNotifier>();
 
-    /// <summary>A dashboard hub context whose clients accept any broadcast (NSubstitute auto-creates the nested proxies).</summary>
     public static IHubContext<DashboardHub> Hub() => Substitute.For<IHubContext<DashboardHub>>();
 }
 

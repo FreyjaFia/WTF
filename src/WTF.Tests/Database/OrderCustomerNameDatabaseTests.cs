@@ -10,7 +10,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
 
-/// <summary>A customer without a last name against a real SQL Server: the name must not turn NULL in a query.</summary>
 public class OrderCustomerNameDatabaseTests
 {
     private static async Task<Customer> CustomerAsync(SqlTestDatabase database, Guid createdBy, bool active = true)

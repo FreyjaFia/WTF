@@ -1,9 +1,5 @@
 namespace WTF.Tests.Endpoints;
 
-/// <summary>
-/// A reviewed snapshot of every HTTP route and who may call it. Adding, removing or changing the
-/// access rule of a route fails this test, so security changes are always deliberate.
-/// </summary>
 public class RouteTableTests : IDisposable
 {
     private static readonly string[] ExpectedRoutes =

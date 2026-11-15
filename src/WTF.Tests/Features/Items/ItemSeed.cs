@@ -3,7 +3,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Items;
 
-/// <summary>Seeding helpers for the items/loyalty/sync/audit tests.</summary>
 internal static class ItemSeed
 {
     public static async Task<User> User(string dbName, Guid? id = null, string first = "Una", string last = "User")

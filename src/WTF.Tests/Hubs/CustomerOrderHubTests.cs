@@ -12,7 +12,6 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Hubs;
 
-/// <summary>The customer hub is anonymous, so the token check at connection time is the only thing keeping it private.</summary>
 public class CustomerOrderHubTests
 {
     private static int _address;
@@ -20,7 +19,7 @@ public class CustomerOrderHubTests
     private readonly string _db = TestDb.NewName();
     private readonly Guid _staffId = Guid.NewGuid();
 
-    /// <summary>The hub counts connections per address across the whole process, so every test uses its own.</summary>
+    // The hub counts connections per address across the whole process, so every test uses its own.
     private readonly string _ip = $"10.20.{Interlocked.Increment(ref _address) % 250}.{Random.Shared.Next(1, 250)}";
 
     private async Task<(Customer Customer, ShortLink Link)> SeedAsync(
