@@ -38,7 +38,7 @@ function entry(overrides: Partial<StockWasteDto> = {}): StockWasteDto {
 }
 
 function page(items: StockWasteDto[], totalCount = items.length, pendingCount = 0): PagedStockWasteDto {
-  return { items, totalCount, pendingCount };
+  return { items, totalCount, pendingCount, page: 1, pageSize: 25 };
 }
 
 function dateString(date: Date): string {
@@ -139,49 +139,44 @@ describe('WasteComponent', () => {
   });
 
   describe('sorting from the column headers', () => {
-    const entries = [
-      entry({ id: 'a', itemName: 'Oat Milk', quantity: 500, createdAt: '2026-10-20T02:00:00Z', status: 'Recorded' }),
-      entry({ id: 'b', itemName: 'bagel', quantity: 5, createdAt: '2026-10-10T02:00:00Z', status: 'Confirmed' }),
-      entry({ id: 'c', itemName: 'Cups', quantity: 50, createdAt: '2026-10-15T02:00:00Z', status: 'PendingReview' }),
-    ];
-    const ids = (component: { sortedEntries: () => StockWasteDto[] }): string[] =>
-      component.sortedEntries().map((e) => e.id);
     const open = () => {
-      stockWaste.getWaste.mockReturnValue(of(page(entries)));
       const fixture = create();
       return internals(fixture.componentInstance) as unknown as {
-        sortedEntries: () => StockWasteDto[];
         toggleSort: (column: 'item' | 'recorded' | 'quantity' | 'status') => void;
         sortDirection: () => string;
+        page: { set: (page: number) => void };
       };
     };
 
     it('keeps the server order until a column is picked', () => {
-      expect(ids(open())).toEqual(['a', 'b', 'c']);
+      open();
+      expect(lastQuery()['sortBy']).toBeNull();
+      expect(lastQuery()['sortDirection']).toBeNull();
     });
 
-    it('sorts by item ignoring case, and reverses when picked again', () => {
+    it('asks the server to sort, reverses when picked again and returns to page 1', () => {
       const component = open();
+      component.page.set(3);
+
       component.toggleSort('item');
-      expect(ids(component)).toEqual(['b', 'c', 'a']);
+      expect(lastQuery()).toMatchObject({ sortBy: 'item', sortDirection: 'asc', page: 1 });
+
       component.toggleSort('item');
       expect(component.sortDirection()).toBe('desc');
-      expect(ids(component)).toEqual(['a', 'c', 'b']);
+      expect(lastQuery()).toMatchObject({ sortBy: 'item', sortDirection: 'desc' });
     });
 
-    it('sorts by recorded date, quantity and status', () => {
+    it('sorts by recorded date, quantity and status on the server', () => {
       const component = open();
-      component.toggleSort('recorded');
-      expect(ids(component)).toEqual(['b', 'c', 'a']);
-      component.toggleSort('quantity');
-      expect(ids(component)).toEqual(['b', 'c', 'a']);
-      component.toggleSort('status');
-      expect(ids(component)).toEqual(['b', 'c', 'a']);
+      for (const column of ['recorded', 'quantity', 'status'] as const) {
+        component.toggleSort(column);
+        expect(lastQuery()).toMatchObject({ sortBy: column, sortDirection: 'asc' });
+      }
     });
   });
 
   describe('loading', () => {
-    it('loads the last 30 days by default with page 1 and size 20', () => {
+    it('loads the last 30 days by default with page 1 and size 25', () => {
       create();
 
       const today = new Date();
@@ -193,8 +188,11 @@ describe('WasteComponent', () => {
         status: null,
         wasteReasonId: null,
         itemId: null,
+        searchTerm: null,
+        sortBy: null,
+        sortDirection: null,
         page: 1,
-        pageSize: 20,
+        pageSize: 25,
       });
     });
 
@@ -328,7 +326,7 @@ describe('WasteComponent', () => {
       tile.click();
       fixture.detectChanges();
       expect(lastQuery()['status']).toBe('PendingReview');
-      expect(router.navigate).toHaveBeenLastCalledWith(
+      expect(router.navigate).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
           queryParams: { status: 'PendingReview' },
@@ -340,7 +338,7 @@ describe('WasteComponent', () => {
       tile.click();
       fixture.detectChanges();
       expect(lastQuery()['status']).toBeNull();
-      expect(router.navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: { status: null } }));
+      expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { status: null } }));
     });
   });
 
@@ -401,7 +399,7 @@ describe('WasteComponent', () => {
       const fixture = create();
       fixture.detectChanges();
       const el: HTMLElement = fixture.nativeElement;
-      expect(el.querySelector('select')).toBeNull();
+      expect(el.querySelector('select:not(app-pagination select)')).toBeNull();
       expect(el.querySelector('app-filter-button')).not.toBeNull();
     });
 
@@ -430,85 +428,83 @@ describe('WasteComponent', () => {
       expect(lastQuery()['itemId']).toBeNull();
     });
 
-    it('searches item, reason, staff and note locally', () => {
-      stockWaste.getWaste.mockReturnValue(
-        of(
-          page([
-            entry({ id: 'a', itemName: 'Oat Milk' }),
-            entry({ id: 'b', itemName: 'Cup', reasonName: 'Breakage', createdByName: 'Ben', notes: 'cracked box' }),
-          ]),
-        ),
-      );
-      const fixture = create();
-      const component = internals(fixture.componentInstance);
+    it('searches on the server after a short pause and returns to page 1', () => {
+      vi.useFakeTimers();
+      try {
+        const fixture = create();
+        const component = internals(fixture.componentInstance);
+        component.page.set(4);
+        const calls = stockWaste.getWaste.mock.calls.length;
 
-      component.search.set('breakage');
-      expect(component.visibleEntries().map((e: StockWasteDto) => e.id)).toEqual(['b']);
-      component.search.set('ben');
-      expect(component.visibleEntries().map((e: StockWasteDto) => e.id)).toEqual(['b']);
-      component.search.set('CRACKED');
-      expect(component.visibleEntries().map((e: StockWasteDto) => e.id)).toEqual(['b']);
-      component.search.set('oat');
-      expect(component.visibleEntries().map((e: StockWasteDto) => e.id)).toEqual(['a']);
+        component.searchControl.setValue(' breakage ');
+        expect(stockWaste.getWaste.mock.calls.length).toBe(calls);
+        vi.advanceTimersByTime(300);
+
+        expect(lastQuery()).toMatchObject({ searchTerm: 'breakage', page: 1 });
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
-  describe('load more', () => {
-    it('appends the next page', () => {
-      stockWaste.getWaste.mockReturnValueOnce(of(page([entry({ id: 'a' })], 2)));
-      const fixture = create();
-      stockWaste.getWaste.mockReturnValueOnce(of(page([entry({ id: 'b' })], 2)));
+  describe('paging', () => {
+    it('starts on the page in the address', () => {
+      queryParams = { page: '3' };
+      create();
 
-      buttons(fixture, 'Load More')[0].click();
-      fixture.detectChanges();
+      expect(lastQuery()['page']).toBe(3);
+    });
+
+    it('shows the pagination bar and loads the chosen page', () => {
+      stockWaste.getWaste.mockReturnValue(of(page([entry()], 60)));
+      const fixture = create();
+      expect(fixture.nativeElement.querySelector('app-pagination')).not.toBeNull();
+
+      internals(fixture.componentInstance).goToPage(2);
 
       expect(lastQuery()['page']).toBe(2);
-      expect(internals(fixture.componentInstance).entries().map((e: StockWasteDto) => e.id)).toEqual(['a', 'b']);
-      expect(buttons(fixture, 'Load More')).toHaveLength(0);
+      expect(router.navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: { page: 2 } }),
+      );
     });
 
-    it('does nothing when every entry is shown', () => {
+    it('goes back to page 1 when the rows per page change', () => {
       const fixture = create();
-      const calls = stockWaste.getWaste.mock.calls.length;
-
-      internals(fixture.componentInstance).loadMore();
-
-      expect(stockWaste.getWaste.mock.calls.length).toBe(calls);
-    });
-
-    it('shows a busy button while loading more', () => {
-      stockWaste.getWaste.mockReturnValueOnce(of(page([entry({ id: 'a' })], 2)));
-      const fixture = create();
-      stockWaste.getWaste.mockReturnValueOnce(new Subject());
-
-      buttons(fixture, 'Load More')[0].click();
-      fixture.detectChanges();
-
-      expect(buttons(fixture, 'Loading...')[0].disabled).toBe(true);
-    });
-
-    it('goes back a page and reports the error when loading more fails', () => {
-      stockWaste.getWaste.mockReturnValueOnce(of(page([entry({ id: 'a' })], 3)));
-      const fixture = create();
-      stockWaste.getWaste.mockReturnValueOnce(throwError(() => new Error('Network down')));
       const component = internals(fixture.componentInstance);
+      component.goToPage(2);
 
-      component.loadMore();
-      expect(alerts.error).toHaveBeenCalledWith('Network down');
+      component.changePageSize(50);
 
-      stockWaste.getWaste.mockReturnValueOnce(of(page([entry({ id: 'b' })], 3)));
-      component.loadMore();
-      expect(lastQuery()['page']).toBe(2);
+      expect(lastQuery()).toMatchObject({ page: 1, pageSize: 50 });
     });
 
-    it('hides Load More while searching', () => {
-      stockWaste.getWaste.mockReturnValue(of(page([entry()], 5)));
+    it('goes back to page 1 when a filter changes', () => {
+      const fixture = create();
+      const component = internals(fixture.componentInstance);
+      component.goToPage(2);
+
+      component.setReason('1');
+
+      expect(lastQuery()).toMatchObject({ page: 1, wasteReasonId: 1 });
+    });
+
+    it('follows the page the server returns when the page was past the end', () => {
+      stockWaste.getWaste.mockReturnValue(of({ ...page([entry()], 30), page: 2, pageSize: 25 }));
       const fixture = create();
 
-      internals(fixture.componentInstance).search.set('oat');
+      expect(internals(fixture.componentInstance).page()).toBe(2);
+    });
+
+    it('dims the rows while another page loads', () => {
+      stockWaste.getWaste.mockReturnValue(of(page([entry()], 60)));
+      const fixture = create();
+      stockWaste.getWaste.mockReturnValue(new Subject());
+
+      internals(fixture.componentInstance).goToPage(2);
       fixture.detectChanges();
 
-      expect(buttons(fixture, 'Load More')).toHaveLength(0);
+      expect(fixture.nativeElement.querySelector('ul')?.classList.contains('opacity-60')).toBe(true);
     });
   });
 

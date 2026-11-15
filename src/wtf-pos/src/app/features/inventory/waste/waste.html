@@ -23,10 +23,9 @@
         class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
       >
         <app-search-input
-          [value]="search()"
+          [control]="searchControl"
           placeholder="Search item, reason, staff, note"
           ariaLabel="Search waste"
-          (valueChange)="search.set($event)"
         />
       </div>
 
@@ -189,7 +188,7 @@
   <div class="pb-4">
     @if (connectionFailed()) {
       <app-connection-error />
-    } @else if (!isLoading() && visibleEntries().length === 0) {
+    } @else if (!isLoading() && entries().length === 0) {
       <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="waste-empty">
         <div class="mb-3 flex justify-center">
           <app-icon name="icon-delete" [class]="'h-12 w-12 opacity-60'" />
@@ -199,7 +198,7 @@
       </div>
     }
 
-    @if (sortedEntries().length > 0) {
+    @if (entries().length > 0) {
       <div class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface pb-5 pt-3 pr-4 pl-6 lg:grid" data-testid="waste-columns">
         <app-sort-header class="col-span-6" label="Item" align="start" [active]="sortColumn() === 'item'" [direction]="sortDirection()" (sorted)="toggleSort('item')" />
         <app-sort-header class="col-span-2" label="Recorded" align="center" [active]="sortColumn() === 'recorded'" [direction]="sortDirection()" (sorted)="toggleSort('recorded')" />
@@ -208,8 +207,8 @@
       </div>
     }
 
-    <ul class="space-y-2.5">
-      @for (entry of sortedEntries(); track entry.id) {
+    <ul class="space-y-2.5 transition-opacity" [class.opacity-60]="isReloading()" [class.pointer-events-none]="isReloading()">
+      @for (entry of entries(); track entry.id) {
         <li class="relative overflow-hidden rounded-xl bg-surface shadow" [attr.data-testid]="'waste-' + entry.id">
           <span class="absolute inset-y-0 left-0 w-1.5" [class]="statusBar(entry.status)" aria-hidden="true"></span>
           <div class="space-y-2 p-3 pl-5 sm:p-4 sm:pl-6">
@@ -306,23 +305,15 @@
       }
     </ul>
 
-    @if (hasMore() && !search()) {
-      <div class="mt-3 flex justify-center">
-        <button
-          type="button"
-          class="app-btn app-btn-secondary app-btn-sm"
-          [disabled]="isLoadingMore()"
-          (click)="loadMore()"
-        >
-          @if (isLoadingMore()) {
-            <span class="loading loading-spinner loading-xs"></span>
-            Loading...
-          } @else {
-            Load More
-          }
-        </button>
-      </div>
-    }
+    <app-pagination
+      label="Waste pages"
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [totalCount]="totalCount()"
+      [disabled]="isReloading()"
+      (pageChange)="goToPage($event)"
+      (pageSizeChange)="changePageSize($event)"
+    />
   </div>
   </app-pull-to-refresh>
   }

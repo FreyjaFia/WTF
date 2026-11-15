@@ -73,6 +73,9 @@ export interface StockWasteQuery {
   wasteReasonId?: number | null;
   status?: StockWasteStatus | null;
   createdBy?: string | null;
+  searchTerm?: string | null;
+  sortBy?: string | null;
+  sortDirection?: string | null;
   page?: number;
   pageSize?: number;
 }
@@ -81,6 +84,8 @@ export interface PagedStockWasteDto {
   items: StockWasteDto[];
   totalCount: number;
   pendingCount: number;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface StockWastePendingCountDto {

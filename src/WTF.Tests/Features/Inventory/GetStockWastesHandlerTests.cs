@@ -134,8 +134,51 @@ public class GetStockWastesHandlerTests
         var zeroSize = await Handle(new GetStockWastesQuery(null, null, null, null, null, null, Page: 0, PageSize: 0));
         var hugeSize = await Handle(new GetStockWastesQuery(null, null, null, null, null, null, Page: -5, PageSize: 10_000));
 
-        zeroSize.Items.Count.ShouldBe(1);
+        zeroSize.PageSize.ShouldBe(25);
+        zeroSize.Items.Count.ShouldBe(3);
+        hugeSize.PageSize.ShouldBe(100);
+        hugeSize.Page.ShouldBe(1);
         hugeSize.Items.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Paging_PastTheEnd_ReturnsLastPage()
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            WasteSeed.Entry(_db, _milkId, _spillId, _staffId, createdAt: DateTime.UtcNow.AddMinutes(i));
+        }
+
+        var result = await Handle(new GetStockWastesQuery(null, null, null, null, null, null, Page: 9, PageSize: 2));
+
+        result.Page.ShouldBe(3);
+        result.Items.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SearchTerm_MatchesItemReasonAndPerson()
+    {
+        var milk = WasteSeed.Entry(_db, _milkId, _spillId, _staffId);
+        var cup = WasteSeed.Entry(_db, _cupId, _expiredId, _otherId, reasonName: "Expired or spoiled");
+
+        (await Handle(new GetStockWastesQuery(null, null, null, null, null, null, SearchTerm: "oat"))).Items.Select(i => i.Id).ShouldBe([milk]);
+        (await Handle(new GetStockWastesQuery(null, null, null, null, null, null, SearchTerm: "expired"))).Items.Select(i => i.Id).ShouldBe([cup]);
+        (await Handle(new GetStockWastesQuery(null, null, null, null, null, null, SearchTerm: "ben"))).Items.Select(i => i.Id).ShouldBe([cup]);
+        (await Handle(new GetStockWastesQuery(null, null, null, null, null, null, SearchTerm: "nothing"))).TotalCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task SortBy_OrdersWholeSetNotJustThePage()
+    {
+        var small = WasteSeed.Entry(_db, _milkId, _spillId, _staffId, 1m);
+        var big = WasteSeed.Entry(_db, _milkId, _spillId, _staffId, 9m);
+        var mid = WasteSeed.Entry(_db, _milkId, _spillId, _staffId, 5m);
+
+        var asc = await Handle(new GetStockWastesQuery(null, null, null, null, null, null, PageSize: 2, SortBy: "quantity", SortDirection: "asc"));
+        var desc = await Handle(new GetStockWastesQuery(null, null, null, null, null, null, PageSize: 2, SortBy: "quantity", SortDirection: "desc"));
+
+        asc.Items.Select(i => i.Id).ShouldBe([small, mid]);
+        desc.Items.Select(i => i.Id).ShouldBe([big, mid]);
     }
 
     [Fact]
