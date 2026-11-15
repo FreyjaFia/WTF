@@ -223,3 +223,30 @@ console logging. Result: nothing prints in the integrated terminal when you laun
   `Serilog.AspNetCore`) and a `"Serilog"` section with `MinimumLevel` and `Override` entries so noisy framework categories
   are quiet. Keep the file sink as is. Optionally log one Information line for each `not_in_plan` refusal (tenant, feature,
   path) so a gate failure is visible in both places.
+
+### Trigger audit (what can send a gated request, and how)
+
+Audited on 15 Nov 2026 from `Endpoints/*.cs` and the Angular services. "Gated" means the endpoint answers 403
+`not_in_plan` once the feature leaves the plan. Items marked "to run" are checked by the Playwright plan, not just by reading.
+
+| Trigger | Kind | Request | Gated by | Today after a downgrade |
+| --- | --- | --- | --- | --- |
+| Save, delete, duplicate in an editor (role, item, ingredient, supplier, purchase order, promotion, expense) | User action | POST/PUT/DELETE on the feature group | its feature | The reported bug: redirect blocked by the Discard dialog, plus toast |
+| Open a list or editor (menu, link, direct URL) | Navigation | GET | its feature | Role guard sends straight to Not in your plan (already correct once the client plan is current) |
+| Reports screen and exports (stock status, waste, gross profit, profit and loss, stock variance, promotions, order links, workbook) | User action | `reports/...` with `RequireFeature` | inventory, expenses, promotions, orderlinks, workbook | Same bug on a refused export |
+| Order chat panel, send message, mark read | User action | `conversations`, order chat | chat (needs orderlinks) | Same bug, on a core screen (order details or editor) |
+| Conversation inbox poll, every 60 s, plus SignalR nudges | **Background** | `GET conversations` | chat | Starts from the order editor, order details and the header envelope when the saved permission list holds chat read. A stale list lets it hit the gate and redirect the cashier off the register. **Highest risk, to run.** |
+| Notification bell counts, every 60 s | Background | `GET notifications/counts` | core (not gated) | Safe |
+| Stock attention badge, every 60 s | Background | `GET items/attention` | inventory | Already follows the permission list and stops itself, so only a stale list is a risk |
+| Pending waste count, every 60 s | Background | `GET stock-waste/pending-count` | inventory | To run: confirm it starts only for waste review, and is stopped when the list narrows |
+| Stock limits and waste item lists | Background on the register | `pos/stock-limits` (needs orders write), `pos/waste-items` (needs waste record) | stock-limits is core; waste-items is inventory | To run: waste items load only on the record waste screen |
+| Catalog cache warm-up (POS bundles and discounted products) | Background | `pos/promotions/...` (needs orders write) | core | Safe, not behind the promotions gate |
+| Dashboard widgets (stock and profit, order links, promotions) | Screen load | `GET dashboard` (core) | the widgets are hidden by `plans.hasFeature`, the endpoint itself is core | Safe: a stale plan hides, no 403 |
+| Plan refresh, subscription, brand | Background | `GET subscription`, `settings/brand` | core | Safe |
+| Offline order sync | Background | `orders/sync`, `orders/batch` | core | Never gated (tested) |
+| Customer's public order page, chat and polling | Public, no staff login | `public/order-links/...` | orderlinks, on the server | Not a staff redirect; see open question 5 |
+| SignalR hubs (dashboard, staff orders, notifications) | Push | `/hubs/...` | not plan-gated | Safe; the staff orders hub only nudges the inbox |
+
+What this changes in the plan: the background-request token must cover the conversation inbox first (the real risk), then
+the waste count and stock badge as a safety net; the Playwright plan adds "chat removed while the cashier sits on the order
+editor" as a required case.
