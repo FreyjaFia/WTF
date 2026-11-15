@@ -26,6 +26,15 @@ public static class UserEndpoints
             })
             .RequireAuthorization(AppPolicies.UsersRead);
 
+        // GET /api/users/paged - One page of users, filtered, sorted and counted on the server
+        userGroup.MapGet("/paged",
+            async ([AsParameters] GetPagedUsersQuery query, ISender sender) =>
+            {
+                var result = await sender.Send(query);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.UsersRead);
+
         // GET /api/users/{id} - Get user by ID
         userGroup.MapGet("/{id:guid}",
             async (Guid id, ISender sender) =>
