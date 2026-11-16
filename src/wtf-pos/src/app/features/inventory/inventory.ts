@@ -2,6 +2,7 @@ import { Component, computed, DestroyRef, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService, StockAttentionService, StockWasteService } from '@core/services';
+import { IconComponent } from '@shared/components';
 import { SectionSwitcherComponent } from '@shared/components/section-switcher/section-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { inventoryGroups, visibleGroups } from '@shared/navigation/hub-groups';
@@ -9,7 +10,7 @@ import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-inventory',
-  imports: [RouterOutlet, RouterLink, SectionSwitcherComponent],
+  imports: [RouterOutlet, RouterLink, SectionSwitcherComponent, IconComponent],
   templateUrl: './inventory.html',
   host: { class: 'flex-1 min-h-0' },
 })

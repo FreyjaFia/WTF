@@ -3,10 +3,12 @@
     <div class="app-page-nav flex shrink-0 items-center gap-2 text-sm">
       <a
         [routerLink]="hubRoute"
-        class="flex min-h-9 items-center gap-1 font-semibold text-gray-600 sm:hidden"
+        class="app-btn app-btn-ghost shrink-0 p-2 sm:hidden"
+        aria-label="Back to Inventory"
+        title="Back"
         data-testid="inventory-back"
       >
-        <span aria-hidden="true">&larr;</span> Inventory
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </a>
       <a
         [routerLink]="hubRoute"
@@ -14,7 +16,7 @@
         data-testid="inventory-crumb"
         >Inventory</a
       >
-      <span class="text-gray-400" aria-hidden="true">/</span>
+      <span class="hidden text-gray-400 sm:inline" aria-hidden="true">/</span>
       <app-section-switcher
         [groups]="switcherGroups()"
         hubLabel="Inventory"

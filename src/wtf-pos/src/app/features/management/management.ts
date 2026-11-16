@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { IconComponent } from '@shared/components';
 import { SectionSwitcherComponent } from '@shared/components/section-switcher/section-switcher';
 import { AuthService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -9,7 +10,7 @@ import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-management',
-  imports: [RouterOutlet, RouterLink, SectionSwitcherComponent],
+  imports: [RouterOutlet, RouterLink, SectionSwitcherComponent, IconComponent],
   templateUrl: './management.html',
   host: { class: 'flex-1 min-h-0' },
 })
