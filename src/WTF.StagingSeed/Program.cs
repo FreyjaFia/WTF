@@ -100,7 +100,7 @@ async Task SeedMainShopAsync()
     // Accounts: one per role, same password
     var accounts = new (string Username, string First, string Last, UserRoleEnum Role)[]
     {
-        (OwnerUsername, "Carlos", "Mendoza", UserRoleEnum.Owner),
+        (OwnerUsername, "Alain", "Elemia", UserRoleEnum.Owner),
         ("manager", "Liza", "Ramos", UserRoleEnum.Admin),
         ("cashier", "Joy", "Bautista", UserRoleEnum.Cashier),
         ("viewer", "Ben", "Aquino", UserRoleEnum.AdminViewer),
