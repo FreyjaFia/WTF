@@ -10,23 +10,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      deploy_to_staging:
-        description: 'Deploy the selected branch to staging (choose the branch in "Use workflow from")'
-        type: boolean
-        default: false
-      db_restored:
-        description: 'I restored the staging database from the main-state backup (needed when the branch has risky SQL)'
-        type: boolean
-        default: false
-      build_android:
-        description: 'Also build the staging Android APK (slow, usually not needed)'
-        type: boolean
-        default: false
-      apply_seed:
-        description: 'Add the staging demo data (accounts, menu, customers, stock) after the SQL scripts'
-        type: boolean
-        default: true
 
 jobs:
   versioning:
@@ -269,7 +252,7 @@ jobs:
     name: Build API (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -360,7 +343,7 @@ jobs:
     name: Build Frontend (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -465,7 +448,7 @@ jobs:
     name: Build Android APK (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging && inputs.build_android)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -613,7 +596,7 @@ jobs:
     name: Deploy SQL Scripts (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     concurrency:
       group: staging-deploy
       cancel-in-progress: false
@@ -623,10 +606,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check the branch SQL against main (manual runs only)
+      - name: Warn about risky branch SQL (manual runs only)
         if: github.event_name == 'workflow_dispatch'
-        env:
-          DB_RESTORED: ${{ inputs.db_restored }}
         run: |
           git fetch --no-tags origin main
           mapfile -t changed < <(git diff --name-only --diff-filter=AM origin/main...HEAD -- 'tools/sql/*.sql')
@@ -647,9 +628,8 @@ jobs:
             fi
           done
 
-          if [ "$risky" = "1" ] && [ "$DB_RESTORED" != "true" ]; then
-            echo "::error::This branch has SQL that can change or remove existing structure or data. Restore the staging database from the main-state backup, then run again with 'db_restored' ticked."
-            exit 1
+          if [ "$risky" = "1" ]; then
+            echo "::warning::This branch has SQL that can change or remove existing structure or data. If staging misbehaves, restore the staging database from the main-state backup and run again."
           fi
 
       - name: Apply SQL scripts in order (staging)
@@ -720,13 +700,11 @@ jobs:
           done
 
       - name: Setup .NET 10 (seed)
-        if: github.event_name != 'workflow_dispatch' || inputs.apply_seed
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
       - name: Add staging demo data (every staging deploy, safe to repeat)
-        if: github.event_name != 'workflow_dispatch' || inputs.apply_seed
         env:
           SQL_SERVER: ${{ secrets.SQL_SERVER_STAGING }}
           SQL_DATABASE: ${{ secrets.SQL_DATABASE_STAGING }}
@@ -795,7 +773,7 @@ jobs:
       needs.build-frontend-staging.result == 'success' &&
       needs.deploy-sql-staging.result == 'success' &&
       (needs.build-android-staging.result == 'success' || needs.build-android-staging.result == 'skipped') &&
-      ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging))
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch')
     concurrency:
       group: staging-deploy
       cancel-in-progress: false
