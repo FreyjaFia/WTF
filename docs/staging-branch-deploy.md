@@ -4,8 +4,8 @@ Staging updates automatically when `main` changes. To test another branch online
 
 1. GitHub, Actions, **Build and Deploy**, **Run workflow**.
 2. In "Use workflow from", pick the branch.
-3. Run it. There are no options: a manual run always deploys that branch to staging (without the Android app), applies
-   its SQL scripts, then adds the demo data.
+3. Run it. There are no options: a manual run always deploys that branch to staging, applies
+   its SQL scripts, adds the demo data and builds the staging Android APK (download it from the run page, under Artifacts: `android-apk-staging`).
 
 ## The database
 

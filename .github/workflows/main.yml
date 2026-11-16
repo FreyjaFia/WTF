@@ -448,7 +448,7 @@ jobs:
     name: Build Android APK (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
