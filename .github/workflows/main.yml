@@ -629,8 +629,47 @@ jobs:
           done
 
           if [ "$risky" = "1" ]; then
-            echo "::warning::This branch has SQL that can change or remove existing structure or data. If staging misbehaves, restore the staging database from the main-state backup and run again."
+            echo "::warning::This branch has SQL that renames, drops or tightens existing structure. The data reset does not undo schema changes left by another branch, so if staging misbehaves, restore the staging database from the main-state backup and run again."
           fi
+
+      - name: Reset staging data (every staging deploy)
+        env:
+          SQL_SERVER: ${{ secrets.SQL_SERVER_STAGING }}
+          SQL_DATABASE: ${{ secrets.SQL_DATABASE_STAGING }}
+          SQL_USERNAME: ${{ secrets.SQL_USERNAME_STAGING }}
+          SQL_PASSWORD: ${{ secrets.SQL_PASSWORD_STAGING }}
+          PROD_SERVER: ${{ secrets.SQL_SERVER }}
+          PROD_DATABASE: ${{ secrets.SQL_DATABASE }}
+          STAGING_PASSWORD: ${{ secrets.STAGING_SEED_PASSWORD }}
+        run: |
+          if [ -z "$SQL_SERVER" ] || [ -z "$SQL_DATABASE" ] || [ -z "$SQL_USERNAME" ] || [ -z "$SQL_PASSWORD" ]; then
+            echo "Missing SQL deployment secrets (SQL_SERVER_STAGING, SQL_DATABASE_STAGING, SQL_USERNAME_STAGING, SQL_PASSWORD_STAGING)."
+            exit 1
+          fi
+
+          # The reset removes every account, so it only runs when the demo accounts can be created again straight after.
+          if [ -z "$STAGING_PASSWORD" ]; then
+            echo "::error::STAGING_SEED_PASSWORD is not set. Add it in the repository secrets, otherwise a reset would leave staging with no accounts."
+            exit 1
+          fi
+
+          # The reset deletes data. Never run it when the staging secrets point at the production database.
+          if [ -n "$PROD_DATABASE" ] && [ "$SQL_DATABASE" = "$PROD_DATABASE" ] && [ "$SQL_SERVER" = "$PROD_SERVER" ]; then
+            echo "::error::The staging database is the same as the production database. Reset refused."
+            exit 1
+          fi
+
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            mcr.microsoft.com/mssql-tools \
+            /opt/mssql-tools/bin/sqlcmd \
+            -S "$SQL_SERVER" \
+            -d "$SQL_DATABASE" \
+            -U "$SQL_USERNAME" \
+            -P "$SQL_PASSWORD" \
+            -C \
+            -b \
+            -i "/workspace/tools/staging/reset_staging_data.sql"
 
       - name: Apply SQL scripts in order (staging)
         env:
@@ -704,7 +743,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Add staging demo data (every staging deploy, safe to repeat)
+      - name: Add staging demo data (every staging deploy)
         env:
           SQL_SERVER: ${{ secrets.SQL_SERVER_STAGING }}
           SQL_DATABASE: ${{ secrets.SQL_DATABASE_STAGING }}

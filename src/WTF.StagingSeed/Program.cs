@@ -26,7 +26,6 @@ using WTF.Domain.Tenancy;
 
 const string PlatformUsername = "platformadmin";
 const string OwnerUsername = "admin";
-const string Marker = "[staging seed] ";
 var starterTenantId = new Guid("00000000-0000-0000-0000-0000000000a2");
 
 var connectionString = Environment.GetEnvironmentVariable("STAGING_SQL");
@@ -99,24 +98,24 @@ async Task SeedMainShopAsync()
     }
 
     // Accounts: one per role, same password
-    var accounts = new (string Username, string First, UserRoleEnum Role)[]
+    var accounts = new (string Username, string First, string Last, UserRoleEnum Role)[]
     {
-        (OwnerUsername, "Admin", UserRoleEnum.Owner),
-        ("manager", "Manager", UserRoleEnum.Admin),
-        ("cashier", "Cashier", UserRoleEnum.Cashier),
-        ("viewer", "Viewer", UserRoleEnum.AdminViewer),
-        ("stockmgr", "Stock", UserRoleEnum.StockManager),
-        ("itemmgr", "Item", UserRoleEnum.ItemManager),
+        (OwnerUsername, "Carlos", "Mendoza", UserRoleEnum.Owner),
+        ("manager", "Liza", "Ramos", UserRoleEnum.Admin),
+        ("cashier", "Joy", "Bautista", UserRoleEnum.Cashier),
+        ("viewer", "Ben", "Aquino", UserRoleEnum.AdminViewer),
+        ("stockmgr", "Nora", "Villanueva", UserRoleEnum.StockManager),
+        ("itemmgr", "Paolo", "Cruz", UserRoleEnum.ItemManager),
     };
 
-    foreach (var (username, first, role) in accounts)
+    foreach (var (username, first, last, role) in accounts)
     {
         if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Username == username))
         {
             continue;
         }
 
-        db.Users.Add(NewUser(username, first, role, shopId));
+        db.Users.Add(NewUser(username, first, last, role, shopId));
         added.Add($"user {username} ({role})");
     }
 
@@ -139,15 +138,15 @@ async Task SeedMainShopAsync()
     // Menu
     var menu = new (string Code, string Name, decimal Price, string Category, int? Sub, bool SeniorPwd)[]
     {
-        ("STG-ESP", "Espresso", 90m, "Drink", coffeeSub, true),
-        ("STG-LAT", "Latte", 140m, "Drink", coffeeSub, true),
-        ("STG-CAP", "Cappuccino", 140m, "Drink", coffeeSub, true),
-        ("STG-ICE", "Iced Americano", 120m, "Drink", coffeeSub, true),
-        ("STG-MAT", "Matcha Latte", 160m, "Drink", nonCoffeeSub, true),
-        ("STG-CRO", "Croissant", 95m, "Food", null, true),
-        ("STG-SND", "Ham and Cheese Sandwich", 180m, "Food", null, true),
-        ("STG-CAK", "Chocolate Cake Slice", 150m, "Dessert", null, true),
-        ("STG-BEA", "Coffee Beans 250g", 480m, "Other", null, false),
+        ("COF-101", "Espresso", 90m, "Drink", coffeeSub, true),
+        ("COF-102", "Latte", 140m, "Drink", coffeeSub, true),
+        ("COF-103", "Cappuccino", 140m, "Drink", coffeeSub, true),
+        ("COF-104", "Iced Americano", 120m, "Drink", coffeeSub, true),
+        ("TEA-201", "Matcha Latte", 160m, "Drink", nonCoffeeSub, true),
+        ("BAK-301", "Croissant", 95m, "Food", null, true),
+        ("FOD-401", "Ham and Cheese Sandwich", 180m, "Food", null, true),
+        ("DES-501", "Chocolate Cake Slice", 150m, "Dessert", null, true),
+        ("RTL-601", "Coffee Beans 250g", 480m, "Other", null, false),
     };
     var products = new Dictionary<string, Product>();
     foreach (var (code, name, price, category, sub, seniorPwd) in menu)
@@ -158,16 +157,16 @@ async Task SeedMainShopAsync()
     // Add-ons are products flagged as add-ons, linked to the drinks through ProductAddOns
     var addOns = new (string Type, string Code, string Name, decimal Price, bool IsDefault)[]
     {
-        ("Size", "STG-AO-MED", "Medium", 0m, true),
-        ("Size", "STG-AO-LRG", "Large", 30m, false),
-        ("Temperature", "STG-AO-HOT", "Hot", 0m, true),
-        ("Temperature", "STG-AO-ICD", "Iced", 10m, false),
-        ("Flavor", "STG-AO-VAN", "Vanilla", 25m, false),
-        ("Flavor", "STG-AO-CAR", "Caramel", 25m, false),
-        ("Flavor", "STG-AO-HAZ", "Hazelnut", 25m, false),
-        ("Topping", "STG-AO-WHP", "Whipped Cream", 20m, false),
-        ("Extra", "STG-AO-SHT", "Extra Shot", 35m, false),
-        ("Extra", "STG-AO-OAT", "Oat Milk", 40m, false),
+        ("Size", "ADD-001", "Medium", 0m, true),
+        ("Size", "ADD-002", "Large", 30m, false),
+        ("Temperature", "ADD-003", "Hot", 0m, true),
+        ("Temperature", "ADD-004", "Iced", 10m, false),
+        ("Flavor", "ADD-005", "Vanilla", 25m, false),
+        ("Flavor", "ADD-006", "Caramel", 25m, false),
+        ("Flavor", "ADD-007", "Hazelnut", 25m, false),
+        ("Topping", "ADD-008", "Whipped Cream", 20m, false),
+        ("Extra", "ADD-009", "Extra Shot", 35m, false),
+        ("Extra", "ADD-010", "Oat Milk", 40m, false),
     };
     var addOnProducts = new Dictionary<string, Product>();
     foreach (var (type, code, name, price, _) in addOns)
@@ -299,7 +298,7 @@ async Task SeedMainShopAsync()
     await db.SaveChangesAsync();
 
     // Stock history: a receipt, two waste entries, two purchase orders and an open count
-    if (!await db.StockReceipts.AnyAsync(r => r.Note != null && r.Note.StartsWith(Marker)))
+    if (!await db.StockReceipts.AnyAsync())
     {
         var receipt = new StockReceipt
         {
@@ -308,7 +307,7 @@ async Task SeedMainShopAsync()
             ReceivedOn = DateOnly.FromDateTime(now.AddDays(-2)),
             InvoiceNumber = "BB-2026-0412",
             InvoiceTotal = 1250m,
-            Note = Marker + "weekly delivery",
+            Note = "Weekly delivery, all sealed",
             CreatedAt = now.AddDays(-2),
             CreatedBy = manager.Id,
             TenantId = shopId,
@@ -339,12 +338,12 @@ async Task SeedMainShopAsync()
     }
 
     var reasons = await db.WasteReasons.ToListAsync();
-    if (!await db.StockWastes.AnyAsync(w => w.Notes != null && w.Notes.StartsWith(Marker)))
+    if (!await db.StockWastes.AnyAsync())
     {
-        foreach (var (itemName, quantity, reasonName, status, review) in new[]
+        foreach (var (itemName, quantity, reasonName, status, review, reasonNote) in new[]
                  {
-                     ("Fresh Milk", 100m, "Spilled or dropped", StockWasteStatuses.Recorded, false),
-                     ("Matcha Powder", 20m, "Expired or spoiled", StockWasteStatuses.PendingReview, true),
+                     ("Fresh Milk", 100m, "Spilled or dropped", StockWasteStatuses.Recorded, false, "Carton slipped while restocking the chiller"),
+                     ("Matcha Powder", 20m, "Expired or spoiled", StockWasteStatuses.PendingReview, true, "Old tin found past its best-before date"),
                  })
         {
             var reason = reasons.FirstOrDefault(r => r.Name == reasonName);
@@ -363,7 +362,7 @@ async Task SeedMainShopAsync()
                 Quantity = quantity,
                 WasteReasonId = reason.Id,
                 ReasonName = reason.Name,
-                Notes = Marker + reasonName,
+                Notes = reasonNote,
                 Status = status,
                 RequiresReview = review,
                 CreatedAt = now.AddDays(-1),
@@ -375,13 +374,13 @@ async Task SeedMainShopAsync()
         added.Add("2 waste entries (one waiting for review)");
     }
 
-    if (!await db.PurchaseOrders.AnyAsync(p => p.Note != null && p.Note.StartsWith(Marker)))
+    if (!await db.PurchaseOrders.AnyAsync())
     {
         var nextPo = (await db.PurchaseOrders.IgnoreQueryFilters().Where(p => p.TenantId == shopId).MaxAsync(p => (int?)p.PoNumber) ?? 0) + 1;
         foreach (var (supplier, status, itemName, packs, note) in new[]
                  {
-                     (dairySupplier, PurchaseOrderStatuses.Sent, "Fresh Milk", 10m, "milk restock (sent)"),
-                     (beansSupplier, PurchaseOrderStatuses.Draft, "Espresso Beans", 5m, "beans (draft)"),
+                     (dairySupplier, PurchaseOrderStatuses.Sent, "Fresh Milk", 10m, "Milk for the week, deliver before Friday"),
+                     (beansSupplier, PurchaseOrderStatuses.Draft, "Espresso Beans", 5m, "Next month beans order, check price first"),
                  })
         {
             var item = items[itemName];
@@ -394,7 +393,7 @@ async Task SeedMainShopAsync()
                 SupplierId = supplier.Id,
                 Status = status,
                 ExpectedOn = DateOnly.FromDateTime(now.AddDays(3)),
-                Note = Marker + note,
+                Note = note,
                 CreatedAt = now.AddDays(-1),
                 CreatedBy = manager.Id,
                 SentAt = status == PurchaseOrderStatuses.Sent ? now.AddDays(-1) : null,
@@ -417,12 +416,12 @@ async Task SeedMainShopAsync()
         added.Add("2 purchase orders (sent and draft)");
     }
 
-    if (!await db.StockCounts.AnyAsync(c => c.Name.StartsWith(Marker)))
+    if (!await db.StockCounts.AnyAsync())
     {
         var count = new StockCount
         {
             Id = Guid.NewGuid(),
-            Name = Marker + "weekly count",
+            Name = "Weekly count, Sunday close",
             Status = StockCountStatuses.Open,
             IsBlind = false,
             CreatedAt = now.AddHours(-3),
@@ -539,7 +538,7 @@ async Task SeedMainShopAsync()
     };
     foreach (var (category, amount, note, daysAgo) in expenses)
     {
-        var text = Marker + note;
+        var text = note;
         if (await db.Expenses.AnyAsync(e => e.Note == text))
         {
             continue;
@@ -563,21 +562,21 @@ async Task SeedMainShopAsync()
     await db.SaveChangesAsync();
 
     // Orders in each state. Totals come from the lines (and WTF.Calculations for Senior/PWD), the same way the app works them out.
-    if (!await db.Orders.AnyAsync(o => o.Note != null && o.Note.StartsWith(Marker)))
+    if (!await db.Orders.AnyAsync())
     {
         var vatRegistered = settings?.VatRegistered ?? false;
         var specs = new List<OrderSpec>
         {
-            new("cash sale, 3 days ago", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -72, [new("Latte", 2, ["Large", "Vanilla"]), new("Croissant", 1, [])]),
-            new("gcash sale, 2 days ago", OrderStatusEnum.Completed, PaymentMethodEnum.GCash, "Maria", -48, [new("Cappuccino", 1, ["Medium"]), new("Chocolate Cake Slice", 1, [])]),
-            new("cash sale with tips", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, "Juan", -30, [new("Matcha Latte", 1, ["Large", "Iced", "Oat Milk"])], Tips: 20m),
-            new("promo price on Latte", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -24, [new("Latte", 1, ["Medium"], PromoPrice: 120m, PromoLabel: "Latte Happy Price")]),
-            new("senior citizen discount", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -12, [new("Iced Americano", 1, ["Medium"]), new("Croissant", 2, [])], Senior: SeniorPwdKind.Senior),
-            new("pwd discount", OrderStatusEnum.Completed, PaymentMethodEnum.GCash, "Ana", -6, [new("Espresso", 2, ["Extra Shot"])], Senior: SeniorPwdKind.Pwd),
-            new("held order (pending)", OrderStatusEnum.Pending, null, "Maria", -1, [new("Latte", 1, ["Hot"]), new("Ham and Cheese Sandwich", 1, [])]),
-            new("cancelled order", OrderStatusEnum.Cancelled, null, null, -20, [new("Espresso", 1, [])]),
-            new("refunded order", OrderStatusEnum.Refunded, PaymentMethodEnum.Cash, null, -36, [new("Croissant", 3, [])]),
-            new("customer link order waiting approval", OrderStatusEnum.PendingApproval, null, "Maria", -2, [new("Cappuccino", 2, ["Large", "Caramel"])], FromLink: true),
+            new("cash sale, 3 days ago", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -72, [new("Latte", 2, ["Large", "Vanilla"]), new("Croissant", 1, [])]),
+            new("gcash sale, 2 days ago", "Paid by GCash, sent the receipt by message", OrderStatusEnum.Completed, PaymentMethodEnum.GCash, "Maria", -48, [new("Cappuccino", 1, ["Medium"]), new("Chocolate Cake Slice", 1, [])]),
+            new("cash sale with tips", "Less ice please", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, "Juan", -30, [new("Matcha Latte", 1, ["Large", "Iced", "Oat Milk"])], Tips: 20m),
+            new("promo price on Latte", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -24, [new("Latte", 1, ["Medium"], PromoPrice: 120m, PromoLabel: "Latte Happy Price")]),
+            new("senior citizen discount", "Senior citizen, ID checked at the counter", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -12, [new("Iced Americano", 1, ["Medium"]), new("Croissant", 2, [])], Senior: SeniorPwdKind.Senior),
+            new("pwd discount", "PWD, ID checked at the counter", OrderStatusEnum.Completed, PaymentMethodEnum.GCash, "Ana", -6, [new("Espresso", 2, ["Extra Shot"])], Senior: SeniorPwdKind.Pwd),
+            new("held order (pending)", "Customer is parking the car, will pay when back", OrderStatusEnum.Pending, null, "Maria", -1, [new("Latte", 1, ["Hot"]), new("Ham and Cheese Sandwich", 1, [])]),
+            new("cancelled order", "Customer left before it was made", OrderStatusEnum.Cancelled, null, null, -20, [new("Espresso", 1, [])]),
+            new("refunded order", "Croissants were stale, refunded", OrderStatusEnum.Refunded, PaymentMethodEnum.Cash, null, -36, [new("Croissant", 3, [])]),
+            new("customer link order waiting approval", "Please deliver to the front gate", OrderStatusEnum.PendingApproval, null, "Maria", -2, [new("Cappuccino", 2, ["Large", "Caramel"])], FromLink: true),
         };
 
         var statusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
@@ -617,10 +616,9 @@ async Task SeedStarterShopAsync()
 
     await BrandDefaults.SaveAsync(db, starterTenantId, BrandDefaults.For("Starter Demo Cafe"), CancellationToken.None);
 
-    var ownerUser = NewUser("starterowner", "Starter", UserRoleEnum.Owner, starterTenantId);
-    var linkUser = NewUser("starter-link", "Customer", UserRoleEnum.Cashier, starterTenantId);
+    var ownerUser = NewUser("starterowner", "Mark", "Tan", UserRoleEnum.Owner, starterTenantId);
+    var linkUser = NewUser("starter-link", "Customer", "Link", UserRoleEnum.Cashier, starterTenantId);
     linkUser.IsActive = false;
-    linkUser.LastName = "Link";
     db.Users.Add(ownerUser);
     db.Users.Add(linkUser);
     await db.SaveChangesAsync();
@@ -634,8 +632,8 @@ async Task SeedStarterShopAsync()
     var drinkCategory = await db.ProductCategories.FirstOrDefaultAsync(c => c.Name == "Drink");
     if (drinkCategory is not null)
     {
-        await EnsureProductAsync(db, starterTenantId, ownerUser.Id, "STG2-ESP", "Espresso", 90m, drinkCategory.Id, null, true, false);
-        await EnsureProductAsync(db, starterTenantId, ownerUser.Id, "STG2-LAT", "Latte", 140m, drinkCategory.Id, null, true, false);
+        await EnsureProductAsync(db, starterTenantId, ownerUser.Id, "COF-101S", "Espresso", 90m, drinkCategory.Id, null, true, false);
+        await EnsureProductAsync(db, starterTenantId, ownerUser.Id, "COF-102S", "Latte", 140m, drinkCategory.Id, null, true, false);
     }
 
     db.Customers.Add(new Customer
@@ -661,7 +659,7 @@ async Task SeedStarterShopAsync()
         Amount = starter.MonthlyPrice,
         Status = SubscriptionNames.InvoiceOpen,
         DueDate = now.AddDays(7),
-        Notes = Marker + "first month",
+        Notes = "First month, paid by bank transfer",
         CreatedAt = now,
     });
     await db.SaveChangesAsync();
@@ -678,7 +676,7 @@ TenantSubscription NewSubscription(Guid tenantId, int planId, int months) => new
     UpdatedAt = now,
 };
 
-User NewUser(string username, string firstName, UserRoleEnum role, Guid tenantId)
+User NewUser(string username, string firstName, string lastName, UserRoleEnum role, Guid tenantId)
 {
     var id = Guid.NewGuid();
     return new User
@@ -687,7 +685,7 @@ User NewUser(string username, string firstName, UserRoleEnum role, Guid tenantId
         Username = username,
         PasswordHash = hash,
         FirstName = firstName,
-        LastName = "Staging",
+        LastName = lastName,
         IsActive = true,
         RoleId = (int)role,
         CreatedAt = now,
@@ -975,7 +973,7 @@ static void AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product
             OrderId = orderId,
             Type = (byte)kind,
             IdNumber = kind == SeniorPwdKind.Senior ? "SC-0001234" : "PWD-0005678",
-            CustomerName = kind == SeniorPwdKind.Senior ? "Lola Remedios" : "Ana Villanueva",
+            CustomerName = kind == SeniorPwdKind.Senior ? "Remedios Navarro" : "Elena Villanueva",
             CoveredAmount = seniorRows.Sum(r => r.Amounts.Covered),
             VatExemptAmount = seniorRows.Sum(r => r.Amounts.VatExempt),
             DiscountAmount = seniorDiscount,
@@ -1003,7 +1001,7 @@ static void AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product
         AmountReceived = paid ? (received ?? net + (spec.Tips ?? 0m)) : null,
         ChangeAmount = received is null ? null : received - net - (spec.Tips ?? 0m),
         Tips = spec.Tips,
-        Note = Marker + spec.Label,
+        Note = spec.Note,
         Source = (byte)(spec.FromLink ? OrderSourceEnum.CustomerLink : OrderSourceEnum.Pos),
         FulfillmentType = spec.FromLink ? (byte)FulfillmentTypeEnum.Delivery : null,
         DeliveryAddress = spec.FromLink ? customer?.Address : null,
@@ -1025,6 +1023,7 @@ internal sealed record OrderLineSpec(string Product, int Quantity, string[] AddO
 
 internal sealed record OrderSpec(
     string Label,
+    string? Note,
     OrderStatusEnum Status,
     PaymentMethodEnum? Payment,
     string? Customer,

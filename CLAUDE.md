@@ -50,3 +50,19 @@ rather than describing what the UI should do.
 - Many source files use CRLF line endings. When editing with scripts, normalize to one style first and restore it, or
   use the Edit tool.
 - Update the feature file in `docs/roadmap/` (and the status in `docs/ROADMAP.md`) when a feature's status or design changes.
+
+## Staging demo data: keep it ready for the demo
+
+Every staging deploy empties the shop data (`tools/staging/reset_staging_data.sql`) and seeds it again from
+`src/WTF.StagingSeed`. Staging is what Pogi demos from, so it must always show the newest features with data in them.
+
+- When a feature adds or changes tables, columns, screens, roles, plan features or settings, update the seed in the same
+  task so the feature has data on staging the moment it deploys (for example a few orders in the new state, a customer
+  with the new field filled in, a role that can reach the new page). New tables are emptied by the reset automatically. If a
+  new table holds fixed setup that must survive (like statuses or plans), add it to the keep list in the reset script.
+- Seed real-looking data: believable names, products, prices, notes, phone numbers and addresses (a Philippine coffee
+  shop). No "test", "E2E", "staging seed", "foo" or lorem ipsum text, and no markers in names or notes.
+- Totals in seeded orders must match what the app computes (use `WTF.Calculations`, never hand-typed numbers).
+- Never put passwords in the seed or the repo. Accounts take the password from the `STAGING_SEED_PASSWORD` secret.
+- The seed must be safe to run twice. Test the reset and the seed on a throwaway database before pushing.
+- How the staging deploy works: `docs/staging-branch-deploy.md`.
