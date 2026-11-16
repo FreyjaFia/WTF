@@ -24,7 +24,7 @@ on:
         type: boolean
         default: false
       apply_seed:
-        description: 'Run the staging seed scripts in tools/staging-seed after the SQL scripts'
+        description: 'Add the staging demo data (accounts, menu, customers, stock) after the SQL scripts'
         type: boolean
         default: true
 
@@ -719,34 +719,28 @@ jobs:
               -Q "INSERT INTO dbo.SchemaScriptHistory (ScriptName) VALUES (N'$script_name_sql');"
           done
 
-      - name: Run staging seed scripts (every deploy, safe to repeat)
+      - name: Setup .NET 10 (seed)
+        if: github.event_name != 'workflow_dispatch' || inputs.apply_seed
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Add staging demo data (every staging deploy, safe to repeat)
         if: github.event_name != 'workflow_dispatch' || inputs.apply_seed
         env:
           SQL_SERVER: ${{ secrets.SQL_SERVER_STAGING }}
           SQL_DATABASE: ${{ secrets.SQL_DATABASE_STAGING }}
           SQL_USERNAME: ${{ secrets.SQL_USERNAME_STAGING }}
           SQL_PASSWORD: ${{ secrets.SQL_PASSWORD_STAGING }}
+          STAGING_PASSWORD: ${{ secrets.STAGING_SEED_PASSWORD }}
         run: |
-          mapfile -t seeds < <(find tools/staging-seed -maxdepth 1 -type f -name '*.sql' 2>/dev/null | sort)
-          if [ "${#seeds[@]}" -eq 0 ]; then
-            echo "No staging seed scripts."
+          if [ -z "$STAGING_PASSWORD" ]; then
+            echo "STAGING_SEED_PASSWORD is not set, so the demo accounts are not created."
             exit 0
           fi
 
-          for seed in "${seeds[@]}"; do
-            echo "Seeding with $(basename "$seed")"
-            docker run --rm \
-              -v "$PWD:/workspace" \
-              mcr.microsoft.com/mssql-tools \
-              /opt/mssql-tools/bin/sqlcmd \
-              -S "$SQL_SERVER" \
-              -d "$SQL_DATABASE" \
-              -U "$SQL_USERNAME" \
-              -P "$SQL_PASSWORD" \
-              -C \
-              -b \
-              -i "/workspace/${seed}"
-          done
+          export STAGING_SQL="Server=${SQL_SERVER};Database=${SQL_DATABASE};User Id=${SQL_USERNAME};Password=${SQL_PASSWORD};TrustServerCertificate=true;Encrypt=true"
+          dotnet run --project src/WTF.StagingSeed -c Release
 
   deploy:
     name: Deploy to MonsterASP.NET (Production)

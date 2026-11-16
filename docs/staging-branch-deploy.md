@@ -15,7 +15,7 @@ applied when you deploy another.
 - Branch with no SQL, or SQL that only adds tables or columns: run it as is.
 - Branch whose SQL renames, drops, adds a constraint or changes data: the run stops with an error. Restore the
   staging database from the main-state backup (MonsterASP panel), then run again with **db_restored** ticked.
-- After the SQL, every script in `tools/staging-seed` runs (see its README). Untick **apply_seed** to skip.
+- After the SQL, `src/WTF.StagingSeed` adds the demo data: a platform admin, an owner (`admin`) and one account per role, a menu, customers (with addresses) and stock items. It only adds what is missing and never changes existing rows or passwords. All accounts use the password in the GitHub secret `STAGING_SEED_PASSWORD`; without that secret nothing is created. Untick **apply_seed** to skip.
 
 Keep a fresh main-state backup: take one right after each deploy from `main`.
 
