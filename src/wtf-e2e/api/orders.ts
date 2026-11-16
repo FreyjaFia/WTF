@@ -72,8 +72,9 @@ export class OrdersApi {
     const orders: Order[] = [];
     for (let page = 1; ; page++) {
       const result = await this.api.json<{ items: readonly Order[]; totalCount: number }>('owner', 'GET', `orders/paged?status=${status}&page=${page}&pageSize=100`);
-      orders.push(...result.items);
-      if (orders.length >= result.totalCount || result.items.length === 0) {
+      // Orders made meanwhile can shift rows between pages, so a row may come back twice.
+      orders.push(...result.items.filter((item) => !orders.some((known) => known.id === item.id)));
+      if (page * 100 >= result.totalCount || result.items.length === 0) {
         return orders;
       }
     }

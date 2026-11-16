@@ -25,10 +25,12 @@ function rows(page: Page) {
 async function openAndSearch(page: Page, stamp: string): Promise<void> {
   await page.goto(ROUTES.customers);
   await expect(page.getByRole('heading', { name: 'Customers', exact: true })).toBeVisible();
-  const answered = page.waitForResponse((response) => response.url().includes('/customers/paged') && response.url().includes(stamp));
-  await page.locator('input[placeholder^="Search"]').locator('visible=true').first().fill(stamp);
-  await answered;
-  await expect(rows(page).first()).toContainText(stamp);
+  const search = page.locator('input[placeholder^="Search"]').locator('visible=true').first();
+  // A slow first load can finish after the typed search and reset the box, so type it again until the list is filtered.
+  await expect(async () => {
+    await search.fill(stamp);
+    await expect(rows(page).first()).toContainText(stamp, { timeout: 5_000 });
+  }).toPass({ timeout: 30_000 });
 }
 
 const bar = (page: Page) => page.locator('app-pagination');
@@ -89,6 +91,7 @@ test.describe('paginated lists: customers @management @paging', () => {
     await openAndSearch(page, stamp);
     await bar(page).getByRole('button', { name: 'Next', exact: true }).click();
     await expect(bar(page)).toContainText(`26 – 50 of ${COUNT}`);
+    await expect(page).toHaveURL(/[?&]page=2/);
 
     await rows(page).nth(3).locator('a').first().click();
     await expect(page).toHaveURL(/customers\/details\//);
