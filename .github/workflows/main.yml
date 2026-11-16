@@ -10,6 +10,23 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      deploy_to_staging:
+        description: 'Deploy the selected branch to staging (choose the branch in "Use workflow from")'
+        type: boolean
+        default: false
+      db_restored:
+        description: 'I restored the staging database from the main-state backup (needed when the branch has risky SQL)'
+        type: boolean
+        default: false
+      build_android:
+        description: 'Also build the staging Android APK (slow, usually not needed)'
+        type: boolean
+        default: false
+      apply_seed:
+        description: 'Run the staging seed scripts in tools/staging-seed after the SQL scripts'
+        type: boolean
+        default: true
 
 jobs:
   versioning:
@@ -252,7 +269,7 @@ jobs:
     name: Build API (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -343,7 +360,7 @@ jobs:
     name: Build Frontend (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -448,7 +465,7 @@ jobs:
     name: Build Android APK (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging && inputs.build_android)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -596,10 +613,44 @@ jobs:
     name: Deploy SQL Scripts (Staging)
     runs-on: ubuntu-26.04
     needs: [versioning, test-api, test-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging)
+    concurrency:
+      group: staging-deploy
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the branch SQL against main (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          DB_RESTORED: ${{ inputs.db_restored }}
+        run: |
+          git fetch --no-tags origin main
+          mapfile -t changed < <(git diff --name-only --diff-filter=AM origin/main...HEAD -- 'tools/sql/*.sql')
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "No SQL differs from main. No database reset needed."
+            exit 0
+          fi
+
+          echo "SQL scripts that differ from main:"
+          printf '  %s\n' "${changed[@]}"
+
+          # Look for anything that removes, renames, tightens or rewrites existing structure or data.
+          risky=0
+          for f in "${changed[@]}"; do
+            if grep -Eiq 'sp_rename|DROP[[:space:]]+(TABLE|COLUMN|CONSTRAINT|INDEX|VIEW)|ALTER[[:space:]]+COLUMN|ADD[[:space:]]+CONSTRAINT|CHECK[[:space:]]*\(|^[[:space:]]*(UPDATE|DELETE)[[:space:]]|TRUNCATE' "$f"; then
+              echo "::warning file=$f::Renames, drops, constraints or data changes found."
+              risky=1
+            fi
+          done
+
+          if [ "$risky" = "1" ] && [ "$DB_RESTORED" != "true" ]; then
+            echo "::error::This branch has SQL that can change or remove existing structure or data. Restore the staging database from the main-state backup, then run again with 'db_restored' ticked."
+            exit 1
+          fi
 
       - name: Apply SQL scripts in order (staging)
         env:
@@ -668,6 +719,35 @@ jobs:
               -Q "INSERT INTO dbo.SchemaScriptHistory (ScriptName) VALUES (N'$script_name_sql');"
           done
 
+      - name: Run staging seed scripts (every deploy, safe to repeat)
+        if: github.event_name != 'workflow_dispatch' || inputs.apply_seed
+        env:
+          SQL_SERVER: ${{ secrets.SQL_SERVER_STAGING }}
+          SQL_DATABASE: ${{ secrets.SQL_DATABASE_STAGING }}
+          SQL_USERNAME: ${{ secrets.SQL_USERNAME_STAGING }}
+          SQL_PASSWORD: ${{ secrets.SQL_PASSWORD_STAGING }}
+        run: |
+          mapfile -t seeds < <(find tools/staging-seed -maxdepth 1 -type f -name '*.sql' 2>/dev/null | sort)
+          if [ "${#seeds[@]}" -eq 0 ]; then
+            echo "No staging seed scripts."
+            exit 0
+          fi
+
+          for seed in "${seeds[@]}"; do
+            echo "Seeding with $(basename "$seed")"
+            docker run --rm \
+              -v "$PWD:/workspace" \
+              mcr.microsoft.com/mssql-tools \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER" \
+              -d "$SQL_DATABASE" \
+              -U "$SQL_USERNAME" \
+              -P "$SQL_PASSWORD" \
+              -C \
+              -b \
+              -i "/workspace/${seed}"
+          done
+
   deploy:
     name: Deploy to MonsterASP.NET (Production)
     runs-on: ubuntu-26.04
@@ -714,7 +794,17 @@ jobs:
     name: Deploy to MonsterASP.NET (Staging)
     runs-on: ubuntu-26.04
     needs: [build-api-staging, build-frontend-staging, build-android-staging, deploy-sql-staging]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # The Android build is optional on a manual run, so a skipped build must not block the deploy.
+    if: >-
+      !cancelled() &&
+      needs.build-api-staging.result == 'success' &&
+      needs.build-frontend-staging.result == 'success' &&
+      needs.deploy-sql-staging.result == 'success' &&
+      (needs.build-android-staging.result == 'success' || needs.build-android-staging.result == 'skipped') &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy_to_staging))
+    concurrency:
+      group: staging-deploy
+      cancel-in-progress: false
     steps:
       - name: Checkout app_offline.htm
         uses: actions/checkout@v4
