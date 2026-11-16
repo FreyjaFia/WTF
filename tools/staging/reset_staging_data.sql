@@ -9,6 +9,8 @@
 --                  RolePermissions (of the system roles only)
 -- Everything else: emptied
 
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 

@@ -669,6 +669,7 @@ jobs:
             -P "$SQL_PASSWORD" \
             -C \
             -b \
+            -I \
             -i "/workspace/tools/staging/reset_staging_data.sql"
 
       - name: Apply SQL scripts in order (staging)
