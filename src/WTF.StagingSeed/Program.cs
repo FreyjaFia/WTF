@@ -54,6 +54,7 @@ await using (var probe = new SeedContext(options, shopId))
 await SeedPlatformAsync();
 await SeedMainShopAsync();
 await SeedStarterShopAsync();
+await SeedStarterBulkAsync();
 
 Console.WriteLine(added.Count == 0 ? "Nothing to add, staging already has the demo data." : $"Added {added.Count} things:\n  " + string.Join("\n  ", added));
 return 0;
@@ -147,6 +148,35 @@ async Task SeedMainShopAsync()
         ("FOD-401", "Ham and Cheese Sandwich", 180m, "Food", null, true),
         ("DES-501", "Chocolate Cake Slice", 150m, "Dessert", null, true),
         ("RTL-601", "Coffee Beans 250g", 480m, "Other", null, false),
+        ("COF-105", "Flat White", 150m, "Drink", coffeeSub, true),
+        ("COF-106", "Americano", 110m, "Drink", coffeeSub, true),
+        ("COF-107", "Mocha", 160m, "Drink", coffeeSub, true),
+        ("COF-108", "Caramel Macchiato", 170m, "Drink", coffeeSub, true),
+        ("COF-109", "Spanish Latte", 165m, "Drink", coffeeSub, true),
+        ("COF-110", "Iced Latte", 145m, "Drink", coffeeSub, true),
+        ("COF-111", "Cold Brew", 130m, "Drink", coffeeSub, true),
+        ("COF-112", "Affogato", 155m, "Dessert", null, true),
+        ("COF-113", "Doppio", 110m, "Drink", coffeeSub, true),
+        ("TEA-202", "Chai Latte", 150m, "Drink", nonCoffeeSub, true),
+        ("TEA-203", "Earl Grey Tea", 100m, "Drink", nonCoffeeSub, true),
+        ("TEA-204", "Iced Lemon Tea", 95m, "Drink", nonCoffeeSub, true),
+        ("TEA-205", "Hot Chocolate", 130m, "Drink", nonCoffeeSub, true),
+        ("TEA-206", "Strawberry Milk", 135m, "Drink", nonCoffeeSub, true),
+        ("TEA-207", "Mango Smoothie", 160m, "Drink", nonCoffeeSub, true),
+        ("BAK-302", "Blueberry Muffin", 85m, "Food", null, true),
+        ("BAK-303", "Cinnamon Roll", 110m, "Food", null, true),
+        ("BAK-304", "Banana Bread Slice", 90m, "Food", null, true),
+        ("FOD-402", "Tuna Melt Sandwich", 185m, "Food", null, true),
+        ("FOD-403", "Chicken Pesto Panini", 210m, "Food", null, true),
+        ("FOD-404", "Egg and Bacon Bagel", 175m, "Food", null, true),
+        ("FOD-405", "Garlic Rice with Tapa", 220m, "Food", null, true),
+        ("FOD-406", "Pasta Aglio e Olio", 195m, "Food", null, true),
+        ("DES-502", "Basque Cheesecake Slice", 175m, "Dessert", null, true),
+        ("DES-503", "Tiramisu Cup", 160m, "Dessert", null, true),
+        ("DES-504", "Leche Flan", 110m, "Dessert", null, true),
+        ("DES-505", "Brownie", 95m, "Dessert", null, true),
+        ("RTL-602", "Cold Brew Bottle 1L", 380m, "Other", null, false),
+        ("RTL-603", "Tumbler 16oz", 650m, "Other", null, false),
     };
     var products = new Dictionary<string, Product>();
     foreach (var (code, name, price, category, sub, seniorPwd) in menu)
@@ -181,6 +211,20 @@ async Task SeedMainShopAsync()
         ["Cappuccino"] = ["Size", "Temperature", "Flavor", "Topping", "Extra"],
         ["Iced Americano"] = ["Size", "Extra", "Temperature"],
         ["Matcha Latte"] = ["Size", "Temperature", "Flavor", "Topping", "Extra"],
+        ["Flat White"] = ["Size", "Temperature", "Flavor", "Extra"],
+        ["Americano"] = ["Size", "Extra", "Temperature"],
+        ["Mocha"] = ["Size", "Temperature", "Flavor", "Topping", "Extra"],
+        ["Caramel Macchiato"] = ["Size", "Temperature", "Flavor", "Topping", "Extra"],
+        ["Spanish Latte"] = ["Size", "Temperature", "Flavor", "Extra"],
+        ["Iced Latte"] = ["Size", "Flavor", "Extra"],
+        ["Cold Brew"] = ["Size", "Flavor", "Extra"],
+        ["Doppio"] = ["Extra"],
+        ["Chai Latte"] = ["Size", "Temperature", "Extra"],
+        ["Earl Grey Tea"] = ["Size", "Temperature"],
+        ["Iced Lemon Tea"] = ["Size"],
+        ["Hot Chocolate"] = ["Size", "Topping", "Extra"],
+        ["Strawberry Milk"] = ["Size", "Topping"],
+        ["Mango Smoothie"] = ["Size", "Topping"],
     };
     foreach (var (drink, types) in drinksAddOns)
     {
@@ -591,6 +635,8 @@ async Task SeedMainShopAsync()
     }
 
     await db.SaveChangesAsync();
+
+    await SeedBulkMainShopAsync(db, owner, manager, cashier, products, addOnProducts, drinksAddOns, customers, settings?.VatRegistered ?? false);
 }
 
 async Task SeedStarterShopAsync()
@@ -664,6 +710,630 @@ async Task SeedStarterShopAsync()
     });
     await db.SaveChangesAsync();
     added.Add("second shop 'Starter Demo Cafe' on the Starter plan (owner starterowner, small menu, open invoice)");
+}
+
+async Task SeedBulkMainShopAsync(WTFDbContext db, User owner, User manager, User cashier, Dictionary<string, Product> products, Dictionary<string, Product> addOnProducts, Dictionary<string, string[]> drinksAddOns, Dictionary<string, Customer> customers, bool vatRegistered)
+{
+    // Enough rows in every list to scroll or page through it. Fixed seed, so every deploy builds the same shop.
+    var random = new Random(2026);
+    T Pick<T>(IReadOnlyList<T> list) => list[random.Next(list.Count)];
+
+    // Staff
+    var staff = new (string Username, string First, string Last, UserRoleEnum Role)[]
+    {
+        ("jose.mendoza", "Jose", "Mendoza", UserRoleEnum.Cashier),
+        ("carla.reyes", "Carla", "Reyes", UserRoleEnum.Cashier),
+        ("miguel.torres", "Miguel", "Torres", UserRoleEnum.Cashier),
+        ("angela.garcia", "Angela", "Garcia", UserRoleEnum.Cashier),
+        ("rafael.lim", "Rafael", "Lim", UserRoleEnum.Cashier),
+        ("bea.fernandez", "Bea", "Fernandez", UserRoleEnum.Cashier),
+        ("dennis.ocampo", "Dennis", "Ocampo", UserRoleEnum.Cashier),
+        ("trisha.castillo", "Trisha", "Castillo", UserRoleEnum.Cashier),
+        ("marco.salazar", "Marco", "Salazar", UserRoleEnum.StockManager),
+        ("ines.delrosario", "Ines", "Del Rosario", UserRoleEnum.StockManager),
+        ("kevin.pascual", "Kevin", "Pascual", UserRoleEnum.ItemManager),
+        ("hannah.soriano", "Hannah", "Soriano", UserRoleEnum.ItemManager),
+        ("gabriel.navarro", "Gabriel", "Navarro", UserRoleEnum.AdminViewer),
+        ("lorna.mercado", "Lorna", "Mercado", UserRoleEnum.AdminViewer),
+        ("arvin.santiago", "Arvin", "Santiago", UserRoleEnum.Cashier),
+        ("katrina.domingo", "Katrina", "Domingo", UserRoleEnum.Cashier),
+        ("ramon.aguilar", "Ramon", "Aguilar", UserRoleEnum.Cashier),
+        ("sheila.valdez", "Sheila", "Valdez", UserRoleEnum.Cashier),
+        ("jericho.pineda", "Jericho", "Pineda", UserRoleEnum.Cashier),
+        ("monica.cabrera", "Monica", "Cabrera", UserRoleEnum.Cashier),
+        ("vince.lacson", "Vince", "Lacson", UserRoleEnum.Cashier),
+        ("pia.magno", "Pia", "Magno", UserRoleEnum.Cashier),
+        ("noel.estrada", "Noel", "Estrada", UserRoleEnum.Cashier),
+        ("diane.tolentino", "Diane", "Tolentino", UserRoleEnum.Cashier),
+        ("harold.bernardo", "Harold", "Bernardo", UserRoleEnum.Cashier),
+        ("celine.ramirez", "Celine", "Ramirez", UserRoleEnum.Cashier),
+        ("bong.salvador", "Bong", "Salvador", UserRoleEnum.Cashier),
+        ("tessa.manalo", "Tessa", "Manalo", UserRoleEnum.Cashier),
+    };
+    var staffUsers = new List<User>();
+    for (var i = 0; i < staff.Length; i++)
+    {
+        var (username, first, last, role) = staff[i];
+        var user = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Username == username);
+        if (user is null)
+        {
+            user = NewUser(username, first, last, role, shopId);
+            user.IsActive = i < staff.Length - 3;
+            db.Users.Add(user);
+            added.Add($"user {username} ({role})");
+        }
+
+        staffUsers.Add(user);
+    }
+
+    await db.SaveChangesAsync();
+    var cashiers = staffUsers.Where(u => u.RoleId == (int)UserRoleEnum.Cashier && u.IsActive).Append(cashier).ToList();
+    var stockStaff = staffUsers.Where(u => u.RoleId == (int)UserRoleEnum.StockManager).Append(manager).ToList();
+
+    // Customers
+    var firstNames = new[] { "Carlo", "Bianca", "Migo", "Trina", "Paolo", "Kristine", "Enzo", "Patricia", "Jerome", "Camille", "Nathan", "Isabel", "Rommel", "Aileen", "Gino", "Dessa", "Franco", "Marites", "Clarence", "Joanna", "Rey", "Shiela", "Albert", "Cherry", "Lance", "Maricar", "Oscar", "Rhea", "Vicente", "Liza", "Dante", "Jasmine", "Ferdie", "Michelle", "Allan" };
+    var lastNames = new[] { "Villareal", "Concepcion", "Aquino", "Dizon", "Hernandez", "Lopez", "Ramos", "Flores", "Gonzales", "Bautista", "Cruz", "Morales", "Castro", "Mendoza", "Rivera", "Alvarez", "Santos", "Perez", "Diaz", "Robles", "Panganiban", "Soriano", "Tan", "Uy", "Go", "Chua", "Evangelista", "Ignacio", "Jimenez", "Gutierrez", "Lacson", "Macaraeg", "Noble", "Ocampo", "Padilla" };
+    var streets = new[] { "Maginhawa Street", "Katipunan Avenue", "Aurora Boulevard", "Shaw Boulevard", "Ayala Avenue", "Jupiter Street", "Kamias Road", "Tomas Morato Avenue", "Timog Avenue", "Ortigas Avenue", "Bonifacio High Street", "Pioneer Street" };
+    var cities = new[] { "Quezon City", "Makati City", "Pasig City", "Mandaluyong City", "Taguig City", "Manila", "San Juan City" };
+    var prefixes = new[] { "0917", "0918", "0927", "0935", "0945", "0956", "0966" };
+    var customersByName = new Dictionary<string, Customer>(customers);
+    for (var i = 0; i < firstNames.Length; i++)
+    {
+        var first = firstNames[i];
+        var last = lastNames[(i * 7 + 3) % lastNames.Length];
+        var address = i % 6 == 5 ? null : $"{random.Next(2, 199)} {Pick(streets)}, {Pick(cities)}";
+        var phone = i % 8 == 7 ? null : prefixes[i % prefixes.Length] + random.Next(1000000, 9999999);
+        var customer = await db.Customers.FirstOrDefaultAsync(c => c.FirstName == first && c.LastName == last);
+        if (customer is null)
+        {
+            customer = new Customer
+            {
+                Id = Guid.NewGuid(),
+                FirstName = first,
+                LastName = last,
+                Address = address,
+                ContactNumber = phone,
+                IsActive = i % 17 != 16,
+                CreatedAt = now.AddDays(-random.Next(1, 90)),
+                CreatedBy = owner.Id,
+                TenantId = shopId,
+            };
+            db.Customers.Add(customer);
+            added.Add($"customer {first} {last}");
+        }
+
+        customersByName[$"{first} {last}"] = customer;
+    }
+
+    await db.SaveChangesAsync();
+
+    // Stock items with their own suppliers. The three original items are left alone so their low-stock warnings stay.
+    var supplierRows = new (string Name, string Contact, string Phone, int Lead)[]
+    {
+        ("Sweet Treats Ingredients", "Dina Asuncion", "09175550103", 2),
+        ("Luzon Tea and Pantry", "Gilbert Sy", "09175550104", 3),
+        ("Manila Packaging Depot", "Ferdie Ong", "09175550105", 4),
+        ("Fresh Farm Produce", "Aling Nena Pascual", "09175550106", 1),
+    };
+    var suppliers = new List<Supplier>();
+    foreach (var (name, contact, phone, lead) in supplierRows)
+    {
+        suppliers.Add(await EnsureSupplierAsync(db, shopId, owner.Id, name, contact, phone, lead));
+    }
+
+    await db.SaveChangesAsync();
+
+    var itemRows = new (string Name, string Unit, int Supplier, string Pack, decimal PackUnits, decimal PackPrice)[]
+    {
+        ("Vanilla Syrup", "ml", 0, "750 ml bottle", 750m, 420m),
+        ("Caramel Syrup", "ml", 0, "750 ml bottle", 750m, 420m),
+        ("Hazelnut Syrup", "ml", 0, "750 ml bottle", 750m, 430m),
+        ("Chocolate Sauce", "ml", 0, "2 L jug", 2000m, 690m),
+        ("Whipped Cream", "ml", 0, "1 L pack", 1000m, 380m),
+        ("Brown Sugar", "g", 0, "1 kg pack", 1000m, 78m),
+        ("White Sugar", "g", 0, "1 kg pack", 1000m, 72m),
+        ("Cocoa Powder", "g", 0, "500 g tub", 500m, 310m),
+        ("Chai Concentrate", "ml", 1, "1 L bottle", 1000m, 360m),
+        ("Earl Grey Tea Bags", "pcs", 1, "box of 100", 100m, 280m),
+        ("Green Tea Leaves", "g", 1, "250 g pack", 250m, 420m),
+        ("Decaf Beans", "g", 1, "1 kg bag", 1000m, 950m),
+        ("Oat Milk", "ml", 1, "1 L carton", 1000m, 165m),
+        ("Bottled Water", "pcs", 1, "case of 24", 24m, 190m),
+        ("Dish Detergent", "ml", 1, "3.8 L gallon", 3800m, 240m),
+        ("Coffee Filters", "pcs", 1, "pack of 100", 100m, 150m),
+        ("12oz Paper Cups", "pcs", 2, "case of 1,000", 1000m, 2900m),
+        ("16oz Paper Cups", "pcs", 2, "case of 1,000", 1000m, 3400m),
+        ("Cup Lids", "pcs", 2, "case of 1,000", 1000m, 1500m),
+        ("Paper Straws", "pcs", 2, "box of 500", 500m, 320m),
+        ("Napkins", "pcs", 2, "pack of 1,000", 1000m, 260m),
+        ("Stirrers", "pcs", 2, "pack of 1,000", 1000m, 180m),
+        ("Cup Sleeves", "pcs", 2, "pack of 500", 500m, 450m),
+        ("Takeout Bags", "pcs", 2, "pack of 200", 200m, 380m),
+        ("Receipt Paper Rolls", "pcs", 2, "box of 50", 50m, 650m),
+        ("Croissant Dough", "pcs", 3, "tray of 24", 24m, 960m),
+        ("Ham Slices", "g", 3, "1 kg pack", 1000m, 420m),
+        ("Cheese Slices", "pcs", 3, "pack of 100", 100m, 560m),
+        ("Sandwich Bread", "pcs", 3, "pack of 12 loaves", 12m, 380m),
+        ("Butter", "g", 3, "1 kg block", 1000m, 540m),
+        ("Chocolate Cake Mix", "g", 3, "1 kg pack", 1000m, 360m),
+        ("Eggs", "pcs", 3, "tray of 30", 30m, 270m),
+    };
+    var bulkItems = new List<(Item Item, int Supplier, string Pack, decimal PackUnits, decimal PackPrice)>();
+    foreach (var (name, unit, supplierIndex, pack, packUnits, packPrice) in itemRows)
+    {
+        var item = await db.Items.FirstOrDefaultAsync(i => i.Name == name);
+        if (item is null)
+        {
+            var cost = Math.Round(packPrice / packUnits, 4);
+            item = new Item
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                UnitName = unit,
+                CurrentQuantity = 0m,
+                WarningQuantity = packUnits,
+                CriticalQuantity = Math.Round(packUnits * 0.4m, 2),
+                CostPrice = cost,
+                AverageCost = cost,
+                YieldPercent = 100m,
+                IsActive = true,
+                CreatedAt = now.AddDays(-75),
+                CreatedBy = owner.Id,
+                TenantId = shopId,
+            };
+            db.Items.Add(item);
+            Move(db, item, StockMovementTypes.AddStock, packUnits * 4m, owner.Id, shopId, null, null, "Opening stock", cost);
+            db.ItemSuppliers.Add(new ItemSupplier
+            {
+                Id = Guid.NewGuid(),
+                ItemId = item.Id,
+                SupplierId = suppliers[supplierIndex].Id,
+                PackName = pack,
+                UnitsPerPack = packUnits,
+                PackPrice = packPrice,
+                IsPreferred = true,
+                CreatedAt = now.AddDays(-75),
+                CreatedBy = owner.Id,
+                TenantId = shopId,
+            });
+            added.Add($"stock item {name}");
+        }
+
+        bulkItems.Add((item, supplierIndex, pack, packUnits, packPrice));
+    }
+
+    await db.SaveChangesAsync();
+
+    // Deliveries over the last two months
+    if (await db.StockReceipts.CountAsync() < 30)
+    {
+        var prefixesByDepot = new[] { "STI", "LTP", "MPD", "FFP" };
+        for (var r = 0; r < 30; r++)
+        {
+            var supplierIndex = r % suppliers.Count;
+            var daysAgo = 2 + r * 2;
+            var receiptId = Guid.NewGuid();
+            var receivedBy = Pick(stockStaff);
+            var lines = bulkItems.Where(i => i.Supplier == supplierIndex).OrderBy(_ => random.Next()).Take(2 + r % 2).ToList();
+            var total = 0m;
+            db.StockReceipts.Add(new StockReceipt
+            {
+                Id = receiptId,
+                SupplierId = suppliers[supplierIndex].Id,
+                ReceivedOn = DateOnly.FromDateTime(now.AddDays(-daysAgo)),
+                InvoiceNumber = $"{prefixesByDepot[supplierIndex]}-2026-{1040 + r * 3}",
+                Note = r % 4 == 0 ? "Delivered by the supplier's rider, all sealed" : null,
+                CreatedAt = now.AddDays(-daysAgo),
+                CreatedBy = receivedBy.Id,
+                TenantId = shopId,
+            });
+            foreach (var (item, _, pack, packUnits, packPrice) in lines)
+            {
+                var packs = random.Next(1, 4);
+                var quantity = packs * packUnits;
+                var movement = Move(db, item, StockMovementTypes.AddStock, quantity, receivedBy.Id, shopId, StockMovementTypes.StockReceiptReference, receiptId, "Received", packPrice / packUnits);
+                movement.CreatedAt = now.AddDays(-daysAgo);
+                total += packs * packPrice;
+                db.StockReceiptLines.Add(new StockReceiptLine
+                {
+                    Id = Guid.NewGuid(),
+                    ReceiptId = receiptId,
+                    ItemId = item.Id,
+                    PackName = pack,
+                    Packs = packs,
+                    UnitsPerPack = packUnits,
+                    PackPrice = packPrice,
+                    Quantity = quantity,
+                    UnitCost = packPrice / packUnits,
+                    MovementId = movement.Id,
+                    TenantId = shopId,
+                });
+            }
+
+            db.StockReceipts.Local.First(x => x.Id == receiptId).InvoiceTotal = total;
+        }
+
+        added.Add("30 stock receipts");
+    }
+
+    // Waste, in every status
+    if (await db.StockWastes.CountAsync() < 30)
+    {
+        var reasons = await db.WasteReasons.ToListAsync();
+        var wasteRows = new (string Reason, string[] Notes)[]
+        {
+            ("Expired or spoiled", ["Found past the best-before date during closing", "Went off in the chiller overnight", "Opened pack left out too long"]),
+            ("Spilled or dropped", ["Dropped while restocking the shelf", "Tipped over during the morning rush", "Bag split open while carrying"]),
+            ("Wrong order or remade", ["Drink remade, customer asked for oat milk", "Order remade after wrong size", "Remade for a table that waited too long"]),
+            ("Quality failed", ["Tasted off during opening check", "Texture was wrong, not served"]),
+            ("Staff meal", ["Crew meal during the long shift", "Staff merienda"]),
+            ("Sample or tasting", ["Cupping session with the supplier", "Tasting for the new menu item"]),
+            ("Breakage", ["Box crushed in the delivery", "Bottle cracked in storage"]),
+        };
+        var statusPattern = new[]
+        {
+            StockWasteStatuses.Recorded, StockWasteStatuses.Confirmed, StockWasteStatuses.Recorded, StockWasteStatuses.Recorded,
+            StockWasteStatuses.PendingReview, StockWasteStatuses.Confirmed, StockWasteStatuses.Recorded, StockWasteStatuses.Disputed,
+        };
+        for (var w = 0; w < 32; w++)
+        {
+            var (reasonName, notes) = wasteRows[w % wasteRows.Length];
+            var reason = reasons.FirstOrDefault(x => x.Name == reasonName);
+            if (reason is null)
+            {
+                continue;
+            }
+
+            var (item, _, _, packUnits, _) = Pick(bulkItems);
+            var quantity = Math.Max(1m, Math.Round(packUnits * (decimal)(0.02 + random.NextDouble() * 0.08), 0));
+            var status = statusPattern[w % statusPattern.Length];
+            var recordedBy = Pick(cashiers);
+            var createdAt = now.AddDays(-1 - w).AddHours(-random.Next(0, 8));
+            var movement = Move(db, item, StockMovementTypes.Waste, -quantity, recordedBy.Id, shopId, StockMovementTypes.StockWasteReference, null, "Waste", item.CostPrice);
+            movement.CreatedAt = createdAt;
+            var reviewed = status is StockWasteStatuses.Confirmed or StockWasteStatuses.Disputed;
+            db.StockWastes.Add(new StockWaste
+            {
+                Id = Guid.NewGuid(),
+                ItemId = item.Id,
+                StockMovementId = movement.Id,
+                Quantity = quantity,
+                WasteReasonId = reason.Id,
+                ReasonName = reason.Name,
+                Notes = Pick(notes),
+                Status = status,
+                RequiresReview = status != StockWasteStatuses.Recorded,
+                ReviewedAt = reviewed ? createdAt.AddHours(6) : null,
+                ReviewedBy = reviewed ? manager.Id : null,
+                ReviewNote = status == StockWasteStatuses.Disputed ? "Quantity looks too high for one shift, please recount" : null,
+                CreatedAt = createdAt,
+                CreatedBy = recordedBy.Id,
+                TenantId = shopId,
+            });
+        }
+
+        added.Add("32 waste entries (recorded, to review, confirmed, disputed)");
+    }
+
+    await db.SaveChangesAsync();
+
+    // Purchase orders from draft to received
+    if (await db.PurchaseOrders.CountAsync() < 30)
+    {
+        var nextPo = (await db.PurchaseOrders.IgnoreQueryFilters().Where(p => p.TenantId == shopId).MaxAsync(p => (int?)p.PoNumber) ?? 0) + 1;
+        var statusPlan = new[]
+        {
+            PurchaseOrderStatuses.Received, PurchaseOrderStatuses.Received, PurchaseOrderStatuses.Sent, PurchaseOrderStatuses.Received,
+            PurchaseOrderStatuses.PartlyReceived, PurchaseOrderStatuses.Draft, PurchaseOrderStatuses.Received, PurchaseOrderStatuses.Cancelled,
+        };
+        var poNotes = new[] { "Regular weekly restock", "Running low before the weekend", "Ahead of the holiday rush", "Price list changed, confirm with the supplier", "Deliver in the morning before opening", null };
+        for (var p = 0; p < 30; p++)
+        {
+            var supplierIndex = p % suppliers.Count;
+            var status = statusPlan[p % statusPlan.Length];
+            var daysAgo = 1 + p * 2;
+            var createdAt = now.AddDays(-daysAgo);
+            var poId = Guid.NewGuid();
+            var buyer = Pick(stockStaff);
+            var open = status is PurchaseOrderStatuses.Sent or PurchaseOrderStatuses.PartlyReceived or PurchaseOrderStatuses.Received;
+            db.PurchaseOrders.Add(new PurchaseOrder
+            {
+                Id = poId,
+                TenantId = shopId,
+                PoNumber = nextPo++,
+                SupplierId = suppliers[supplierIndex].Id,
+                Status = status,
+                ExpectedOn = DateOnly.FromDateTime(createdAt.AddDays(suppliers[supplierIndex].LeadTimeDays ?? 2)),
+                Note = Pick(poNotes),
+                CreatedAt = createdAt,
+                CreatedBy = buyer.Id,
+                SentAt = open ? createdAt.AddHours(2) : null,
+                SentBy = open ? buyer.Id : null,
+                ClosedAt = status is PurchaseOrderStatuses.Received or PurchaseOrderStatuses.Cancelled ? createdAt.AddDays(3) : null,
+                ClosedBy = status is PurchaseOrderStatuses.Received or PurchaseOrderStatuses.Cancelled ? buyer.Id : null,
+            });
+            foreach (var (item, _, pack, packUnits, packPrice) in bulkItems.Where(i => i.Supplier == supplierIndex).OrderBy(_ => random.Next()).Take(1 + p % 3))
+            {
+                var ordered = random.Next(2, 9);
+                db.PurchaseOrderLines.Add(new PurchaseOrderLine
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = shopId,
+                    PurchaseOrderId = poId,
+                    ItemId = item.Id,
+                    PackName = pack,
+                    UnitsPerPack = packUnits,
+                    PackPrice = packPrice,
+                    PacksOrdered = ordered,
+                    PacksReceived = status switch
+                    {
+                        PurchaseOrderStatuses.Received => ordered,
+                        PurchaseOrderStatuses.PartlyReceived => Math.Max(1, ordered / 2),
+                        _ => 0m,
+                    },
+                });
+            }
+        }
+
+        added.Add("30 purchase orders (draft, sent, part received, received, cancelled)");
+    }
+
+    // Stock counts: weekly counts that were posted, a few cancelled
+    if (await db.StockCounts.CountAsync() < 30)
+    {
+        await db.SaveChangesAsync();
+        for (var c = 0; c < 30; c++)
+        {
+            var weeksAgo = c + 1;
+            var createdAt = now.AddDays(-weeksAgo * 3).AddHours(-3);
+            var counter = Pick(stockStaff);
+            var cancelled = c % 11 == 10;
+            var countId = Guid.NewGuid();
+            db.StockCounts.Add(new StockCount
+            {
+                Id = countId,
+                Name = c % 4 == 3 ? $"Month-end count, {createdAt:MMMM}" : $"Weekly count, week of {createdAt:MMM d}",
+                Status = cancelled ? StockCountStatuses.Cancelled : StockCountStatuses.Posted,
+                IsBlind = c % 3 == 0,
+                Note = cancelled ? "Started on the wrong shelf, redone the next day" : null,
+                CreatedAt = createdAt,
+                CreatedBy = counter.Id,
+                PostedAt = cancelled ? null : createdAt.AddHours(2),
+                PostedBy = cancelled ? null : counter.Id,
+                CancelledAt = cancelled ? createdAt.AddHours(1) : null,
+                CancelledBy = cancelled ? counter.Id : null,
+                TenantId = shopId,
+            });
+            foreach (var (item, _, _, _, _) in bulkItems.OrderBy(_ => random.Next()).Take(4 + c % 3))
+            {
+                db.StockCountLines.Add(new StockCountLine
+                {
+                    Id = Guid.NewGuid(),
+                    CountId = countId,
+                    ItemId = item.Id,
+                    ExpectedQuantity = item.CurrentQuantity,
+                    CountedQuantity = item.CurrentQuantity,
+                    CountedAt = createdAt.AddHours(1),
+                    CountedBy = counter.Id,
+                    TenantId = shopId,
+                });
+            }
+        }
+
+        added.Add("30 stock counts (posted and cancelled)");
+    }
+
+    await db.SaveChangesAsync();
+
+    // Expenses for the last two months
+    var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now, TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")));
+    var expenseRows = new (byte Category, string Text, decimal Amount)[]
+    {
+        (ExpenseCategories.Supplies, "Ice delivery", 650m),
+        (ExpenseCategories.Utilities, "Water refill", 380m),
+        (ExpenseCategories.Salaries, "Part-time barista pay", 4200m),
+        (ExpenseCategories.Supplies, "Cleaning supplies from the palengke", 720m),
+        (ExpenseCategories.Marketing, "Printed menu cards", 1350m),
+        (ExpenseCategories.Delivery, "Courier for a catering order", 480m),
+        (ExpenseCategories.PaymentFees, "GCash merchant fees", 310m),
+        (ExpenseCategories.Utilities, "Internet bill", 1899m),
+        (ExpenseCategories.Other, "Pest control visit", 1500m),
+        (ExpenseCategories.Supplies, "Fresh flowers for the tables", 450m),
+        (ExpenseCategories.Salaries, "Weekend crew overtime", 2600m),
+        (ExpenseCategories.Other, "Grinder blade replacement", 950m),
+    };
+    for (var e = 0; e < 38; e++)
+    {
+        var (category, text, amount) = expenseRows[e % expenseRows.Length];
+        var date = today.AddDays(-(2 + e * 3 / 2));
+        var note = $"{text}, {date:MMM d}";
+        if (await db.Expenses.AnyAsync(x => x.Note == note))
+        {
+            continue;
+        }
+
+        db.Expenses.Add(new Expense
+        {
+            Id = Guid.NewGuid(),
+            ExpenseDate = date,
+            Category = category,
+            Amount = amount + e % 5 * 25m,
+            Note = note,
+            IsActive = true,
+            CreatedAt = now.AddDays(-(2 + e * 3 / 2)),
+            CreatedBy = manager.Id,
+            TenantId = shopId,
+        });
+    }
+
+    await db.SaveChangesAsync();
+
+    // Orders for the last month. Totals come from the lines, the same way the app works them out.
+    if (await db.Orders.CountAsync() < 90)
+    {
+        var drinkNames = drinksAddOns.Keys.ToList();
+        var foodNames = products.Values.Where(p => !p.IsAddOn && p.CategoryId != products["Espresso"].CategoryId && p.Code is not null && !p.Code.StartsWith("RTL")).Select(p => p.Name).ToList();
+        var orderNotes = new[] { "Less ice please", "Extra hot", "No sugar", "Name on the cup: Migs", "For pickup in 10 minutes", "Birthday treat, add a candle if possible", "Oat milk instead of fresh milk" };
+        var specs = new List<OrderSpec>();
+        for (var o = 0; o < 90; o++)
+        {
+            var lines = new List<OrderLineSpec>();
+            var drinkCount = random.Next(100) < 20 ? 2 : 1;
+            for (var d = 0; d < drinkCount; d++)
+            {
+                var drink = Pick(drinkNames);
+                var types = drinksAddOns[drink];
+                var chosen = new List<string>();
+                if (types.Contains("Size"))
+                {
+                    chosen.Add(random.Next(100) < 65 ? "Medium" : "Large");
+                }
+
+                if (types.Contains("Temperature"))
+                {
+                    chosen.Add(random.Next(100) < 55 ? "Hot" : "Iced");
+                }
+
+                if (types.Contains("Flavor") && random.Next(100) < 20)
+                {
+                    chosen.Add(Pick(new[] { "Vanilla", "Caramel", "Hazelnut" }));
+                }
+
+                if (types.Contains("Extra") && random.Next(100) < 12)
+                {
+                    chosen.Add(Pick(new[] { "Extra Shot", "Oat Milk" }));
+                }
+
+                lines.Add(new OrderLineSpec(drink, random.Next(100) < 80 ? 1 : 2, chosen.ToArray()));
+            }
+
+            if (random.Next(100) < 45)
+            {
+                lines.Add(new OrderLineSpec(Pick(foodNames), random.Next(100) < 85 ? 1 : 2, []));
+            }
+
+            var roll = random.Next(100);
+            var status = roll < 86 ? OrderStatusEnum.Completed : roll < 94 ? OrderStatusEnum.Cancelled : OrderStatusEnum.Refunded;
+            var payment = status == OrderStatusEnum.Cancelled ? (PaymentMethodEnum?)null : random.Next(100) < 58 ? PaymentMethodEnum.Cash : PaymentMethodEnum.GCash;
+            var customer = random.Next(100) < 40 ? Pick(customersByName.Keys.ToList()) : null;
+            var senior = status == OrderStatusEnum.Completed && random.Next(100) < 6 ? (random.Next(2) == 0 ? SeniorPwdKind.Senior : SeniorPwdKind.Pwd) : (SeniorPwdKind?)null;
+            var note = random.Next(100) < 15 ? Pick(orderNotes) : status == OrderStatusEnum.Cancelled ? "Customer changed their mind" : status == OrderStatusEnum.Refunded ? "Wrong drink served, refunded at the counter" : null;
+            var tips = payment == PaymentMethodEnum.Cash && random.Next(100) < 10 ? 20m : (decimal?)null;
+            specs.Add(new OrderSpec($"order {o}", note, status, payment, customer, -(4 + o * 8 + random.Next(0, 7)), lines.ToArray(), Tips: tips, Senior: senior));
+        }
+
+        var statusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
+        foreach (var spec in specs.Where(s => statusIds.Contains((int)s.Status)).OrderBy(s => s.HoursAgo))
+        {
+            AddOrder(db, spec, products, addOnProducts, customersByName, Pick(cashiers), shopId, now, vatRegistered);
+            await db.SaveChangesAsync();
+        }
+
+        added.Add($"{specs.Count} more orders over the last month");
+    }
+
+    // Audit log
+    if (await db.AuditLogs.CountAsync() < 80)
+    {
+        var orderIds = await db.Orders.OrderBy(o => o.CreatedAt).Select(o => o.Id).Take(60).ToListAsync();
+        var productList = products.Values.Where(p => !p.IsAddOn).ToList();
+        var everyone = new List<User> { owner, manager }.Concat(staffUsers.Where(u => u.IsActive)).ToList();
+        var ips = new[] { "112.200.45.18", "120.28.71.203", "49.145.12.77", "124.105.88.9" };
+        for (var a = 0; a < 90; a++)
+        {
+            var user = everyone[a % everyone.Count];
+            var timestamp = now.AddMinutes(-(40 + a * 190 + random.Next(0, 60)));
+            var (action, entityType, entityId, oldValues, newValues) = (a % 6) switch
+            {
+                0 => ("UserLogin", "User", user.Id.ToString(), null, null),
+                1 => ("OrderCreated", "Order", Pick(orderIds).ToString(), null, "{\"status\":\"Completed\"}"),
+                2 => ("ProductUpdated", "Product", Pick(productList).Id.ToString(), $"{{\"price\":{Pick(productList).Price}}}", $"{{\"price\":{Pick(productList).Price + 5m}}}"),
+                3 => ("ItemStockAdded", "Item", Pick(bulkItems).Item.Id.ToString(), null, "{\"reason\":\"Delivery received\"}"),
+                4 => ("StockWasted", "StockWaste", Guid.NewGuid().ToString(), null, "{\"status\":\"Recorded\"}"),
+                _ => ("UserLogout", "User", user.Id.ToString(), null, null),
+            };
+            db.AuditLogs.Add(new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Action = action,
+                EntityType = entityType,
+                EntityId = entityId,
+                OldValues = oldValues,
+                NewValues = newValues,
+                IpAddress = ips[a % ips.Length],
+                Timestamp = timestamp,
+                TenantId = shopId,
+            });
+        }
+
+        added.Add("90 audit log rows");
+    }
+
+    await db.SaveChangesAsync();
+}
+
+async Task SeedStarterBulkAsync()
+{
+    await using var db = new SeedContext(options, starterTenantId);
+    if (!await db.Tenants.AnyAsync(t => t.Id == starterTenantId) || await db.Orders.CountAsync() >= 40)
+    {
+        return;
+    }
+
+    var random = new Random(77);
+    var owner = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Username == "starterowner");
+    var staff = new (string Username, string First, string Last)[] { ("starter.cashier1", "Rowena", "Abad"), ("starter.cashier2", "Jun", "Calderon") };
+    var cashiers = new List<User> { owner };
+    foreach (var (username, first, last) in staff)
+    {
+        var user = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Username == username);
+        if (user is null)
+        {
+            user = NewUser(username, first, last, UserRoleEnum.Cashier, starterTenantId);
+            db.Users.Add(user);
+        }
+
+        cashiers.Add(user);
+    }
+
+    var customers = new Dictionary<string, Customer>();
+    foreach (var (first, last, address) in new[] { ("Pedro", "Reyes", "7 Bonifacio Street, Pasig City"), ("Lourdes", "Tiu", "88 Scout Tuazon Street, Quezon City"), ("Ariel", "Macapagal", "14 Sampaguita Road, Marikina City"), ("Gemma", "Sarmiento", (string?)null) })
+    {
+        var customer = await db.Customers.FirstOrDefaultAsync(c => c.FirstName == first && c.LastName == last);
+        if (customer is null)
+        {
+            customer = new Customer { Id = Guid.NewGuid(), FirstName = first, LastName = last, Address = address, IsActive = true, CreatedAt = now.AddDays(-10), CreatedBy = owner.Id, TenantId = starterTenantId };
+            db.Customers.Add(customer);
+        }
+
+        customers[first] = customer;
+    }
+
+    await db.SaveChangesAsync();
+
+    var products = await db.Products.Where(p => !p.IsAddOn && p.IsActive).ToDictionaryAsync(p => p.Name);
+    var names = products.Keys.ToList();
+    var statusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
+    var noAddOns = new Dictionary<string, Product>();
+    var customerKeys = customers.Keys.ToList();
+    for (var o = 0; o < 45; o++)
+    {
+        var lines = new[] { new OrderLineSpec(names[random.Next(names.Count)], random.Next(1, 3), []) };
+        var status = random.Next(100) < 90 ? OrderStatusEnum.Completed : OrderStatusEnum.Cancelled;
+        var payment = status == OrderStatusEnum.Completed ? (random.Next(100) < 60 ? PaymentMethodEnum.Cash : PaymentMethodEnum.GCash) : (PaymentMethodEnum?)null;
+        var customer = random.Next(100) < 35 ? customerKeys[random.Next(customerKeys.Count)] : null;
+        var spec = new OrderSpec($"starter order {o}", null, status, payment, customer, -(3 + o * 14 + random.Next(0, 9)), lines);
+        if (!statusIds.Contains((int)spec.Status))
+        {
+            continue;
+        }
+
+        AddOrder(db, spec, products, noAddOns, customers, cashiers[random.Next(cashiers.Count)], starterTenantId, now, false);
+        await db.SaveChangesAsync();
+    }
+
+    added.Add("Starter Demo Cafe: 2 more staff, 3 more customers and 45 orders over the last month");
 }
 
 TenantSubscription NewSubscription(Guid tenantId, int planId, int months) => new()

@@ -39,7 +39,12 @@ All accounts use the GitHub secret `STAGING_SEED_PASSWORD`.
   review), 2 purchase orders and an open count.
 - Orders: completed (cash, GCash, tips, promo price), Senior and PWD discounts, held, cancelled, refunded, and a
   customer-link order waiting for approval.
+- Enough rows to page through every paged list (page sizes 10, 25, 50, 100): about 140 orders (infinite scroll on the order
+  list), 40 customers, 38 products, 35 stock items, 38 users, 30+ receipts, waste entries, purchase orders, stock counts
+  and expenses, and 90 audit log rows. The extra stock activity uses its own items so the three original items keep their
+  fine, low and near-critical states.
 - Also customers (with addresses), expenses, and a second shop `Starter Demo Cafe` on the Starter plan (owner
-  `starterowner`, open invoice).
+  `starterowner`, open invoice). It also has 2 more staff, 4 customers and 45 orders for plan gating: sign in as `starterowner` to see the screens
+  that are not in the Starter plan.
 
 When you build a feature, update the seed so the feature has data on staging (see `CLAUDE.md`).
