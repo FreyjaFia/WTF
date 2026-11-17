@@ -28,6 +28,6 @@ public record OrderDto(
     DateTime? CatalogSyncedAt = null,
     bool IsAged = false,
     int? HeldDays = null,
-    byte? KitchenStatus = null);,
+    byte? KitchenStatus = null,
     Guid? BranchId = null,
     string? BranchCode = null);

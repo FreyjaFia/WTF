@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from 
 import { NavigationEnd, Router } from '@angular/router';
 import { AuthLoadingService, AuthService, BrandService, ConnectivityService, ImageCacheService } from '@core/services';
 import { appVersion } from '@environments/version';
+import { BranchSwitcherComponent } from '@shared/components/branch-switcher/branch-switcher';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { NotificationBellComponent } from '@shared/components/notification-bell/notification-bell';
@@ -15,6 +16,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
   imports: [
     CommonModule,
     AvatarComponent,
+    BranchSwitcherComponent,
     IconComponent,
     NotificationBellComponent,
     StaffEnvelopeComponent,

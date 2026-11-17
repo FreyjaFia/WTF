@@ -77,6 +77,7 @@ export const AppRoutes = {
   ManagementSuppliers: '/management/setup/suppliers',
   ManagementSupplierById: (supplierId: string) => `/management/setup/suppliers/${supplierId}`,
   ManagementExpenses: '/management/expenses',
+  ManagementBranches: '/management/branches',
   ManagementSchemaScripts: '/management/schema-scripts',
   ManagementSyncPolicy: '/management/sync-policy',
 } as const;

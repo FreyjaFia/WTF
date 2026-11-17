@@ -29,3 +29,4 @@ export * from './waste.models';
 export * from './subscription.models';
 export * from './catalog.models';
 export * from './offline-sync-policy.models';
+export * from './branch.models';

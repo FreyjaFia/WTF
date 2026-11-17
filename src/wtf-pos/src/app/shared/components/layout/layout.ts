@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { BrandService, SubscriptionService } from '@core/services';
+import { BrandService, BranchService, SubscriptionService } from '@core/services';
 import { DockComponent } from '@shared/components/dock/dock';
 import { HeaderComponent } from '@shared/components/header/header';
 import { OfflineBannerComponent } from '@shared/components/offline-banner/offline-banner';
@@ -18,6 +18,7 @@ export class LayoutComponent implements AfterViewInit, OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly subscription = inject(SubscriptionService);
   private readonly brand = inject(BrandService);
+  private readonly branches = inject(BranchService);
   private resizeObserver?: ResizeObserver;
   private mediaQuery?: MediaQueryList;
   private readonly onMediaChange = () => this.updateSidebarWidth();
@@ -25,6 +26,7 @@ export class LayoutComponent implements AfterViewInit, OnDestroy {
   public ngAfterViewInit(): void {
     this.subscription.start();
     this.brand.load();
+    this.branches.loadMine();
 
     if (typeof window === 'undefined') {
       return;

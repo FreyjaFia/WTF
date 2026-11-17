@@ -1,0 +1,49 @@
+@if (branchService.isMultiBranch()) {
+  <div class="dropdown dropdown-end z-35" data-testid="branch-switcher">
+    <button
+      type="button"
+      tabindex="0"
+      class="app-btn app-btn-ghost flex max-w-36 items-center gap-1.5 px-2 py-1.5 text-sm font-semibold text-gray-700 sm:max-w-56"
+      aria-label="Switch branch"
+      data-testid="branch-switcher-button"
+    >
+      <app-icon name="icon-storefront" [class]="'h-4.5 w-4.5 shrink-0 text-gray-500'" />
+      <span class="truncate">{{ branchService.activeLabel() }}</span>
+    </button>
+    <ul
+      tabindex="0"
+      class="dropdown-content menu bg-base-100 rounded-box z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] p-2 shadow"
+      data-testid="branch-switcher-menu"
+    >
+      @if (branchService.canSeeAll()) {
+        <li>
+          <button
+            type="button"
+            class="app-menu-item"
+            [class.font-bold]="branchService.isAllSelected()"
+            data-testid="branch-option-all"
+            (click)="choose(allBranches)"
+          >
+            All branches
+          </button>
+        </li>
+      }
+      @for (branch of branchService.branches(); track branch.id) {
+        @if (branch.isActive) {
+          <li>
+            <button
+              type="button"
+              class="app-menu-item"
+              [class.font-bold]="branch.id === branchService.activeId()"
+              [attr.data-testid]="'branch-option-' + branch.code"
+              (click)="choose(branch.id)"
+            >
+              <span class="truncate">{{ branch.name }}</span>
+              <span class="ml-auto text-xs text-gray-400">{{ branch.code }}</span>
+            </button>
+          </li>
+        }
+      }
+    </ul>
+  </div>
+}

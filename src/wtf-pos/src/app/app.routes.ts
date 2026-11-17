@@ -53,6 +53,7 @@ import { UsersComponent } from '@features/management/users/users';
 import { BrandPageComponent } from '@features/management/brand/brand-page';
 import { SubscriptionPageComponent } from '@features/management/subscription/subscription-page';
 import { ExpensesComponent } from '@features/management/expenses/expenses';
+import { BranchesComponent } from '@features/management/branches/branches';
 import { SetupComponent } from '@features/management/setup/setup';
 import { ShopComponent } from '@features/management/shop/shop';
 import { SyncPolicyPageComponent } from '@features/management/sync-policy/sync-policy-page';
@@ -530,6 +531,12 @@ export const routes: Routes = [
             component: AuditLogsComponent,
             canActivate: [roleGuard],
             data: { permission: Permissions.AuditRead },
+          },
+          {
+            path: 'branches',
+            component: BranchesComponent,
+            canActivate: [roleGuard],
+            data: { permission: Permissions.BranchesRead },
           },
           {
             path: 'expenses',

@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import {
   authInterceptor,
+  branchInterceptor,
   subscriptionInterceptor,
   timezoneInterceptor,
   utcDateInterceptor,
@@ -15,7 +16,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([timezoneInterceptor, utcDateInterceptor, authInterceptor, subscriptionInterceptor])),
+    provideHttpClient(withInterceptors([timezoneInterceptor, utcDateInterceptor, authInterceptor, branchInterceptor, subscriptionInterceptor])),
     provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
   ],
 };

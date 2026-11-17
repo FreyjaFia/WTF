@@ -46,7 +46,7 @@
           type="button"
           [class]="styles().confirmButton"
           (click)="confirmed.emit()"
-          [disabled]="isBusy()"
+          [disabled]="isBusy() || confirmDisabled()"
         >
           @if (isBusy()) {
             <span class="loading loading-spinner loading-xs mr-2"></span>
