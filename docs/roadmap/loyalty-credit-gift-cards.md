@@ -101,6 +101,8 @@ this, and the customer table stays free of money.
 
 ### Phase 0 - Decisions and accountant check [Planned]
 
+**Pogi, 18 Nov 2026: skip the accountant and legal checks for now.** The defaults below stand and each check becomes a settings switch if needed later.
+
 Nothing below is verified; written from general practice. **Check with the accountant, and for gift cards the shop's lawyer or
 DTI/BIR, before launch:**
 
@@ -192,6 +194,8 @@ DTI/BIR, before launch:**
   adjust; a card sale never appears in sales reports.
 
 ### Phase 4 - Reports, Daily Close and liability [Planned]
+
+**Simple rule (Pogi, 18 Nov 2026):** an order paid with a gift card, credit or a promo card is a normal sale for its full amount, in every sales report. Selling a gift card or topping up credit is not a sale, so it stays out of sales totals; it shows as its own line ("Gift cards sold", "Credit sold") on the Daily Close and the liability report. A report switch **"Include gift card and credit sales in totals"** (default off) adds those lines to the totals for owners who prefer to see cash in. A card spent on an order is never counted twice: the sale counts when the order is made, not when the card was sold. Free promo cards: nothing is counted when they are issued; when one is spent the order is a normal sale and the tender shows as "Promo card", so the Promo cards report can show what the campaign gave away. How to book it is parked with the accountant questions.
 
 Report tables use the shared report definitions (`report-definitions.ts`, one generic table, Excel/PDF/CSV, total row equal to
 the sum of rows) and the monthly workbook gets matching sheets.
