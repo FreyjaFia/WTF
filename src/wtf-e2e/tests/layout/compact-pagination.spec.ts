@@ -23,7 +23,7 @@ test.describe('compact pagination and sub page headers @layout @paging', () => {
       await expect(bar(page)).toBeVisible();
 
       const barBox = await box(page, 'app-pagination');
-      expect(barBox.height, 'the paginator is one slim row').toBeLessThan(viewport.width < 640 ? 64 : 72);
+      expect(barBox.height, 'the paginator is one slim row').toBeLessThan(48);
 
       await expect(bar(page).getByLabel('Rows per page')).toBeVisible();
       const barWidth = await page.evaluate(() => {
@@ -67,7 +67,7 @@ test.describe('compact pagination and sub page headers @layout @paging', () => {
       const firstRow = await box(page, '[data-testid="coverage-row"]');
       expect(firstRow.y, 'the first product starts in the upper two thirds').toBeLessThan(viewport.height * 0.65);
       const barBox = await box(page, 'app-pagination');
-      expect(barBox.height).toBeLessThan(72);
+      expect(barBox.height).toBeLessThan(48);
       expect(overflowProblem(await measureOverflow(page))).toBeNull();
       if (process.env.E2E_SHOTS) {
         await page.screenshot({ path: `${process.env.E2E_SHOTS}/ingredients-${viewport.width}.png` });

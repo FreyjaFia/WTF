@@ -1,16 +1,16 @@
 @if (visible()) {
   <div
-    class="bg-surface flex items-center justify-between gap-2 rounded-xl px-3 py-1.5 shadow-lg ring-1 ring-gray-100"
+    class="flex items-center justify-between gap-2 border-t border-gray-200 py-1"
     data-testid="pagination"
   >
-    <div class="flex min-w-0 items-center gap-3">
+    <div class="flex min-w-0 items-center gap-1">
       <span class="text-xs whitespace-nowrap text-gray-500" data-testid="pagination-range">
         {{ firstRow() }} &ndash; {{ lastRow() }} of {{ totalCount() }}
       </span>
-      <label class="flex items-center gap-2 text-xs text-gray-500">
-        <span class="hidden sm:inline">Rows per page</span>
+      <label class="flex items-center gap-1 text-xs text-gray-500">
+        <span class="hidden pl-2 sm:inline">Rows per page</span>
         <select
-          class="bg-surface rounded-lg px-2 py-1 text-sm text-gray-700 ring-1 ring-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
+          class="cursor-pointer rounded-md bg-transparent py-1 pl-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
           aria-label="Rows per page"
           [disabled]="disabled()"
           (change)="changePageSize($event)"
@@ -22,10 +22,10 @@
       </label>
     </div>
 
-    <nav class="flex shrink-0 items-center gap-1" [attr.aria-label]="label()">
+    <nav class="flex shrink-0 items-center gap-0.5" [attr.aria-label]="label()">
       <button
         type="button"
-        class="app-btn app-btn-secondary app-btn-sm"
+        class="app-btn app-btn-ghost p-1.5 disabled:opacity-30"
         aria-label="Previous"
         [disabled]="disabled() || page() <= 1"
         (click)="goToPage(page() - 1)"
@@ -43,16 +43,19 @@
           <path d="M15 18l-6-6 6-6" />
         </svg>
       </button>
-      <div class="hidden items-center gap-1 sm:flex">
+      <div class="hidden items-center gap-0.5 sm:flex">
         @for (item of items(); track $index) {
           @if (item === null) {
             <span class="px-1 text-gray-400" aria-hidden="true">&hellip;</span>
           } @else {
             <button
               type="button"
-              class="app-btn app-btn-sm"
-              [class.app-btn-primary]="item === page()"
-              [class.app-btn-secondary]="item !== page()"
+              class="min-w-8 cursor-pointer rounded-md px-2 py-1 text-sm transition-colors duration-200 ease-out disabled:cursor-default"
+              [class]="
+                item === page()
+                  ? 'bg-gray-100 font-semibold text-gray-900'
+                  : 'text-gray-600 hover:bg-gray-100'
+              "
               [attr.aria-current]="item === page() ? 'page' : null"
               [attr.aria-label]="'Page ' + item"
               [disabled]="disabled()"
@@ -63,10 +66,10 @@
           }
         }
       </div>
-      <label class="flex items-center gap-1 text-xs whitespace-nowrap text-gray-500 sm:hidden">
+      <label class="flex items-center gap-1 px-1 text-xs whitespace-nowrap text-gray-500 sm:hidden">
         <span class="hidden">Page</span>
         <select
-          class="bg-surface rounded-lg px-1.5 py-1 text-sm text-gray-700 ring-1 ring-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
+          class="cursor-pointer rounded-md bg-transparent py-1 pl-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
           aria-label="Go to page"
           [disabled]="disabled()"
           (change)="selectPage($event)"
@@ -79,7 +82,7 @@
       </label>
       <button
         type="button"
-        class="app-btn app-btn-secondary app-btn-sm"
+        class="app-btn app-btn-ghost p-1.5 disabled:opacity-30"
         aria-label="Next"
         [disabled]="disabled() || page() >= totalPages()"
         (click)="goToPage(page() + 1)"

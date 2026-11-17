@@ -10,7 +10,7 @@ import {
 @Component({
   selector: 'app-pagination',
   templateUrl: './pagination.html',
-  host: { class: 'bg-surface sticky bottom-0 z-10 block py-1' },
+  host: { class: 'bg-surface sticky bottom-0 z-10 block' },
 })
 export class PaginationComponent {
   public readonly page = input.required<number>();
