@@ -10,7 +10,7 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Subscriptions;
 
-public record PlanDto(int Id, string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive, int ShopCount = 0);
+public record PlanDto(int Id, string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive, int ShopCount = 0, int? MaxBranches = null);
 
 public record TenantSubscriptionDto(
     Guid TenantId,
@@ -33,7 +33,7 @@ public record TenantSubscriptionDto(
 internal static class PlatformBilling
 {
     public static PlanDto ToDto(Plan p, int shopCount = 0) =>
-        new(p.Id, p.Code, p.Name, p.MonthlyPrice, [.. PlanFeatures.Normalize(PlanFeatures.Split(p.Features))], p.MaxUsers, p.IsActive, shopCount);
+        new(p.Id, p.Code, p.Name, p.MonthlyPrice, [.. PlanFeatures.Normalize(PlanFeatures.Split(p.Features))], p.MaxUsers, p.IsActive, shopCount, p.MaxBranches);
 
     public static Task<int> CountUsersAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken) =>
         db.Users.AsNoTracking().IgnoreQueryFilters().CountAsync(u => u.TenantId == tenantId && u.IsActive, cancellationToken);
@@ -88,7 +88,7 @@ public class GetPlansHandler(WTFDbContext db) : IRequestHandler<GetPlansQuery, L
     }
 }
 
-public record UpdatePlanCommand(int Id, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive) : IRequest<PlanDto>;
+public record UpdatePlanCommand(int Id, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive, int? MaxBranches = null) : IRequest<PlanDto>;
 
 public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit, ITenantFeatures tenantFeatures) : IRequestHandler<UpdatePlanCommand, PlanDto>
 {
@@ -97,7 +97,7 @@ public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit, ITe
         var plan = await db.Plans.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException("Plan not found.");
 
-        var name = PlanFeatureInput.ValidatedName(request.Name, request.MonthlyPrice, request.MaxUsers);
+        var name = PlanFeatureInput.ValidatedName(request.Name, request.MonthlyPrice, request.MaxUsers, request.MaxBranches);
 
         var features = PlanFeatureInput.Clean(request.Features);
         var summary = $"{plan.Name}: {plan.MonthlyPrice:0.00} -> {request.MonthlyPrice:0.00}; {PlanFeatureInput.Diff(plan.Features, features)}; active {plan.IsActive} -> {request.IsActive}";
@@ -105,6 +105,7 @@ public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit, ITe
         plan.MonthlyPrice = request.MonthlyPrice;
         plan.Features = features;
         plan.MaxUsers = request.MaxUsers;
+        plan.MaxBranches = request.MaxBranches;
         plan.IsActive = request.IsActive;
         await db.SaveChangesAsync(cancellationToken);
 

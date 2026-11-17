@@ -4,7 +4,7 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Common.Tenancy;
 
-public sealed record TenantPlan(string Name, IReadOnlySet<string> Features, int? MaxUsers = null);
+public sealed record TenantPlan(string Name, IReadOnlySet<string> Features, int? MaxUsers = null, int? MaxBranches = null);
 
 public interface ITenantFeatures
 {

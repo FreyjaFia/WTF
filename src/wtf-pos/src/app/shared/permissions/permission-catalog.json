@@ -355,6 +355,24 @@
       "requires": []
     },
     {
+      "key": "branches.read",
+      "area": "Shop",
+      "label": "View branches",
+      "description": "See the branch list and who works in each branch.",
+      "feature": "branches",
+      "requires": []
+    },
+    {
+      "key": "branches.manage",
+      "area": "Shop",
+      "label": "Manage branches",
+      "description": "Add, change, close and reopen branches, and choose the main branch.",
+      "feature": "branches",
+      "requires": [
+        "branches.read"
+      ]
+    },
+    {
       "key": "audit.read",
       "area": "System",
       "label": "View the audit log",
@@ -413,6 +431,8 @@
       "roles.manage",
       "brand.manage",
       "subscription.billing",
+      "branches.read",
+      "branches.manage",
       "audit.read",
       "schemascripts.read"
     ],
@@ -454,7 +474,8 @@
       "users.read",
       "users.write",
       "brand.manage",
-      "subscription.billing"
+      "subscription.billing",
+      "branches.read"
     ],
     "AdminViewer": [
       "orders.read",
@@ -471,7 +492,8 @@
       "promotions.read",
       "dashboard.read",
       "reports.read",
-      "users.read"
+      "users.read",
+      "branches.read"
     ],
     "Cashier": [
       "orders.read",
@@ -512,6 +534,12 @@
     ],
     "BrandManage": [
       "brand.manage"
+    ],
+    "BranchesRead": [
+      "branches.read"
+    ],
+    "BranchesManage": [
+      "branches.manage"
     ],
     "ProductsRead": [
       "products.read",

@@ -24,5 +24,6 @@ public enum AuditEntityType
     Role,
     Report,
     OfflineSyncPolicy,
-    UnsyncedOrder
+    UnsyncedOrder,
+    Branch
 }

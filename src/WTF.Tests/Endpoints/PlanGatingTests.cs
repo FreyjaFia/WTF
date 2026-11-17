@@ -20,6 +20,7 @@ public class PlanGatingTests : IDisposable
     [
         "GET /api",
         "GET /api/health",
+        "GET /api/branches/mine",
         "GET /api/notifications/",
         "GET /api/notifications/counts",
         "POST /api/notifications/read",

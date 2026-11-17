@@ -48,6 +48,8 @@ public static class PermissionCatalog
         new("roles.manage", "People", "Manage roles", "Create, change and delete custom roles and choose what each can do. Only permissions you hold yourself can be given.", PlanFeatures.CustomRoles, []),
         new("brand.manage", "Shop", "Manage shop brand", "Change the shop name, logo and receipt details.", "core", []),
         new("subscription.billing", "Shop", "Manage subscription and billing", "See and pay the subscription.", "core", []),
+        new("branches.read", "Shop", "View branches", "See the branch list and who works in each branch.", PlanFeatures.Branches, []),
+        new("branches.manage", "Shop", "Manage branches", "Add, change, close and reopen branches, and choose the main branch.", PlanFeatures.Branches, ["branches.read"]),
         new("audit.read", "System", "View the audit log", "See who changed what.", PlanFeatures.Audit, []),
         new("schemascripts.read", "System", "View database script history", "See which database scripts have run.", "core", [])
     ];
@@ -59,6 +61,8 @@ public static class PermissionCatalog
     {
         [AppPolicies.SubscriptionBilling] = ["subscription.billing"],
         [AppPolicies.BrandManage] = ["brand.manage"],
+        [AppPolicies.BranchesRead] = ["branches.read"],
+        [AppPolicies.BranchesManage] = ["branches.manage"],
         [AppPolicies.ProductsRead] = ["products.read", "orders.write"],
         [AppPolicies.ProductsWrite] = ["products.write"],
         [AppPolicies.UsersRead] = ["users.read"],

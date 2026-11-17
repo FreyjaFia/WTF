@@ -33,7 +33,7 @@ internal static class PlanFeatureInput
         return PlanFeatures.Serialize(words);
     }
 
-    public static string ValidatedName(string? name, decimal monthlyPrice, int? maxUsers)
+    public static string ValidatedName(string? name, decimal monthlyPrice, int? maxUsers, int? maxBranches = null)
     {
         var trimmed = name?.Trim() ?? string.Empty;
         if (trimmed.Length is 0 or > 60)
@@ -49,6 +49,11 @@ internal static class PlanFeatureInput
         if (maxUsers is < 1)
         {
             throw new InvalidOperationException("Maximum users must be at least 1, or empty for no limit.");
+        }
+
+        if (maxBranches is < 1)
+        {
+            throw new InvalidOperationException("Maximum branches must be at least 1, or empty for no limit.");
         }
 
         return trimmed;
@@ -79,7 +84,7 @@ public class GetPlanFeaturesHandler : IRequestHandler<GetPlanFeaturesQuery, List
             .ToList());
 }
 
-public record CreatePlanCommand(string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive) : IRequest<PlanDto>;
+public record CreatePlanCommand(string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive, int? MaxBranches = null) : IRequest<PlanDto>;
 
 public partial class CreatePlanHandler(WTFDbContext db, IPlatformAuditService audit) : IRequestHandler<CreatePlanCommand, PlanDto>
 {
@@ -91,7 +96,7 @@ public partial class CreatePlanHandler(WTFDbContext db, IPlatformAuditService au
             throw new InvalidOperationException("Plan code is required: 1 to 30 lowercase letters, digits or hyphens.");
         }
 
-        var name = PlanFeatureInput.ValidatedName(request.Name, request.MonthlyPrice, request.MaxUsers);
+        var name = PlanFeatureInput.ValidatedName(request.Name, request.MonthlyPrice, request.MaxUsers, request.MaxBranches);
 
         if (await db.Plans.AnyAsync(p => p.Code == code, cancellationToken))
         {
@@ -107,6 +112,7 @@ public partial class CreatePlanHandler(WTFDbContext db, IPlatformAuditService au
             MonthlyPrice = request.MonthlyPrice,
             Features = features,
             MaxUsers = request.MaxUsers,
+            MaxBranches = request.MaxBranches,
             IsActive = request.IsActive,
             SortOrder = nextOrder
         };

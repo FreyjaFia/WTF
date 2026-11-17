@@ -90,5 +90,11 @@ public enum AuditAction
     UnsyncedOrderRetried,
     UnsyncedOrderNoteOnly,
     UnsyncedOrderDiscarded,
-    OrderKitchenStatusChanged
+    OrderKitchenStatusChanged,
+    BranchCreated,
+    BranchUpdated,
+    BranchClosed,
+    BranchReopened,
+    BranchMainChanged,
+    BranchScopeChanged
 }

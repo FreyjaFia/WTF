@@ -15,7 +15,7 @@ public partial class PlanFeatureDriftTests
 
     // Words added by a later script. The 20261130 script is a record of what it did and is never edited, so it knows only the
     // words that existed then; each later script is checked below.
-    private static readonly string[] AddedLater = [PlanFeatures.Kitchen];
+    private static readonly string[] AddedLater = [PlanFeatures.Kitchen, PlanFeatures.Branches];
 
     private static string[] WordsOf20261130() => [.. PlanFeatures.Gateable.Except(AddedLater)];
 

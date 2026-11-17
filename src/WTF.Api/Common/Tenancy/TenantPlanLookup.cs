@@ -15,7 +15,7 @@ public static class TenantPlanLookup
             .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(s => s.TenantId == tenantId)
-            .Select(s => new { s.Plan.Name, s.Plan.Features, s.Plan.MaxUsers })
+            .Select(s => new { s.Plan.Name, s.Plan.Features, s.Plan.MaxUsers, s.Plan.MaxBranches })
             .FirstOrDefaultAsync(cancellationToken);
 
         var kitchenSwitchedOn = await db.TenantSettings
@@ -31,7 +31,7 @@ public static class TenantPlanLookup
             features.Remove(PlanFeatures.Kitchen);
         }
 
-        return plan is null ? new TenantPlan(string.Empty, features) : new TenantPlan(plan.Name, features, plan.MaxUsers);
+        return plan is null ? new TenantPlan(string.Empty, features) : new TenantPlan(plan.Name, features, plan.MaxUsers, plan.MaxBranches);
     }
 
     // Straight from the database, for jobs and tests. A request with no shop (tests, platform area) is never blocked.

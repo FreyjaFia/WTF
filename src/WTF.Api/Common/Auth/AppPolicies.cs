@@ -42,6 +42,8 @@ public static class AppPolicies
     public const string StockWasteReview = "StockWasteReview";
     public const string WasteReasonsManage = "WasteReasonsManage";
     public const string WasteReasonsRead = "WasteReasonsRead";
+    public const string BranchesRead = "BranchesRead";
+    public const string BranchesManage = "BranchesManage";
     public const string ExpensesRead = "ExpensesRead";
     public const string ExpensesWrite = "ExpensesWrite";
     public const string DashboardRead = "DashboardRead";
