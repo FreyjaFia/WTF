@@ -326,3 +326,51 @@ the upsell nudge, the spend threshold's "minimum", audiences and coupons into on
 - Offline: item and spend conditions are local arithmetic; code and audience keep the offline rules above.
 - Build order: the condition model goes into step 0 (engine) with trigger item and minimum spend; code, audience and
   payment method join as their steps arrive, so no step needs its own special case.
+
+### Clash prevention: scenarios and tests (Pogi, 18 Nov)
+
+Rule: a new promotion type is not done until it passes every scenario below with the types that already exist. The
+scenarios are rows in `calculation-cases.json` (both the API and Angular tests run them), plus handler tests for the saved
+order and Playwright runs for the cart. Expected prices are worked by hand in the case file, never copied from output.
+
+**Properties checked on random carts (property tests, like `senior-pwd.property.spec.ts`)**
+
+- A unit is discounted by at most one line rule; total discount never exceeds the list price; no line or order below 0.
+- Result does not depend on the order lines were added or on how the rules are listed (permute both, same totals).
+- Adding a promotion never raises any price; ending a promotion returns the list price.
+- The POS (Angular) total equals the API total for the same cart, with and without Senior/PWD, offline quote included.
+- Whole-cent sums: line prices plus order adjustments equal the order total exactly.
+- Usage limits: concurrent orders never use more than the limit (the existing ten-register test), and voids give back
+  exactly the uses taken, including split lines and order-level rules.
+
+**Scenario matrix (every pair, at least the ones in bold)**
+
+| Scenario | Expected |
+| -------- | -------- |
+| **Product rule and category rule on one latte** | Bigger saving wins; same saving: lower price, then older promotion; one label |
+| **Happy hour window and a weekday rule overlap** | Both are "line rules"; best wins; outside the window only the other applies |
+| **Multi-buy over units one rule already discounted** | Those units are skipped; the rest count toward buy-X |
+| **Multi-buy with a limit smaller than the reward** | Line split into discounted and full-price parts; limit counts rewards, not items |
+| **Bundle with any-of items and a category rule on the same drink** | The drink inside the bundle gets no line rule; the bundle price stands |
+| **Two bundles that can both claim the same cart items** | Deterministic: the cheaper result for the customer, the bundle choice is stored on the order; picking is by the cashier, so no double claim |
+| **Spend discount with a rule-discounted cart** | The threshold uses the subtotal after line rules; crossing the line only because of a list price does not qualify |
+| **Spend discount and Senior/PWD** | Covered lines and tips are excluded from the spend subtotal and from the discount |
+| **Trigger item is also the target** | One unit cannot be both unless the cart has two (explicit count rule) |
+| **Trigger removed after the discount applied** | Cart reprices at once; on an open order edit the discount is removed |
+| **Coupon on a promotion that another rule also covers** | The code unlocks its promotion; best saving still wins unless the code is marked exclusive |
+| **Two coupons on one order** | Only the best one applies, the other is refused with the same wording as a wrong code |
+| **Audience rule (first order) after the first order is a pending order** | A pending or held order counts as the first order; a cancelled one does not |
+| **Order override of a completed order** | Existing lines keep the price they were sold at; only new lines are priced today; an ended promotion is not re-applied |
+| **Partial refund / void line** | Order-level discounts are re-spread by the stored allocation; refund equals what was paid for that line |
+| **Offline sale, promotion ended or limit used before sync** | Same holds as today (quote mismatch), plus a new check for each new rule shape |
+| **Plan downgrade while promotions exist** | New orders get no discounts, saved orders keep theirs, the editor shows "Not in your plan" |
+| **Another shop's promotion** | Never applied, never listed (tenant filter), checked per new table |
+| **Timezone** | Windows follow Asia/Manila, including a window past midnight and the day-of-week of the part after midnight |
+| **Price change between cart and save** | `expectedTotal` mismatch is refused with the new total; works for all new rule shapes |
+
+**Conflict check at save time.** When an owner saves an active promotion, the editor lists other active promotions that
+cover the same products or categories at the same time ("Overlaps with Happy Hour, which would win for Iced Latte"), using
+the simulator. It warns but does not block; a rule that can never win (always beaten) is flagged as useless.
+
+**Process.** Step 0 ships the scenario matrix with the three existing types first (so the engine is proven against today's
+behaviour with no price changes), then every later step adds its rows. Run the full matrix in CI on each promotion change.
