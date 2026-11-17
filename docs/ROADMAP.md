@@ -31,8 +31,9 @@ update its file and the status in the table below.
 | Image Storage CORS | Completed | [image-storage-cors](roadmap/image-storage-cors.md) |
 | Stale Image Cleanup | Completed | [stale-image-cleanup](roadmap/stale-image-cleanup.md) |
 | Chat Images and Message Expiry | Completed | [chat-images-and-expiry](roadmap/chat-images-and-expiry.md) |
+| Open in App (Android App Links, no PWA) | Planned, plan written, questions open | [open-in-app](roadmap/open-in-app.md) |
 
 Keywords to find the right file: stock, waste, costing, recipes, counts, variance, profit, expenses, notifications, bell,
 roles, permissions -> role-based-access; not-in-plan redirect, discard dialog, server logs -> graceful-plan-gating; branches -> inventory or multiple-branches-and-tenants; promotions, coupons, bundles -> promotions; offline sync, review
 -> offline; reports, dashboard -> sales-reporting; customer link, chat -> customer-ordering-links, chat-images-and-expiry;
-add-on types, categories -> dynamic-catalog; browser or unit tests -> automated-testing.
+app links, assetlinks, open in app, install -> open-in-app; add-on types, categories -> dynamic-catalog; browser or unit tests -> automated-testing.
