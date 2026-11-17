@@ -310,3 +310,19 @@ E/D are cheap once spend and multi-buy exist. I would skip K and M until a shop 
 Consistency note: A to H and L reuse the same rule shape and engine, so they add rows and editor presets rather than new
 order columns. Only B and J need a "trigger" idea (a rule that fires because another item is in the cart); build that once
 inside the engine so multi-buy, spend and these share it.
+
+### Conditions on any promotion (Pogi, 18 Nov)
+
+Instead of a separate type for each trigger, any promotion can carry optional **conditions** that must hold before it applies:
+a **trigger item** in the cart (a product, category or sub-category, with a count), a **minimum spend**, a **customer
+audience**, a **coupon code**, a **payment method**. A promotion with no conditions behaves exactly as today. This folds
+the upsell nudge, the spend threshold's "minimum", audiences and coupons into one idea, with one editor section
+("Applies when...") and one `PromotionConditions` table (`PromotionId`, `Kind`, target ids, value, `TenantId`).
+
+- The engine checks conditions before pricing a rule; all conditions must hold (AND, no OR in the first version).
+- A trigger item is not discounted by the rule unless it is also the target; a unit can count as a trigger for one
+  promotion and a target for another.
+- The cart shows what is missing ("Add any drink to get the croissant for ₱60"), the same nudge as spend.
+- Offline: item and spend conditions are local arithmetic; code and audience keep the offline rules above.
+- Build order: the condition model goes into step 0 (engine) with trigger item and minimum spend; code, audience and
+  payment method join as their steps arrive, so no step needs its own special case.
