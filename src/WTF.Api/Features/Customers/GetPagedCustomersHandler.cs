@@ -71,7 +71,8 @@ public sealed class GetPagedCustomersHandler(WTFDbContext db, IHttpContextAccess
         }
 
         var term = searchTerm.Trim().ToLower();
-        var digits = new string(term.Where(char.IsDigit).ToArray());
+        // Only a term with no letters is a phone search; "Pgr7ji00n" must not match the phone numbers containing 700.
+        var digits = term.Any(char.IsLetter) ? string.Empty : new string(term.Where(char.IsDigit).ToArray());
 
         return query.Where(c =>
             c.FirstName.ToLower().Contains(term) ||

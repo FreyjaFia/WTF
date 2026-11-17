@@ -81,6 +81,18 @@ public class GetPagedCustomersHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SearchWithLettersAndDigits_DoesNotMatchPhoneNumbersByItsDigits()
+    {
+        var withPhone = CustomerSeed.NewCustomer("Maria", "Santos");
+        withPhone.ContactNumber = "09170000000";
+        await CustomerSeed.SeedAsync(_dbName, withPhone, CustomerSeed.NewCustomer("Pgr7ji00n001", "Reyes"));
+
+        var result = await Handler().Handle(new GetPagedCustomersQuery(SearchTerm: "Pgr7ji00n"), CancellationToken.None);
+
+        result.Items.Single().FirstName.ShouldBe("Pgr7ji00n001");
+    }
+
+    [Fact]
     public async Task Handle_SortsByNameOrAddress_ThenFallsBackOnUnknownColumns()
     {
         await CustomerSeed.SeedAsync(_dbName,
