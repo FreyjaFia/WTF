@@ -101,7 +101,9 @@ test.describe('Offline sync policy @orders @offline @policy', () => {
       await page.getByTestId('policy-tolerance').fill('5');
       await expect(save).toBeEnabled();
       await expect(save).toBeInViewport();
+      const saved = page.waitForResponse((r) => r.url().includes('/orders/sync-policy') && r.request().method() === 'PUT');
       await save.click();
+      expect((await saved).ok()).toBe(true);
       await expect(save).toBeDisabled();
 
       await page.reload();
