@@ -379,22 +379,15 @@
                         [fill]="'currentColor'"
                       />{{ getItemNetTotal(c) | number: '1.2-2' }}
                     </div>
-                    @if (!c.bundlePromotionId && !c.bundleItems?.length && getBreakdown(c).rows.length > 0) {
-                      <div class="col-span-2 mt-1">
-                        <app-line-breakdown [breakdown]="getBreakdown(c)" />
-                      </div>
-                    }
-                    @if (isCovered(c)) {
-                      <div class="col-span-2 mt-1 text-xs" data-testid="senior-pwd-line-reduction">
-                        <div class="grid grid-cols-[1fr_auto] items-start gap-3 font-semibold text-sky-700">
-                          <div class="flex min-w-0">
-                            <span class="w-3.5 shrink-0" aria-hidden="true">-</span>
-                            <span class="min-w-0 wrap-anywhere">Senior/PWD discount</span>
-                          </div>
-                          <div class="shrink-0 text-right tabular-nums">
-                            - ₱{{ c.seniorPwdReduction | number: '1.2-2' }}
-                          </div>
-                        </div>
+                    @if (!c.bundlePromotionId && !c.bundleItems?.length && (getBreakdown(c).rows.length > 0 || isCovered(c))) {
+                      <div
+                        class="col-span-2 col-start-2 mt-1"
+                        [attr.data-testid]="isCovered(c) ? 'senior-pwd-line-reduction' : null"
+                      >
+                        <app-line-breakdown
+                          [breakdown]="getBreakdown(c)"
+                          [seniorPwdReduction]="isCovered(c) ? (c.seniorPwdReduction ?? null) : null"
+                        />
                       </div>
                     }
                     @if (c.specialInstructions) {

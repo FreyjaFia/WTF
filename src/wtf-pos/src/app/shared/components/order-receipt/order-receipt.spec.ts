@@ -328,7 +328,7 @@ describe('OrderReceiptComponent', () => {
       discountAmount: 17.86,
     };
 
-    it('shows the type, name, full ID, VAT exempt, discount and a signature line', () => {
+    it('shows the type, name, full ID, VAT exempt, and discount', () => {
       const { el } = setup(receipt({ totalAmount: 71.43, seniorPwdPersons: [person] }));
       const text = el.querySelector('[data-testid="receipt-senior-pwd"]')?.textContent ?? '';
 
@@ -337,7 +337,6 @@ describe('OrderReceiptComponent', () => {
       expect(text).toContain('OSCA-1234');
       expect(text).toContain('10.71');
       expect(text).toContain('17.86');
-      expect(text).toContain('Signature');
     });
 
     it('leaves out the VAT exempt line when no VAT was exempted', () => {

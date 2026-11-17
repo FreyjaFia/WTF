@@ -153,25 +153,12 @@
           </div>
         }
         @if (!isBundleLine(item)) {
-          <app-line-breakdown variant="receipt" [breakdown]="getBreakdown(item)" />
-        }
-        @if (item.seniorPwdReduction && seniorPwdPersonOf(item); as person) {
-          <div
-            data-testid="receipt-senior-pwd-line-reduction"
-            style="
-              display: flex;
-              justify-content: space-between;
-              font-size: 12px;
-              font-weight: 600;
-              margin-top: 2px;
-              color: var(--color-sky-700, #0369a1);
-            "
-          >
-            <span style="display: flex; min-width: 0">
-              <span style="flex: none; width: 14px">−</span>
-              <span style="min-width: 0; overflow-wrap: anywhere">Senior/PWD discount</span>
-            </span>
-            <span style="white-space: nowrap; margin-left: 12px">− &#8369;{{ item.seniorPwdReduction | number: '1.2-2' }}</span>
+          <div [attr.data-testid]="item.seniorPwdReduction ? 'receipt-senior-pwd-line-reduction' : null">
+            <app-line-breakdown
+              variant="receipt"
+              [breakdown]="getBreakdown(item)"
+              [seniorPwdReduction]="item.seniorPwdReduction && seniorPwdPersonOf(item) ? item.seniorPwdReduction : null"
+            />
           </div>
         }
         @if (item.specialInstructions?.trim()) {
@@ -331,9 +318,6 @@
         >
           <span>Discount ({{ seniorPwdPercent }}%)</span>
           <span>-<span style="color: inherit">&#8369;</span>{{ person.discountAmount | number: '1.2-2' }}</span>
-        </div>
-        <div style="margin-top: 20px; border-top: 1px solid var(--color-gray-300); padding-top: 2px; font-size: 10px; color: var(--color-gray-400)">
-          Signature
         </div>
       </div>
       <div style="border-top: 1px solid var(--color-gray-200); margin-bottom: 16px"></div>

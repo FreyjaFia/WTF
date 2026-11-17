@@ -5,7 +5,7 @@
         <div
           style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 2px"
           [style.color]="receiptRowColor[row.kind]"
-          [style.font-weight]="row.kind === 'discount' ? 600 : 400"
+          [style.font-weight]="row.kind === 'base' || row.kind === 'addOn' ? 400 : 600"
         >
           <span style="display: flex; min-width: 0">
             <span style="flex: none; width: 14px">{{ row.sign }}</span>

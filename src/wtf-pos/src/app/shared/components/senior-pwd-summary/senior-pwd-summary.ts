@@ -1,12 +1,14 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { SENIOR_PWD_DISCOUNT_PERCENT } from '@shared/calculations';
+import { IconComponent } from '../icons/icon/icon';
 import { SeniorPwdTypeEnum } from '@shared/models';
 import { SeniorPwdTypeLabelPipe } from '@shared/pipes';
 
 @Component({
   selector: 'app-senior-pwd-summary',
-  imports: [DecimalPipe, SeniorPwdTypeLabelPipe],
+  imports: [DecimalPipe, IconComponent, SeniorPwdTypeLabelPipe],
+  host: { class: 'block' },
   templateUrl: './senior-pwd-summary.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

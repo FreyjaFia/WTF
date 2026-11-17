@@ -763,19 +763,13 @@
                       </div>
                     }
                   </div>
-                } @else if (c.addOns?.length || getDiscountedAmount(c) > 0) {
-                  <div class="mt-2 ml-19 border-t border-gray-200 pt-2">
-                    <app-line-breakdown [breakdown]="getBreakdown(c)" />
-                  </div>
-                }
-
-                @if (seniorPwd.isCoveredByPerson(c)) {
+                } @else if (c.addOns?.length || getDiscountedAmount(c) > 0 || seniorPwd.isCoveredByPerson(c)) {
                   <div
-                    class="mt-2 ml-19 border-t border-gray-200 pt-2 text-xs"
-                    data-testid="senior-pwd-line-reduction"
+                    class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2 text-xs"
+                    [attr.data-testid]="seniorPwd.isCoveredByPerson(c) ? 'senior-pwd-line-reduction' : null"
                   >
-                    @if (!c.addOns?.length) {
-                      <div class="mb-1 grid grid-cols-[1fr_auto] items-start gap-3 text-gray-500">
+                    @if (seniorPwd.isCoveredByPerson(c) && !c.addOns?.length) {
+                      <div class="grid grid-cols-[1fr_auto] items-start gap-3 text-gray-500">
                         <div class="flex min-w-0">
                           <span class="w-3.5 shrink-0" aria-hidden="true"></span>
                           <span class="min-w-0 wrap-anywhere"
@@ -785,17 +779,10 @@
                         <div class="shrink-0 text-right tabular-nums">₱{{ getLineTotal(c) | number: '1.2-2' }}</div>
                       </div>
                     }
-                    <div class="grid grid-cols-[1fr_auto] items-start gap-3 font-semibold text-sky-700">
-                      <div class="flex min-w-0">
-                        <span class="w-3.5 shrink-0" aria-hidden="true">-</span>
-                        <span class="min-w-0 wrap-anywhere"
-                          >Senior/PWD discount</span
-                        >
-                      </div>
-                      <div class="shrink-0 text-right tabular-nums">
-                        - ₱{{ seniorPwd.lineReduction($index) | number: '1.2-2' }}
-                      </div>
-                    </div>
+                    <app-line-breakdown
+                      [breakdown]="getBreakdown(c)"
+                      [seniorPwdReduction]="seniorPwd.isCoveredByPerson(c) ? seniorPwd.lineReduction($index) : null"
+                    />
                   </div>
                 }
 

@@ -10,23 +10,23 @@
   @if (covered() !== null) {
     <div class="flex justify-between text-xs text-gray-600">
       <span>Covered</span>
-      <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-covered'">{{ covered() | number: '1.2-2' }}</span>
+      <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-covered'"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ covered() | number: '1.2-2' }}</span>
     </div>
   }
   @if (vatExempt() !== null) {
     <div class="flex justify-between text-xs text-gray-600">
       <span>VAT exempt</span>
-      <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-vat'">{{ negateVatExempt() ? '-' : '' }}{{ vatExempt() | number: '1.2-2' }}</span>
+      <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-vat'">{{ negateVatExempt() ? '-' : '' }}<app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ vatExempt() | number: '1.2-2' }}</span>
     </div>
   }
   <div class="flex justify-between text-xs text-gray-600">
     <span>Senior/PWD discount ({{ discountPercent }}%)</span>
-    <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-discount'">-{{ discount() | number: '1.2-2' }}</span>
+    <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-discount'">-<app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ discount() | number: '1.2-2' }}</span>
   </div>
   @if (amountDue() !== null) {
     <div class="flex justify-between font-semibold text-gray-900">
       <span>Amount due</span>
-      <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-due'">{{ amountDue() | number: '1.2-2' }}</span>
+      <span class="tabular-nums" [attr.data-testid]="testIdPrefix() + '-due'"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ amountDue() | number: '1.2-2' }}</span>
     </div>
   }
 </div>
