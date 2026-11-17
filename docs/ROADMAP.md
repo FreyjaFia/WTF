@@ -13,6 +13,7 @@ update its file and the status in the table below.
 | Audit Log | Completed | [audit-log](roadmap/audit-log.md) |
 | Sales Reporting (phases 1-4) | Implemented, checked | [sales-reporting](roadmap/sales-reporting.md) |
 | Multiple Branches, Branding, Multi-tenant | Planned, design decided | [multiple-branches-and-tenants](roadmap/multiple-branches-and-tenants.md) |
+| Multiple Branches per shop | Planned, plan written and decisions made 13 Nov 2026; build in progress on branch `multiple-branches` (VAT/TIN per branch to confirm with the accountant, left out) | [multiple-branches](roadmap/multiple-branches.md) |
 | Role-Based Access Control | In progress (phases 1 to 5 built on branches, not merged) | [role-based-access](roadmap/role-based-access.md) |
 | Block features by subscription plan | Planned, plan written, decisions open | [block-features-by-plan](roadmap/block-features-by-plan.md) |
 | Graceful plan-gating failures | Built on branch `graceful-plan-gating-plan` (not merged); Playwright spec to do | [graceful-plan-gating](roadmap/graceful-plan-gating.md) |
