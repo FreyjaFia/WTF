@@ -620,6 +620,12 @@ async Task SeedMainShopAsync()
             new("held order (pending)", "Customer is parking the car, will pay when back", OrderStatusEnum.Pending, null, "Maria", -1, [new("Latte", 1, ["Hot"]), new("Ham and Cheese Sandwich", 1, [])]),
             new("cancelled order", "Customer left before it was made", OrderStatusEnum.Cancelled, null, null, -20, [new("Espresso", 1, [])]),
             new("refunded order", "Croissants were stale, refunded", OrderStatusEnum.Refunded, PaymentMethodEnum.Cash, null, -36, [new("Croissant", 3, [])]),
+            new("held offline sale, price changed", "Sold while the wifi was down", OrderStatusEnum.PendingReview, PaymentMethodEnum.Cash, "Juan", -5, [new("Cappuccino", 2, ["Large"])],
+                Held: new("OFF-0412", 20m, [new("PriceChanged", ReviewSeverityEnum.Hold, "Cappuccino was sold at 130.00 but costs 140.00 now", 0, "140.00", "130.00"), new("StockShortfall", ReviewSeverityEnum.Note, "Oat milk ran short by 1 carton when this sale synced")])),
+            new("held offline sale, promotion ended", "Customer asked for the Happy Price", OrderStatusEnum.PendingReview, PaymentMethodEnum.GCash, "Ana", -150, [new("Latte", 1, ["Medium"])],
+                Held: new("OFF-0398", 20m, [new("PromotionEnded", ReviewSeverityEnum.Hold, "Latte Happy Price had ended when this sale synced", 0, "140.00", "120.00")])),
+            new("held offline sale, senior ID missing", null, OrderStatusEnum.PendingReview, PaymentMethodEnum.Cash, null, -9, [new("Iced Americano", 1, ["Medium"])], Senior: SeniorPwdKind.Senior,
+                Held: new("OFF-0421", 0m, [new("SeniorPwdIdMissing", ReviewSeverityEnum.Hold, "The Senior Citizen ID number was left blank on the device")])),
             new("customer link order waiting approval", "Please deliver to the front gate", OrderStatusEnum.PendingApproval, null, "Maria", -2, [new("Cappuccino", 2, ["Large", "Caramel"])], FromLink: true),
         };
 
@@ -632,6 +638,69 @@ async Task SeedMainShopAsync()
 
         await db.SaveChangesAsync();
         added.Add($"{specs.Count} orders (completed, held, cancelled, refunded, senior, PWD, customer link)");
+    }
+
+    if (!await db.OfflineSyncPolicies.AnyAsync())
+    {
+        const byte hold = (byte)ReviewSeverityEnum.Hold;
+        db.OfflineSyncPolicies.Add(new OfflineSyncPolicy
+        {
+            TenantId = shopId,
+            PriceChangedMode = hold,
+            AddOnPriceChangedMode = (byte)ReviewSeverityEnum.Note,
+            ProductInactiveMode = hold,
+            BundleChangedMode = hold,
+            CustomerInactiveMode = (byte)ReviewSeverityEnum.Note,
+            PromotionEndedMode = hold,
+            UnknownProductMode = hold,
+            PriceTolerance = 5m,
+            AutoApproveNotes = true,
+            AgedAfterDays = 3,
+            UpdatedAt = now.AddDays(-4),
+            UpdatedBy = owner.Id,
+        });
+        added.Add("offline sync policy");
+    }
+
+    if (!await db.UnsyncedOrders.AnyAsync())
+    {
+        UnsyncedOrder Unsynced(string localId, string code, string error, int hoursAgo, string product, int quantity, decimal price, bool resolved)
+        {
+            var item = products[product];
+            var command = new WTF.Api.Features.Orders.CreateOrderCommand
+            {
+                Items = [new WTF.Api.Features.Orders.DTOs.OrderItemRequestDto(item.Id, quantity, [], null, null, price)],
+                Status = OrderStatusEnum.Completed,
+                PaymentMethod = PaymentMethodEnum.Cash,
+                CreatedAt = now.AddHours(hoursAgo),
+                OfflineLocalId = localId,
+                ExpectedTotal = price * quantity,
+            };
+            return new UnsyncedOrder
+            {
+                Id = Guid.NewGuid(),
+                OfflineLocalId = localId,
+                QuotedOrderJson = System.Text.Json.JsonSerializer.Serialize(command, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)),
+                ErrorText = error,
+                ErrorCode = code,
+                CashierUserId = cashier.Id,
+                DeviceCreatedAt = now.AddHours(hoursAgo),
+                ReceivedAt = now.AddHours(hoursAgo).AddMinutes(40),
+                QuotedTotal = price * quantity,
+                StatusId = (byte)(resolved ? UnsyncedOrderStatusEnum.Resolved : UnsyncedOrderStatusEnum.Open),
+                Resolution = resolved ? (byte)UnsyncedOrderResolutionEnum.Discarded : null,
+                ResolvedBy = resolved ? manager.Id : null,
+                ResolvedAt = resolved ? now.AddHours(hoursAgo).AddHours(20) : null,
+                DiscardReason = resolved ? "Customer already paid again at the counter" : null,
+                TenantId = shopId,
+            };
+        }
+
+        db.UnsyncedOrders.AddRange(
+            Unsynced("OFF-0405", "Rejected", "The server could not save this sale: the item was removed from the menu", -30, "Croissant", 2, 95m, false),
+            Unsynced("OFF-0409", "InvalidData", "The quantity on this sale was not valid", -11, "Iced Americano", 1, 120m, false),
+            Unsynced("OFF-0391", "Rejected", "The server could not save this sale: the customer was not found", -200, "Latte", 1, 140m, true));
+        added.Add("3 unsynced offline sales");
     }
 
     await db.SaveChangesAsync();
@@ -1575,7 +1644,7 @@ static StockMovement Move(WTFDbContext db, Item item, string type, decimal delta
     return movement;
 }
 
-static void AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product> products, Dictionary<string, Product> addOns, Dictionary<string, Customer> customers, User creator, Guid tenantId, DateTime now, bool vatRegistered)
+static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product> products, Dictionary<string, Product> addOns, Dictionary<string, Customer> customers, User creator, Guid tenantId, DateTime now, bool vatRegistered)
 {
     var orderId = Guid.NewGuid();
     var createdAt = now.AddHours(spec.HoursAgo);
@@ -1660,7 +1729,8 @@ static void AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product
     }
 
     var received = paid && spec.Payment == PaymentMethodEnum.Cash ? Math.Ceiling((net + (spec.Tips ?? 0m)) / 100m) * 100m : (decimal?)null;
-    db.Orders.Add(new Order
+    var held = spec.Held;
+    var order = new Order
     {
         Id = orderId,
         CustomerId = customer?.Id,
@@ -1679,8 +1749,36 @@ static void AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product
         CustomerAddress = customer?.Address,
         AcceptedAt = paid ? createdAt : null,
         ReadyAt = paid ? createdAt.AddMinutes(8) : null,
+        OfflineLocalId = held?.LocalId,
+        QuotedTotal = held is null ? null : net - held.QuotedLess,
+        CatalogSyncedAt = held is null ? null : createdAt.AddHours(-3),
+        ReviewReasons = held is null ? null : string.Join("\n", held.Reasons.Where(r => r.Severity == ReviewSeverityEnum.Hold).Select(r => r.Text)),
         TenantId = tenantId,
-    });
+    };
+    db.Orders.Add(order);
+
+    if (held is not null)
+    {
+        for (var i = 0; i < held.Reasons.Length; i++)
+        {
+            var reason = held.Reasons[i];
+            db.OrderReviewReasons.Add(new OrderReviewReason
+            {
+                Id = Guid.NewGuid(),
+                OrderId = orderId,
+                SortOrder = i,
+                LineIndex = reason.LineIndex,
+                Code = reason.Code,
+                Severity = (byte)reason.Severity,
+                ExpectedValue = reason.Expected,
+                QuotedValue = reason.Quoted,
+                Text = reason.Text,
+                TenantId = tenantId,
+            });
+        }
+    }
+
+    return order;
 }
 
 internal enum SeniorPwdKind : byte
@@ -1701,7 +1799,12 @@ internal sealed record OrderSpec(
     OrderLineSpec[] Lines,
     decimal? Tips = null,
     SeniorPwdKind? Senior = null,
-    bool FromLink = false);
+    bool FromLink = false,
+    HeldSpec? Held = null);
+
+internal sealed record HeldReasonSpec(string Code, ReviewSeverityEnum Severity, string Text, int? LineIndex = null, string? Expected = null, string? Quoted = null);
+
+internal sealed record HeldSpec(string LocalId, decimal QuotedLess, HeldReasonSpec[] Reasons);
 
 internal sealed class SeedContext : WTFDbContext
 {
