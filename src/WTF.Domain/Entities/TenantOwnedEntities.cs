@@ -233,3 +233,11 @@ public partial class OfflineSyncPolicy : ITenantOwned
 public partial class UnsyncedOrder : ITenantOwned
 {
 }
+
+public partial class Branch : ITenantOwned
+{
+}
+
+public partial class UserBranch : ITenantOwned
+{
+}

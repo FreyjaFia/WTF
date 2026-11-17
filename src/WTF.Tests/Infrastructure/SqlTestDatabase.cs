@@ -55,6 +55,7 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
                     Status = 2,
                     CreatedAt = DateTime.UtcNow,
                 });
+                db.Branches.Add(MainBranch(TenantDefaults.DefaultTenantId));
                 await db.SaveChangesAsync();
             }
 
@@ -72,6 +73,18 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
             throw;
         }
     }
+
+    public static Branch MainBranch(Guid tenantId, string code = "MAIN") => new()
+    {
+        Id = Guid.NewGuid(),
+        TenantId = tenantId,
+        Name = "Main",
+        Code = code,
+        TimeZone = "Asia/Manila",
+        IsActive = true,
+        IsMain = true,
+        CreatedAt = DateTime.UtcNow,
+    };
 
     public WTFDbContext CreateContext()
     {
@@ -91,6 +104,16 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
             .Options;
 
         return new SqlServerWtfDbContext(options, tenant);
+    }
+
+    public WTFDbContext CreateContext(ICurrentTenant tenant, ICurrentBranch branch)
+    {
+        var options = new DbContextOptionsBuilder<WTFDbContext>()
+            .UseSqlServer(_connectionString)
+            .EnableSensitiveDataLogging()
+            .Options;
+
+        return new SqlServerWtfDbContext(options, tenant, branch);
     }
 
     private async Task SeedLookupsAsync()
@@ -206,6 +229,11 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
 
         public SqlServerWtfDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant tenant)
             : base(options, tenant)
+        {
+        }
+
+        public SqlServerWtfDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant tenant, ICurrentBranch branch)
+            : base(options, tenant, branch)
         {
         }
 

@@ -161,6 +161,7 @@ public class SeniorPwdDatabaseTests
             db.Tenants.AddRange(
                 new Tenant { Id = TenantA, Name = "Shop A", Slug = "shop-a", Status = 2, CreatedAt = DateTime.UtcNow },
                 new Tenant { Id = TenantB, Name = "Shop B", Slug = "shop-b", Status = 2, CreatedAt = DateTime.UtcNow });
+            db.Branches.AddRange(SqlTestDatabase.MainBranch(TenantA), SqlTestDatabase.MainBranch(TenantB));
             await db.SaveChangesAsync();
         }
 
@@ -199,6 +200,7 @@ public class SeniorPwdDatabaseTests
         db.Tenants.AddRange(
             new Tenant { Id = TenantA, Name = "Shop A", Slug = "shop-a", Status = 2, CreatedAt = DateTime.UtcNow },
             new Tenant { Id = TenantB, Name = "Shop B", Slug = "shop-b", Status = 2, CreatedAt = DateTime.UtcNow });
+        db.Branches.AddRange(SqlTestDatabase.MainBranch(TenantA), SqlTestDatabase.MainBranch(TenantB));
         await db.SaveChangesAsync();
         return database;
     }

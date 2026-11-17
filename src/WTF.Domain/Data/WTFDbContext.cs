@@ -20,6 +20,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
+    public virtual DbSet<Branch> Branches { get; set; }
+
     public virtual DbSet<Conversation> Conversations { get; set; }
 
     public virtual DbSet<ConversationMessage> ConversationMessages { get; set; }
@@ -152,6 +154,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<UserBranch> UserBranches { get; set; }
+
     public virtual DbSet<UserImage> UserImages { get; set; }
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
@@ -190,6 +194,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_AuditLog_BranchId");
+
             entity.ToTable("AuditLog");
 
             entity.HasIndex(e => e.Action, "IX_AuditLog_Action");
@@ -219,6 +225,55 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_AuditLog_Users");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.AuditLogs)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AuditLog_Branches");
+        });
+
+        modelBuilder.Entity<Branch>(entity =>
+        {
+            entity.HasIndex(e => new { e.TenantId, e.Code }, "UX_Branches_TenantId_Code").IsUnique();
+
+            entity.HasIndex(e => new { e.TenantId, e.IsMain }, "UX_Branches_TenantId_Main")
+                .IsUnique()
+                .HasFilter("([IsMain]=(1))");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Branches_Id");
+            entity.Property(e => e.Address).HasMaxLength(300);
+            entity.Property(e => e.Code).HasMaxLength(5);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Branches_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Branches_IsActive");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Phone).HasMaxLength(30);
+            entity.Property(e => e.TimeZone)
+                .HasMaxLength(64)
+                .HasDefaultValue("Asia/Manila", "DF_Branches_TimeZone");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Branches)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Branches_Tenants");
+        });
+
+        modelBuilder.Entity<UserBranch>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.BranchId });
+
+            entity.HasIndex(e => e.BranchId, "IX_UserBranches_BranchId");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_UserBranches_CreatedAt");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.UserBranches)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserBranches_Branches");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserBranches)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserBranches_Users");
         });
 
         modelBuilder.Entity<Conversation>(entity =>
@@ -403,6 +458,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<Expense>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_Expenses_BranchId");
+
             entity.HasIndex(e => new { e.ExpenseDate, e.Category }, "IX_Expenses_ExpenseDate").IsDescending(true, false);
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Expenses_Id");
@@ -425,6 +482,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ExpenseUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Expenses_UpdatedBy");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.Expenses)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Expenses_Branches");
         });
 
         modelBuilder.Entity<FixedBundlePromotion>(entity =>
@@ -841,6 +903,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<Order>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_Orders_BranchId");
+
             entity.HasIndex(e => e.CustomerId, "IX_Orders_CustomerId");
 
             entity.HasIndex(e => e.OrderLinkId, "IX_Orders_OrderLinkId");
@@ -853,7 +917,7 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.TenantId, "IX_Orders_TenantId");
 
-            entity.HasIndex(e => new { e.TenantId, e.OrderNumber }, "UQ_Orders_OrderNumber").IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.BranchId, e.OrderNumber }, "UQ_Orders_OrderNumber").IsUnique();
 
             entity.HasIndex(e => new { e.TenantId, e.OfflineLocalId }, "UX_Orders_OfflineLocalId")
                 .IsUnique()
@@ -915,6 +979,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.OrderUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Orders_UpdatedBy");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Orders_Branches");
         });
 
         modelBuilder.Entity<OrderBundlePromotion>(entity =>
@@ -1053,6 +1122,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<OrderSeniorPwdDiscount>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_OrderSeniorPwdDiscounts_BranchId");
+
             entity.HasIndex(e => e.OrderId, "IX_OrderSeniorPwdDiscounts_OrderId");
 
             entity.HasIndex(e => new { e.TenantId, e.IdNumber, e.CreatedAt }, "IX_OrderSeniorPwdDiscounts_TenantId_IdNumber_CreatedAt");
@@ -1080,6 +1151,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderSeniorPwdDiscounts_Tenants");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.OrderSeniorPwdDiscounts)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderSeniorPwdDiscounts_Branches");
         });
 
         modelBuilder.Entity<PaymentMethod>(entity =>
@@ -1492,6 +1568,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<PurchaseOrder>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_PurchaseOrders_BranchId");
+
             entity.HasIndex(e => new { e.Status, e.CreatedAt }, "IX_PurchaseOrders_Status_CreatedAt").IsDescending(false, true);
 
             entity.HasIndex(e => e.SupplierId, "IX_PurchaseOrders_SupplierId");
@@ -1526,6 +1604,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PurchaseOrders_Tenants");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.PurchaseOrders)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseOrders_Branches");
         });
 
         modelBuilder.Entity<PurchaseOrderLine>(entity =>
@@ -1631,6 +1714,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<ShortLink>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_ShortLinks_BranchId");
+
             entity.HasIndex(e => e.Token, "IX_ShortLinks").IsUnique();
 
             entity.HasIndex(e => e.CreatedBy, "IX_ShortLinks_CreatedBy");
@@ -1654,6 +1739,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ShortLinks_Tenants");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.ShortLinks)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ShortLinks_Branches");
         });
 
         modelBuilder.Entity<Status>(entity =>
@@ -1665,6 +1755,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<StockCount>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_StockCounts_BranchId");
+
             entity.HasIndex(e => new { e.Status, e.CreatedAt }, "IX_StockCounts_Status_CreatedAt").IsDescending(false, true);
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockCounts_Id");
@@ -1691,6 +1783,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockCounts_Tenants");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.StockCounts)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockCounts_Branches");
         });
 
         modelBuilder.Entity<StockCountLine>(entity =>
@@ -1724,6 +1821,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<StockMovement>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_StockMovements_BranchId");
+
             entity.HasIndex(e => new { e.ItemId, e.CreatedAt }, "IX_StockMovements_ItemId_CreatedAt").IsDescending(false, true);
 
             entity.HasIndex(e => new { e.ReferenceType, e.ReferenceId }, "IX_StockMovements_Reference");
@@ -1759,10 +1858,17 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockMovements_Tenants");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.StockMovements)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockMovements_Branches");
         });
 
         modelBuilder.Entity<StockReceipt>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_StockReceipts_BranchId");
+
             entity.HasIndex(e => e.PurchaseOrderId, "IX_StockReceipts_PurchaseOrderId").HasFilter("([PurchaseOrderId] IS NOT NULL)");
 
             entity.HasIndex(e => new { e.ReceivedOn, e.CreatedAt }, "IX_StockReceipts_ReceivedOn").IsDescending();
@@ -1798,6 +1904,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockReceipts_Tenants");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.StockReceipts)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockReceipts_Branches");
         });
 
         modelBuilder.Entity<StockReceiptLine>(entity =>
@@ -1833,6 +1944,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<StockWaste>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_StockWastes_BranchId");
+
             entity.HasIndex(e => e.CreatedAt, "IX_StockWastes_CreatedAt");
 
             entity.HasIndex(e => new { e.ItemId, e.CreatedAt }, "IX_StockWastes_Item_Created");
@@ -1890,6 +2003,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.WasteReasonId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockWastes_WasteReasons");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.StockWastes)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockWastes_Branches");
         });
 
         modelBuilder.Entity<Supplier>(entity =>
@@ -2091,6 +2209,10 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.InverseUpdatedByNavigation)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Users_UpdatedBy");
+
+            entity.HasOne(d => d.DefaultBranch).WithMany(p => p.Users)
+                .HasForeignKey(d => d.DefaultBranchId)
+                .HasConstraintName("FK_Users_DefaultBranch");
         });
 
         modelBuilder.Entity<UserImage>(entity =>

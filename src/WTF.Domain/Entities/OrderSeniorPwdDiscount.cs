@@ -27,6 +27,10 @@ public partial class OrderSeniorPwdDiscount
 
     public Guid TenantId { get; set; }
 
+    public Guid BranchId { get; set; }
+
+    public virtual Branch Branch { get; set; } = null!;
+
     public virtual Order Order { get; set; } = null!;
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

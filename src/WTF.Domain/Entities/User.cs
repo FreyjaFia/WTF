@@ -31,6 +31,10 @@ public partial class User
 
     public bool MustChangePassword { get; set; }
 
+    public Guid? DefaultBranchId { get; set; }
+
+    public byte BranchScope { get; set; }
+
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
     public virtual ICollection<ConversationMessage> ConversationMessages { get; set; } = new List<ConversationMessage>();
@@ -40,6 +44,8 @@ public partial class User
     public virtual ICollection<Customer> CustomerCreatedByNavigations { get; set; } = new List<Customer>();
 
     public virtual ICollection<Customer> CustomerUpdatedByNavigations { get; set; } = new List<Customer>();
+
+    public virtual Branch? DefaultBranch { get; set; }
 
     public virtual ICollection<Expense> ExpenseCreatedByNavigations { get; set; } = new List<Expense>();
 
@@ -132,6 +138,8 @@ public partial class User
     public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
+
+    public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
 
     public virtual UserImage? UserImage { get; set; }
 

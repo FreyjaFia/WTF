@@ -25,6 +25,10 @@ public partial class AuditLog
 
     public Guid TenantId { get; set; }
 
+    public Guid BranchId { get; set; }
+
+    public virtual Branch Branch { get; set; } = null!;
+
     public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User User { get; set; } = null!;

@@ -31,6 +31,10 @@ public partial class PurchaseOrder
 
     public Guid? ClosedBy { get; set; }
 
+    public Guid BranchId { get; set; }
+
+    public virtual Branch Branch { get; set; } = null!;
+
     public virtual User? ClosedByNavigation { get; set; }
 
     public virtual User CreatedByNavigation { get; set; } = null!;

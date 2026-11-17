@@ -95,6 +95,7 @@ public class TenantIsolationDatabaseTests
         db.Tenants.AddRange(
             new WTF.Domain.Entities.Tenant { Id = TenantA, Name = "Shop A", Slug = "shop-a", Status = 2, CreatedAt = DateTime.UtcNow },
             new WTF.Domain.Entities.Tenant { Id = TenantB, Name = "Shop B", Slug = "shop-b", Status = 2, CreatedAt = DateTime.UtcNow });
+        db.Branches.AddRange(SqlTestDatabase.MainBranch(TenantA), SqlTestDatabase.MainBranch(TenantB));
         await db.SaveChangesAsync();
     }
 
