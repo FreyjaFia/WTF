@@ -24,6 +24,7 @@ update its file and the status in the table below.
 | Dynamic Catalog Management | Built 6 Nov 2026; browser run and production check to do | [dynamic-catalog](roadmap/dynamic-catalog.md) |
 | Promotions / Bundles | Phase 1 completed; ideas for later | [promotions](roadmap/promotions.md) |
 | List paging (infinite scroll for Orders, pagination elsewhere) | Built on branch `list-paging`, not merged | [list-paging](roadmap/list-paging.md) |
+| Biometric Login (fingerprint / face sign-in) | Planned, plan written, open questions for Pogi | [biometric-login](roadmap/biometric-login.md) |
 | Automated Testing Plan | Mostly completed | [automated-testing](roadmap/automated-testing.md) |
 | Customer Ordering Links | Completed | [customer-ordering-links](roadmap/customer-ordering-links.md) (design; [build history](roadmap/customer-ordering-links-build-history.md)) |
 | Button States and Text Audit | Partly done | [button-audit](roadmap/button-audit.md) |
@@ -32,7 +33,7 @@ update its file and the status in the table below.
 | Stale Image Cleanup | Completed | [stale-image-cleanup](roadmap/stale-image-cleanup.md) |
 | Chat Images and Message Expiry | Completed | [chat-images-and-expiry](roadmap/chat-images-and-expiry.md) |
 
-Keywords to find the right file: stock, waste, costing, recipes, counts, variance, profit, expenses, notifications, bell,
+Keywords to find the right file: biometric, fingerprint, passkey -> biometric-login; stock, waste, costing, recipes, counts, variance, profit, expenses, notifications, bell,
 roles, permissions -> role-based-access; not-in-plan redirect, discard dialog, server logs -> graceful-plan-gating; branches -> inventory or multiple-branches-and-tenants; promotions, coupons, bundles -> promotions; offline sync, review
 -> offline; reports, dashboard -> sales-reporting; customer link, chat -> customer-ordering-links, chat-images-and-expiry;
 add-on types, categories -> dynamic-catalog; browser or unit tests -> automated-testing.
