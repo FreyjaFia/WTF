@@ -15,7 +15,7 @@ Planning only. Nothing is built. Written 17 Nov 2026 against `main` at v1.22.1.
 | Tenancy rule | `TenantTokenRule`: every shop token must carry a tenant id. Legacy no-tenant tokens get 401. Platform admins are separate (`dbo.PlatformAdmins`, `/api/platform/login`, own rate limit policy). |
 | Other session rules | `MustChangePassword` flag; `SessionRevocation` revokes all refresh tokens when a password changes; impersonation tokens are read-only/short and separate. |
 | Web app | `AuthService` keeps `token` and `refreshToken` in `localStorage`. `authGuard` lets a person in offline when the refresh token is still held and refreshes later. Login page is `features/login`. |
-| Android app | Capacitor 8 wrapper (`com.wtf.pos`, WebView served on `http://localhost`, `androidScheme: 'http'`). Same web code. No biometric or secure-storage plugin today. The project notes call the Android app `app.wtf.pos`; the config in the repo says `com.wtf.pos`. Confirm which is current before the native work. |
+| Android app | Capacitor 8 wrapper (`com.wtf.pos`, WebView served on `http://localhost`, `androidScheme: 'http'`). Same web code. No biometric or secure-storage plugin today. The package name is `com.wtf.pos` (decided by Pogi, 17 Nov 2026; the older notes saying `app.wtf.pos` are out of date). |
 | Rate limiting | Fixed-window policies exist for platform login (10/min per IP), public links and loyalty. **The shop login has no rate limit and no lockout** (already an open audit item). |
 | Audit | `IAuditService`, `AuditAction.UserLogin` / `UserLogout`; Owner-only audit log screen. |
 | Plan gating | Features per plan (`ITenantFeatures`, `FeatureRequirement`); shop settings in `TenantSettings`. |
@@ -206,7 +206,7 @@ Total about 14 to 17 working days; phase 1 and 2 alone (web only) are usable and
 
 1. **Web and Android both, or Android first?** The plan treats them as one flow. If most staff use the APK on a shared tablet, Android (phase 3) matters more than web passkeys.
 2. **Shared till tablets:** do staff share one device and one lock screen? If yes, should fingerprint be limited to the Owner and Manager roles by default (setting per role), or allowed for everyone with the shop-level on/off only?
-3. **Which package name is current for Android,** `app.wtf.pos` or the repo's `com.wtf.pos`? And do any shops run the APK on Huawei devices without Google services?
+3. Do any shops run the APK on Huawei devices without Google services?
 4. **Final production domain:** passkeys are tied to it. Is `wtfbyfaith` the permanent name?
 5. **Plan gating:** keep it in every plan (recommended) or make it a paid plan feature?
 6. **Password change behaviour:** should a person changing their own password remove fingerprint devices on all other devices (recommended, safer) but keep the one they are using, or keep every device?
