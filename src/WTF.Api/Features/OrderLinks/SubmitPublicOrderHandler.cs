@@ -211,6 +211,7 @@ public class SubmitPublicOrderHandler(
             ActorUserId = systemUserId,
             Source = OrderSourceEnum.CustomerLink,
             OrderLinkId = access.Link.Id,
+            BranchId = access.Link.BranchId,
             FulfillmentType = request.Fulfillment,
             DeliveryAddress = address,
             ContactNumber = contact

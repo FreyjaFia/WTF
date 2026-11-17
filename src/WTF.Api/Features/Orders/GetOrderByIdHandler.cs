@@ -18,6 +18,7 @@ public class GetOrderByIdHandler(WTFDbContext db, ITenantFeatures tenantFeatures
     {
         var order = await db.Orders
             .Include(o => o.Customer)
+            .Include(o => o.Branch)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))

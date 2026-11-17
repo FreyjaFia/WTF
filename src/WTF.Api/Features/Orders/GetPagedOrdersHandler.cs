@@ -24,7 +24,8 @@ public sealed record GetPagedOrdersQuery(
     DateTimeOffset? From = null,
     DateTimeOffset? To = null,
     string? SortBy = null,
-    string? SortDirection = null) : IRequest<PagedResultDto<OrderDto>>;
+    string? SortDirection = null,
+    Guid? BranchId = null) : IRequest<PagedResultDto<OrderDto>>;
 
 public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IHttpContextAccessor? httpContextAccessor = null)
     : IRequestHandler<GetPagedOrdersQuery, PagedResultDto<OrderDto>>
@@ -40,6 +41,11 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenan
         if (request.CustomerId.HasValue)
         {
             baseQuery = baseQuery.Where(o => o.CustomerId == request.CustomerId.Value);
+        }
+
+        if (request.BranchId.HasValue)
+        {
+            baseQuery = baseQuery.Where(o => o.BranchId == request.BranchId.Value);
         }
 
         if (request.Source.HasValue)
@@ -88,6 +94,7 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenan
         var orders = await ApplySort(query, request)
             .ApplyPaging(paging)
             .Include(o => o.Customer)
+            .Include(o => o.Branch)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
