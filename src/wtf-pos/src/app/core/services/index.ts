@@ -50,6 +50,7 @@ export * from './stock-receipt.service';
 export * from './supplier.service';
 export * from './waste-reason.service';
 export * from './expense.service';
+export * from './kitchen.service';
 export * from './catalog-lookup.service';
 export * from './catalog-setup.service';
 export * from './list-scroll.service';

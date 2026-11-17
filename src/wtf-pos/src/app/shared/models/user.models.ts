@@ -5,6 +5,7 @@ export enum UserRoleEnum {
   Owner = 4,
   ItemManager = 5,
   StockManager = 6,
+  Kitchen = 7,
 }
 
 export interface UserDto {

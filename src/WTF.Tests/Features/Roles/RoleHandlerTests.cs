@@ -220,7 +220,7 @@ public class RoleHandlerTests
 
         roles.Select(r => r.Name).ShouldContain("Mine");
         roles.Select(r => r.Name).ShouldNotContain("Theirs");
-        roles.Count(r => r.IsSystem).ShouldBe(6);
+        roles.Count(r => r.IsSystem).ShouldBe(7);
         roles.Single(r => r.Name == "Mine").Permissions.ShouldBe(["orders.read"]);
         roles.Single(r => r.Name == "Owner").PermissionCount.ShouldBe(PermissionCatalog.All.Count);
     }

@@ -64,6 +64,21 @@ public partial class Order
     public string? CustomerAddress { get; set; }
 
     public DateTime? CatalogSyncedAt { get; set; }
+    public byte? KitchenStatus { get; set; }
+
+    public DateTime? KitchenStartedAt { get; set; }
+
+    public DateTime? KitchenServedAt { get; set; }
+
+    public Guid? KitchenUpdatedBy { get; set; }
+
+    public DateTime? KitchenChangedAt { get; set; }
+
+    public string? KitchenChangeNote { get; set; }
+
+    public byte? KitchenChangeKind { get; set; }
+
+    public DateTime? KitchenDismissedAt { get; set; }
 
     public virtual Conversation? Conversation { get; set; }
 

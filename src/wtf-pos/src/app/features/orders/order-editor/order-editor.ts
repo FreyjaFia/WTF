@@ -56,6 +56,7 @@ import {
   ModalStackService,
   OfflineOrderService,
   OrderService,
+  PlanStore,
   ProductService,
   PromotionService,
   StockLimitsService,
@@ -166,6 +167,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   private readonly orderService = inject(OrderService);
   private readonly customerService = inject(CustomerService);
   private readonly authService = inject(AuthService);
+  private readonly planStore = inject(PlanStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
@@ -2600,7 +2602,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.skipGuard = true;
         this.cartPersistence.clear();
         this.alertService.info(
-          `Order ${localId} saved offline. It will sync when you're back online.`,
+          `Order ${localId} saved offline. It will sync when you're back online.${this.kitchenReminder()}`,
         );
         this.router.navigateByUrl(AppRoutes.OrdersList);
       })
@@ -3321,5 +3323,11 @@ export class OrderEditor implements OnInit, OnDestroy {
         })),
       })),
     };
+  }
+
+  private kitchenReminder(): string {
+    return this.planStore.isKnown() && this.planStore.hasFeature('kitchen')
+      ? ' Offline: tell the kitchen.'
+      : '';
   }
 }

@@ -13,6 +13,12 @@ public partial class PlanFeatureDriftTests
 {
     private static readonly string[] LegacyWords = ["pos", "orders", "reports", "offline"];
 
+    // Words added by a later script. The 20261130 script is a record of what it did and is never edited, so it knows only the
+    // words that existed then; each later script is checked below.
+    private static readonly string[] AddedLater = [PlanFeatures.Kitchen];
+
+    private static string[] WordsOf20261130() => [.. PlanFeatures.Gateable.Except(AddedLater)];
+
     private static string Script() =>
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Sql", "20261130_plan_feature_catalog.sql"));
 
@@ -48,7 +54,7 @@ public partial class PlanFeatureDriftTests
 
         var listed = Words(match.Groups["words"].Value.Replace("--", " "));
 
-        listed.ShouldBe(PlanFeatures.Gateable);
+        listed.ShouldBe(WordsOf20261130());
     }
 
     [Fact]
@@ -57,7 +63,7 @@ public partial class PlanFeatureDriftTests
         var match = BusinessInsert().Match(Script());
         match.Success.ShouldBeTrue();
 
-        Words(match.Groups["features"].Value).Order().ShouldBe(PlanFeatures.Gateable.Order());
+        Words(match.Groups["features"].Value).Order().ShouldBe(WordsOf20261130().Order());
     }
 
     [Fact]
@@ -71,5 +77,17 @@ public partial class PlanFeatureDriftTests
 
         PlanFeatures.Unknown(known).ShouldBeEmpty();
         PlanFeatures.Normalize(known).Order().ShouldBe(known.Order());
+    }
+
+    [Fact]
+    public void TheKitchenScript_NamesEveryCatalogKey_AndGivesProAndBusinessTheKitchenWord()
+    {
+        var script = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Sql", "20261210_add_kitchen_board.sql"));
+        var header = Regex.Match(script, @"valid plan feature words are now:\s*(?<words>[a-z,\s\-]+?)\.", RegexOptions.Singleline);
+        header.Success.ShouldBeTrue("the script header no longer names the valid words");
+
+        Words(header.Groups["words"].Value.Replace("--", " ")).ShouldBe(PlanFeatures.Gateable);
+        script.ShouldContain("WHERE Code IN ('pro', 'business')");
+        script.ShouldContain("'kitchen'");
     }
 }

@@ -158,7 +158,7 @@ public class OfflineStockNoteTests
         var approve = new ApproveHeldOrderHandler(
             approveDb,
             TestRequest.As(_userId, AppRoles.Admin),
-            new HeldOrderApprover(approveDb, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(approveDb)),
+            new HeldOrderApprover(approveDb, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(approveDb), TestFakes.Features),
             GetSender());
         await approve.Handle(new ApproveHeldOrderCommand(id), CancellationToken.None);
 

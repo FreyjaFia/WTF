@@ -10,6 +10,8 @@ export const Permissions = {
   ChatRead: 'chat.read',
   ChatWrite: 'chat.write',
   OrderLinksManage: 'orderlinks.manage',
+  KitchenRead: 'kitchen.read',
+  KitchenUpdate: 'kitchen.update',
   CustomersRead: 'customers.read',
   CustomersWrite: 'customers.write',
   ProductsRead: 'products.read',

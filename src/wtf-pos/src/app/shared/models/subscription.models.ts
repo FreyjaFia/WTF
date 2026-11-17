@@ -96,6 +96,7 @@ export interface BrandDto {
   primaryColor: string;
   seniorPwdEnabled?: boolean;
   vatRegistered?: boolean;
+  kitchenBoardEnabled?: boolean;
 }
 
 export interface PublicBrandDto {

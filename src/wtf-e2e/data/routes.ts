@@ -5,6 +5,7 @@ export const ROUTES = {
   ordersList: '/orders/list',
   unsyncedOrders: '/orders/unsynced',
   heldOrders: '/orders/held',
+  kitchen: '/kitchen',
   orderEditor: '/orders/editor',
   orderEditorById: (id: string): string => `/orders/editor/${id}`,
   orderDetails: (id: string): string => `/orders/details/${id}`,

@@ -27,4 +27,5 @@ public record OrderDto(
     List<OrderReviewReasonDto>? ReviewDetails = null,
     DateTime? CatalogSyncedAt = null,
     bool IsAged = false,
-    int? HeldDays = null);
+    int? HeldDays = null,
+    byte? KitchenStatus = null);

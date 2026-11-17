@@ -46,7 +46,7 @@ public class RoleDatabaseTests
         await using var readA = database.CreateContext(new FixedTenant(ShopA));
         var roles = await new GetRolesHandler(readA).Handle(new GetRolesQuery(), CancellationToken.None);
         roles.Where(r => !r.IsSystem).Select(r => r.Id).ShouldBe([100]);
-        roles.Count(r => r.IsSystem).ShouldBe(6);
+        roles.Count(r => r.IsSystem).ShouldBe(7);
         (await new GetRoleByIdHandler(readA).Handle(new GetRoleByIdQuery(101), CancellationToken.None)).ShouldBeNull();
     }
 

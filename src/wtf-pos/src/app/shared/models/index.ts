@@ -11,6 +11,7 @@ export * from './notification.models';
 export * from './price-history.models';
 export * from './held-order.models';
 export * from './order.models';
+export * from './kitchen.models';
 export * from './order-link.models';
 export * from './product.models';
 export * from './promotion.models';

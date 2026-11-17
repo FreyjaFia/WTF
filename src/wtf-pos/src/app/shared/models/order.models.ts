@@ -157,6 +157,8 @@ export interface OrderDto {
   /** A held offline order that has waited past the aged-after days. */
   isAged?: boolean;
   heldDays?: number | null;
+  /** 0 new, 1 preparing, 2 ready, 3 served. Null when the kitchen board does not track this order. */
+  kitchenStatus?: number | null;
 }
 
 export type HeldRejectStockOutcome = 'none' | 'waste';

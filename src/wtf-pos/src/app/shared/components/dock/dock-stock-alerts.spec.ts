@@ -22,6 +22,7 @@ describe('DockComponent: items that need attention', () => {
             canReadManagement: () => false,
             canWriteOrders: () => false,
             canReadOrders: () => false,
+            canReadKitchen: () => false,
             canReadInventory: () => true,
             canReadStockMovements: () => options.canRead ?? true,
           },

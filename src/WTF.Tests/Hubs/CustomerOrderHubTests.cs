@@ -231,13 +231,13 @@ public class CustomerOrderHubTests
     }
 
     [Fact]
-    public void TheStaffHub_RequiresTheOrdersReadPolicy_AndHasNoCallableMethods()
+    public void TheStaffHub_RequiresTheOrdersLivePolicy_AndHasNoCallableMethods()
     {
         var authorize = typeof(StaffOrderHub)
             .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
             .Single();
-        authorize.Policy.ShouldBe(WTF.Api.Common.Auth.AppPolicies.OrdersRead);
+        authorize.Policy.ShouldBe(WTF.Api.Common.Auth.AppPolicies.OrdersLive);
 
         typeof(StaffOrderHub)
             .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance

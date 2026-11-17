@@ -7,5 +7,6 @@ public enum UserRoleEnum
     AdminViewer = 3,
     Owner = 4,
     ItemManager = 5,
-    StockManager = 6
+    StockManager = 6,
+    Kitchen = 7
 }

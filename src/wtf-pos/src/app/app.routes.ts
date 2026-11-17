@@ -60,6 +60,7 @@ import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotInPlanComponent } from '@features/not-in-plan/not-in-plan';
 import { NotificationsComponent } from '@features/notifications/notifications';
 import { HeldOrders } from '@features/orders/held-orders/held-orders';
+import { KitchenBoardComponent } from '@features/kitchen/kitchen-board';
 import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
@@ -170,6 +171,12 @@ export const routes: Routes = [
             data: { permission: Permissions.OrdersOverride },
           },
         ],
+      },
+      {
+        path: 'kitchen',
+        component: KitchenBoardComponent,
+        canActivate: [roleGuard],
+        data: { permission: Permissions.KitchenRead },
       },
       { path: 'not-in-plan', component: NotInPlanComponent },
       {

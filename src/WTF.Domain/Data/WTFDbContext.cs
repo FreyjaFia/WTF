@@ -847,6 +847,10 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.StatusId, "IX_Orders_StatusId");
 
+            entity.HasIndex(e => new { e.TenantId, e.KitchenStatus }, "IX_Orders_Kitchen")
+                .HasFilter("([KitchenStatus]<(3))")
+                .IncludeProperties(e => e.CreatedAt);
+
             entity.HasIndex(e => e.TenantId, "IX_Orders_TenantId");
 
             entity.HasIndex(e => new { e.TenantId, e.OrderNumber }, "UQ_Orders_OrderNumber").IsUnique();
@@ -864,6 +868,7 @@ public partial class WTFDbContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.CustomerAddress).HasMaxLength(150);
             entity.Property(e => e.DeliveryAddress).HasMaxLength(300);
+            entity.Property(e => e.KitchenChangeNote).HasMaxLength(300);
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.OfflineLocalId)
                 .HasMaxLength(40)

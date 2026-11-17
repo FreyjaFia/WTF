@@ -31,6 +31,7 @@ describe('route guards', () => {
       canReadManagement: vi.fn().mockReturnValue(false),
       canWriteOrders: vi.fn().mockReturnValue(false),
       canReadOrders: vi.fn().mockReturnValue(false),
+      canReadKitchen: vi.fn().mockReturnValue(false),
       canReadStockMovements: vi.fn().mockReturnValue(false),
       canReadItems: vi.fn().mockReturnValue(false),
       canOpenManagementMenu: vi.fn().mockReturnValue(false),

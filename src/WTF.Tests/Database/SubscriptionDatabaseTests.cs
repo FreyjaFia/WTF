@@ -429,7 +429,7 @@ public class SubscriptionDatabaseTests
         await using (var db = database.CreateContext(new FixedTenant(a.Tenant.Id)))
         {
             var brand = BrandDefaults.For("Alpha Coffee") with { Phone = "0917", PrimaryColor = "#1A3C5E" };
-            await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), audit, Substitute.For<Microsoft.AspNetCore.Http.IHttpContextAccessor>()).Handle(new UpdateBrandCommand(brand), CancellationToken.None);
+            await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), audit, Substitute.For<Microsoft.AspNetCore.Http.IHttpContextAccessor>(), TestFakes.Features).Handle(new UpdateBrandCommand(brand), CancellationToken.None);
         }
 
         await using (var db = database.CreateContext(new FixedTenant(a.Tenant.Id)))
@@ -461,7 +461,7 @@ public class SubscriptionDatabaseTests
         async Task SaveAsync(BrandDto brand)
         {
             await using var db = database.CreateContext(new FixedTenant(a.Tenant.Id));
-            await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), TestFakes.Audit(), http).Handle(new UpdateBrandCommand(brand), CancellationToken.None);
+            await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), TestFakes.Audit(), http, TestFakes.Features).Handle(new UpdateBrandCommand(brand), CancellationToken.None);
         }
 
         async Task<(bool Senior, bool Vat)> ReadAsync()
@@ -513,7 +513,7 @@ public class SubscriptionDatabaseTests
 
         await using (var db = database.CreateContext(new FixedTenant(a.Tenant.Id)))
         {
-            var saved = await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), audit, http)
+            var saved = await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), audit, http, TestFakes.Features)
                 .Handle(new UpdateBrandCommand(BrandDefaults.For("Logo A") with { LogoUrl = "https://evil.example/x.png" }), CancellationToken.None);
             saved.LogoUrl.ShouldBe("/images/brand/two.png");
 

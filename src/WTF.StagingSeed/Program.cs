@@ -9,6 +9,7 @@ using WTF.Api.Features.Platform;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Features.Subscriptions;
 using WTF.Api.Features.Users.Enums;
+using WTF.Calculations.Kitchen;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Domain.Data;
@@ -85,8 +86,9 @@ async Task SeedMainShopAsync()
     var settings = await db.TenantSettings.FirstOrDefaultAsync(s => s.TenantId == shopId);
     if (settings is not null)
     {
-        var filled = !settings.SeniorPwdEnabled;
+        var filled = !settings.SeniorPwdEnabled || !settings.KitchenBoardEnabled;
         settings.SeniorPwdEnabled = true;
+        settings.KitchenBoardEnabled = true;
         settings.Address = Fill(settings.Address, "1 Coffee Street, Makati City", ref filled);
         settings.Phone = Fill(settings.Phone, "02 8123 4567", ref filled);
         settings.ReceiptHeader = Fill(settings.ReceiptHeader, "Thank you for visiting!", ref filled);
@@ -94,7 +96,7 @@ async Task SeedMainShopAsync()
         if (filled)
         {
             await db.SaveChangesAsync();
-            added.Add("shop settings (Senior/PWD on, receipt text)");
+            added.Add("shop settings (Senior/PWD and kitchen board on, receipt text)");
         }
     }
 
@@ -107,6 +109,7 @@ async Task SeedMainShopAsync()
         ("viewer", "Ben", "Aquino", UserRoleEnum.AdminViewer),
         ("stockmgr", "Nora", "Villanueva", UserRoleEnum.StockManager),
         ("itemmgr", "Paolo", "Cruz", UserRoleEnum.ItemManager),
+        ("kitchen", "Rico", "Mendoza", UserRoleEnum.Kitchen),
     };
 
     foreach (var (username, first, last, role) in accounts)
@@ -706,6 +709,36 @@ async Task SeedMainShopAsync()
     await db.SaveChangesAsync();
 
     await SeedBulkMainShopAsync(db, owner, manager, cashier, products, addOnProducts, drinksAddOns, customers, settings?.VatRegistered ?? false);
+
+    // The kitchen board: orders at every step, so it is never empty on demo day. Times are relative to the deploy.
+    if (!await db.Orders.AnyAsync(o => o.KitchenStatus != null))
+    {
+        var vatRegistered = settings?.VatRegistered ?? false;
+        var kitchenSpecs = new List<OrderSpec>
+        {
+            new("kitchen new, pickup", null, OrderStatusEnum.Pending, null, "Maria", 0, [new("Latte", 1, ["Large", "Iced"]), new("Croissant", 1, [])], MinutesAgo: -2, Instructions: "Name on the cup: Migs", Kitchen: new(KitchenState.New)),
+            new("kitchen new, prepaid", null, OrderStatusEnum.Completed, PaymentMethodEnum.GCash, null, 0, [new("Cappuccino", 2, ["Medium", "Hot"])], MinutesAgo: -4, Kitchen: new(KitchenState.New)),
+            new("kitchen preparing, less ice", null, OrderStatusEnum.Pending, null, "Juan", 0, [new("Matcha Latte", 1, ["Large", "Iced", "Oat Milk"])], MinutesAgo: -7, Instructions: "Less ice please", Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 2)),
+            new("kitchen preparing, prepaid", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, 0, [new("Iced Americano", 1, ["Medium"]), new("Ham and Cheese Sandwich", 1, [])], MinutesAgo: -9, Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 1)),
+            new("kitchen ready for pickup", null, OrderStatusEnum.Pending, null, "Ana", 0, [new("Espresso", 2, ["Extra Shot"])], MinutesAgo: -12, Instructions: "Extra hot", Kitchen: new(KitchenState.Ready, StartedMinutesAfter: 1, ReadyMinutesAfter: 6)),
+            new("kitchen customer link", null, OrderStatusEnum.Pending, null, "Maria", 0, [new("Cappuccino", 2, ["Large", "Caramel"])], MinutesAgo: -15, Instructions: "Please deliver to the front gate", FromLink: true, Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 3)),
+            new("kitchen changed after start", null, OrderStatusEnum.Pending, null, "Juan", 0, [new("Latte", 1, ["Medium", "Hot"]), new("Croissant", 1, [])], MinutesAgo: -10, Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 2, ChangeNote: "+1 Croissant, -1 Chocolate Cake Slice", ChangeKind: KitchenChangeKind.Changed)),
+            new("kitchen added after served", null, OrderStatusEnum.Pending, null, "Ana", 0, [new("Iced Americano", 1, ["Medium"]), new("Croissant", 1, [])], MinutesAgo: -25, Kitchen: new(KitchenState.New, ChangeNote: "+1 Croissant", ChangeKind: KitchenChangeKind.Added)),
+            new("kitchen cancelled while making", "Customer left before it was made", OrderStatusEnum.Cancelled, null, null, 0, [new("Espresso", 1, [])], MinutesAgo: -14, Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 2)),
+            new("kitchen served, paid later", "Will pay at the end of the day", OrderStatusEnum.Pending, null, "Maria", 0, [new("Latte", 1, ["Medium", "Iced"])], MinutesAgo: -40, Kitchen: new(KitchenState.Served, StartedMinutesAfter: 2, ReadyMinutesAfter: 7, ServedMinutesAfter: 8)),
+            new("kitchen served, prepaid", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, 0, [new("Chocolate Cake Slice", 1, []), new("Cappuccino", 1, ["Medium", "Hot"])], MinutesAgo: -55, Kitchen: new(KitchenState.Served, StartedMinutesAfter: 1, ReadyMinutesAfter: 6, ServedMinutesAfter: 7)),
+            new("kitchen left over from yesterday", null, OrderStatusEnum.Pending, null, "Juan", -30, [new("Latte", 1, ["Medium", "Hot"])], Kitchen: new(KitchenState.New)),
+        };
+
+        var statusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
+        foreach (var spec in kitchenSpecs.Where(s => statusIds.Contains((int)s.Status)).OrderBy(s => s.HoursAgo).ThenBy(s => s.MinutesAgo))
+        {
+            AddOrder(db, spec, products, addOnProducts, customers, spec.FromLink ? owner : cashier, shopId, now, vatRegistered);
+            await db.SaveChangesAsync();
+        }
+
+        added.Add($"{kitchenSpecs.Count} kitchen board orders (new, preparing, ready, changed, cancelled, served, left over)");
+    }
 }
 
 async Task SeedStarterShopAsync()
@@ -1647,7 +1680,7 @@ static StockMovement Move(WTFDbContext db, Item item, string type, decimal delta
 static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product> products, Dictionary<string, Product> addOns, Dictionary<string, Customer> customers, User creator, Guid tenantId, DateTime now, bool vatRegistered)
 {
     var orderId = Guid.NewGuid();
-    var createdAt = now.AddHours(spec.HoursAgo);
+    var createdAt = now.AddHours(spec.HoursAgo).AddMinutes(spec.MinutesAgo);
     var customer = spec.Customer is null ? null : customers[spec.Customer];
     var sortOrder = 0;
     var gross = 0m;
@@ -1742,13 +1775,23 @@ static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Produc
         ChangeAmount = received is null ? null : received - net - (spec.Tips ?? 0m),
         Tips = spec.Tips,
         Note = spec.Note,
+        SpecialInstructions = spec.Instructions,
         Source = (byte)(spec.FromLink ? OrderSourceEnum.CustomerLink : OrderSourceEnum.Pos),
         FulfillmentType = spec.FromLink ? (byte)FulfillmentTypeEnum.Delivery : null,
         DeliveryAddress = spec.FromLink ? customer?.Address : null,
         ContactNumber = spec.FromLink ? customer?.ContactNumber : null,
         CustomerAddress = customer?.Address,
-        AcceptedAt = paid ? createdAt : null,
-        ReadyAt = paid ? createdAt.AddMinutes(8) : null,
+        AcceptedAt = paid || (spec.FromLink && spec.Status == OrderStatusEnum.Pending) ? createdAt : null,
+        ReadyAt = spec.Kitchen is { } kitchenReady
+            ? kitchenReady.ReadyMinutesAfter is { } ready ? createdAt.AddMinutes(ready) : null
+            : paid ? createdAt.AddMinutes(8) : null,
+        KitchenStatus = spec.Kitchen is { } kitchen ? (byte)kitchen.State : null,
+        KitchenStartedAt = spec.Kitchen?.StartedMinutesAfter is { } started ? createdAt.AddMinutes(started) : null,
+        KitchenServedAt = spec.Kitchen?.ServedMinutesAfter is { } served ? createdAt.AddMinutes(served) : null,
+        KitchenUpdatedBy = spec.Kitchen is null ? null : creator.Id,
+        KitchenChangedAt = spec.Kitchen?.ChangeNote is null ? null : createdAt.AddMinutes(3),
+        KitchenChangeNote = spec.Kitchen?.ChangeNote,
+        KitchenChangeKind = spec.Kitchen?.ChangeKind is { } kind2 ? (byte)kind2 : null,
         OfflineLocalId = held?.LocalId,
         QuotedTotal = held is null ? null : net - held.QuotedLess,
         CatalogSyncedAt = held is null ? null : createdAt.AddHours(-3),
@@ -1800,7 +1843,18 @@ internal sealed record OrderSpec(
     decimal? Tips = null,
     SeniorPwdKind? Senior = null,
     bool FromLink = false,
-    HeldSpec? Held = null);
+    HeldSpec? Held = null,
+    int MinutesAgo = 0,
+    KitchenSpec? Kitchen = null,
+    string? Instructions = null);
+
+internal sealed record KitchenSpec(
+    KitchenState State,
+    int? StartedMinutesAfter = null,
+    int? ReadyMinutesAfter = null,
+    int? ServedMinutesAfter = null,
+    string? ChangeNote = null,
+    KitchenChangeKind? ChangeKind = null);
 
 internal sealed record HeldReasonSpec(string Code, ReviewSeverityEnum Severity, string Text, int? LineIndex = null, string? Expected = null, string? Quoted = null);
 

@@ -542,7 +542,7 @@ public class OfflineSyncTests
 
     private HeldOrderApprover Approver(WTFDbContext db)
     {
-        return new HeldOrderApprover(db, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(db));
+        return new HeldOrderApprover(db, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
     }
 
     private ISender GetSender()

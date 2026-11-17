@@ -5,6 +5,7 @@ export const AppRoles = {
   AdminViewer: 'AdminViewer',
   ItemManager: 'ItemManager',
   StockManager: 'StockManager',
+  Kitchen: 'Kitchen',
 } as const;
 
 export type AppRole = (typeof AppRoles)[keyof typeof AppRoles];
@@ -16,4 +17,5 @@ export const AppRoleLabels: Record<AppRole, string> = {
   [AppRoles.AdminViewer]: 'Admin Viewer',
   [AppRoles.ItemManager]: 'Item Manager',
   [AppRoles.StockManager]: 'Stock Manager',
+  [AppRoles.Kitchen]: 'Kitchen',
 };

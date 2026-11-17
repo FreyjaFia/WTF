@@ -1,0 +1,390 @@
+<div class="flex h-full min-h-0 flex-col" [class.text-lg]="largeText()" data-testid="kitchen-board">
+  <div class="mb-3 flex shrink-0 flex-col gap-3 sm:mb-4">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Kitchen</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">What to make now, oldest first.</p>
+      </div>
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          class="app-btn app-btn-ghost app-btn-sm"
+          [class.bg-gray-100]="largeText()"
+          [attr.aria-pressed]="largeText()"
+          (click)="toggleLargeText()"
+          data-testid="kitchen-large-text"
+        >
+          Large text
+        </button>
+        <button
+          type="button"
+          class="app-btn app-btn-ghost app-btn-sm hidden md:inline-flex"
+          [class.bg-gray-100]="chimeOn()"
+          [attr.aria-pressed]="chimeOn()"
+          (click)="toggleChime()"
+          data-testid="kitchen-chime"
+        >
+          Chime
+        </button>
+        <button
+          type="button"
+          class="app-btn app-btn-ghost app-btn-sm hidden md:inline-flex"
+          [attr.aria-pressed]="isFullscreen()"
+          (click)="toggleFullscreen()"
+          data-testid="kitchen-fullscreen"
+        >
+          {{ isFullscreen() ? 'Exit full screen' : 'Full screen' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+      <div
+        class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:max-w-104 md:flex-1"
+      >
+        <app-search-input placeholder="Search by order #" [control]="searchControl" />
+      </div>
+
+      <div class="flex items-center justify-between gap-2 md:ml-auto md:justify-end">
+        <div class="inline-flex rounded-lg bg-gray-100 p-0.5" role="tablist" aria-label="Board or served">
+          <button
+            type="button"
+            role="tab"
+            class="min-h-9 rounded-md px-3 text-sm font-semibold transition-colors duration-200 ease-out"
+            [class]="view() === 'board' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-600'"
+            [attr.aria-selected]="view() === 'board'"
+            (click)="selectView('board')"
+            data-testid="kitchen-view-board"
+          >
+            Board
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="min-h-9 rounded-md px-3 text-sm font-semibold transition-colors duration-200 ease-out"
+            [class]="view() === 'served' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-600'"
+            [attr.aria-selected]="view() === 'served'"
+            (click)="selectView('served')"
+            data-testid="kitchen-view-served"
+          >
+            Served today
+          </button>
+        </div>
+        <div class="flex items-center gap-1">
+          <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
+          <button
+            type="button"
+            class="app-btn app-btn-ghost p-2"
+            (click)="refresh()"
+            aria-label="Refresh kitchen orders"
+            data-testid="kitchen-refresh"
+          >
+            <app-icon name="icon-refresh" [class]="'h-5 w-5 text-gray-600'" [fill]="'currentColor'" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <app-side-drawer
+    [isOpen]="isFiltersOpen()"
+    [title]="'Kitchen Filters'"
+    [subtitle]="'Refine the kitchen orders'"
+    [showOnDesktop]="true"
+    (closed)="closeFilters()"
+  >
+    <div class="space-y-3">
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Where from</p>
+          <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="clearFilters()">
+            Clear
+          </button>
+        </div>
+        <div class="space-y-2">
+          <label class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700">
+            <span>Counter</span>
+            <input
+              type="radio"
+              name="kitchen-source"
+              class="radio radio-sm"
+              [checked]="sourceFilter() === 0"
+              (change)="setSource(0)"
+              data-testid="kitchen-source-pos"
+            />
+          </label>
+          <label class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700">
+            <span>Customer link</span>
+            <input
+              type="radio"
+              name="kitchen-source"
+              class="radio radio-sm"
+              [checked]="sourceFilter() === 1"
+              (change)="setSource(1)"
+              data-testid="kitchen-source-link"
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+  </app-side-drawer>
+
+  @if (!isOnline()) {
+    <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800" role="status" data-testid="kitchen-offline">
+      You are offline. These orders may be out of date. Buttons work again when the connection is back.
+    </p>
+  } @else if (loadFailed()) {
+    <p class="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700" role="alert" data-testid="kitchen-load-failed">
+      The orders could not be loaded. Trying again shortly.
+    </p>
+  }
+
+  <div class="min-h-0 flex-1 overflow-y-auto pb-4">
+    @if (isLoading()) {
+      <p class="py-10 text-center text-sm text-gray-500">Loading orders…</p>
+    } @else if (view() === 'served') {
+      @if (servedOrders().length === 0) {
+        <p class="py-10 text-center text-sm text-gray-500" data-testid="kitchen-served-empty">Nothing served yet today.</p>
+      } @else {
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="kitchen-served-list">
+          @for (order of servedOrders(); track order.id) {
+            <ng-container [ngTemplateOutlet]="card" [ngTemplateOutletContext]="{ order: order }" />
+          }
+        </div>
+      }
+    } @else {
+      @if (stopMakingOrders().length > 0) {
+        <div class="mb-4 space-y-3" data-testid="kitchen-stop-making">
+          @for (order of stopMakingOrders(); track order.id) {
+            <div class="rounded-xl border-2 border-red-300 bg-red-50 p-3" [attr.data-testid]="'kitchen-stop-' + order.orderNumber">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-bold tracking-wide text-red-700 uppercase">Cancelled. Stop making</p>
+                  <p class="text-2xl font-extrabold text-gray-900">#{{ order.orderNumber }}</p>
+                </div>
+                @if (canUpdate()) {
+                  <button
+                    type="button"
+                    class="app-btn app-btn-danger min-h-12 px-4"
+                    [disabled]="isBusy(order)"
+                    (click)="dismiss(order)"
+                    data-testid="kitchen-dismiss"
+                  >
+                    Dismiss
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (staleOrders().length > 0) {
+        <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3" data-testid="kitchen-stale">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-bold text-amber-800">From yesterday</p>
+              <p class="text-xs text-amber-800">
+                {{ staleOrders().length }} order{{ staleOrders().length === 1 ? '' : 's' }} from an earlier day still open.
+              </p>
+            </div>
+            @if (canUpdate()) {
+              <button
+                type="button"
+                class="app-btn app-btn-secondary min-h-11 px-4"
+                (click)="clearOld()"
+                data-testid="kitchen-clear-old"
+              >
+                Clear old
+              </button>
+            }
+          </div>
+          <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            @for (order of staleOrders(); track order.id) {
+              <ng-container [ngTemplateOutlet]="card" [ngTemplateOutletContext]="{ order: order }" />
+            }
+          </div>
+        </div>
+      }
+
+      <div class="mb-3 flex gap-1 rounded-xl bg-gray-100 p-1 md:hidden" role="tablist" aria-label="Kitchen steps">
+        @for (column of columns; track column.state) {
+          <button
+            type="button"
+            role="tab"
+            class="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-semibold transition-colors duration-200 ease-out"
+            [class]="activeTab() === column.state ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-600'"
+            [attr.aria-selected]="activeTab() === column.state"
+            (click)="selectTab(column.state)"
+            [attr.data-testid]="'kitchen-tab-' + column.label.toLowerCase()"
+          >
+            {{ column.label }}
+            <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-gray-200 px-1.5 text-xs leading-5 font-bold text-gray-700">{{
+              counts()[column.state]
+            }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-3">
+        @for (column of columns; track column.state) {
+          <section
+            class="min-w-0 flex-col gap-3"
+            [class]="activeTab() === column.state ? 'flex' : 'hidden md:flex'"
+            [attr.aria-label]="column.label"
+            [attr.data-testid]="'kitchen-column-' + column.label.toLowerCase()"
+          >
+            <h2 class="hidden items-center gap-2 text-sm font-bold tracking-wide text-gray-700 uppercase md:flex">
+              {{ column.label }}
+              <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-gray-200 px-1.5 text-xs leading-5 font-bold text-gray-700">{{
+                counts()[column.state]
+              }}</span>
+            </h2>
+            @for (order of ordersIn(column.state); track order.id) {
+              <ng-container [ngTemplateOutlet]="card" [ngTemplateOutletContext]="{ order: order }" />
+            } @empty {
+              <p class="rounded-xl border border-dashed border-gray-300 px-3 py-8 text-center text-sm text-gray-500">
+                {{ column.empty }}
+              </p>
+            }
+          </section>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #card let-order="order">
+  <article
+    class="rounded-xl border bg-surface p-3 shadow-sm transition-colors duration-200 ease-out"
+    [class]="
+      ageTone(order) === 'red'
+        ? 'border-red-400'
+        : ageTone(order) === 'amber'
+          ? 'border-amber-400'
+          : 'border-gray-200'
+    "
+    [attr.data-testid]="'kitchen-card-' + order.orderNumber"
+    [attr.data-age-tone]="ageTone(order)"
+  >
+    <header class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <p class="text-3xl leading-none font-extrabold text-gray-900">#{{ order.orderNumber }}</p>
+        @if (order.customerName) {
+          <p class="mt-1 truncate text-sm text-gray-600">{{ order.customerName }}</p>
+        }
+      </div>
+      <div class="flex shrink-0 flex-col items-end gap-1">
+        <span
+          class="rounded-full px-2 py-0.5 text-xs font-bold"
+          [class]="
+            ageTone(order) === 'red'
+              ? 'bg-red-100 text-red-700'
+              : ageTone(order) === 'amber'
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-gray-100 text-gray-700'
+          "
+          data-testid="kitchen-age"
+          >{{ ageLabel(order) }}</span
+        >
+        <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">{{ fulfillmentLabel(order) }}</span>
+      </div>
+    </header>
+
+    @if (order.changeKind) {
+      <div class="mt-3 rounded-lg bg-amber-50 px-3 py-2" data-testid="kitchen-change">
+        <div class="flex items-center justify-between gap-2">
+          <span class="rounded bg-amber-500 px-1.5 py-0.5 text-xs font-extrabold tracking-wide text-white uppercase">{{
+            order.changeKind === ChangeKind.Added ? 'Added' : 'Changed'
+          }}</span>
+          @if (canUpdate()) {
+            <button
+              type="button"
+              class="app-btn app-btn-secondary app-btn-xs min-h-9"
+              [disabled]="isBusy(order)"
+              (click)="markSeen(order)"
+              data-testid="kitchen-seen"
+            >
+              Seen
+            </button>
+          }
+        </div>
+        @if (order.changeNote) {
+          <p class="mt-1 text-sm font-medium wrap-break-word whitespace-pre-line text-amber-900">{{ order.changeNote }}</p>
+        }
+      </div>
+    }
+
+    <ul class="mt-3 space-y-2">
+      @for (line of order.lines; track $index; let i = $index) {
+        <li class="flex gap-2">
+          <span class="min-w-8 text-xl leading-6 font-extrabold text-gray-900">{{ line.quantity }}×</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-semibold wrap-break-word text-gray-900">
+              {{ line.name }}
+              @if (temperatureOf(order, i); as temperature) {
+                <span
+                  class="ml-1 rounded-full px-2 py-0.5 align-middle text-xs font-bold"
+                  [class]="temperature.toLowerCase().startsWith('ice') || temperature.toLowerCase() === 'cold' ? 'bg-sky-100 text-sky-800' : 'bg-orange-100 text-orange-800'"
+                  data-testid="kitchen-temperature"
+                  >{{ temperature }}</span
+                >
+              }
+            </p>
+            @for (addOn of line.addOns; track $index) {
+              @if (!addOn.isTemperature) {
+                <p class="text-sm text-gray-600">+ {{ addOn.quantity > 1 ? addOn.quantity + '× ' : '' }}{{ addOn.name }}</p>
+              }
+            }
+            @if (line.note) {
+              <p class="text-sm font-medium wrap-break-word text-gray-800 italic">{{ line.note }}</p>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+
+    @if (order.specialInstructions) {
+      <p class="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium wrap-break-word whitespace-pre-line text-gray-800" data-testid="kitchen-instructions">
+        {{ order.specialInstructions }}
+      </p>
+    }
+
+    @if (canUpdate()) {
+      <div class="mt-3 flex flex-col gap-2">
+        @if (order.kitchenStatus === States.Served) {
+          <button
+            type="button"
+            class="app-btn app-btn-secondary min-h-12 w-full"
+            [disabled]="isBusy(order)"
+            (click)="bringBack(order)"
+            data-testid="kitchen-bring-back"
+          >
+            Bring back
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="app-btn app-btn-primary min-h-12 w-full text-base font-bold"
+            [disabled]="isBusy(order)"
+            (click)="advance(order)"
+            data-testid="kitchen-advance"
+          >
+            {{ actionLabel(order) }}
+          </button>
+          @if (canStepBack(order)) {
+            <button
+              type="button"
+              class="app-btn app-btn-ghost min-h-10 w-full text-sm"
+              [disabled]="isBusy(order)"
+              (click)="stepBack(order)"
+              data-testid="kitchen-undo"
+            >
+              {{ backLabel(order) }}
+            </button>
+          }
+        }
+      </div>
+    }
+  </article>
+</ng-template>

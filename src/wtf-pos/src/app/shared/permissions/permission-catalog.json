@@ -75,6 +75,24 @@
       "requires": []
     },
     {
+      "key": "kitchen.read",
+      "area": "Orders",
+      "label": "View the kitchen board",
+      "description": "See the orders to make, with their products, add-ons and notes, but no prices or payment.",
+      "feature": "kitchen",
+      "requires": []
+    },
+    {
+      "key": "kitchen.update",
+      "area": "Orders",
+      "label": "Move orders on the kitchen board",
+      "description": "Start, finish and hand over orders, and dismiss cancelled ones.",
+      "feature": "kitchen",
+      "requires": [
+        "kitchen.read"
+      ]
+    },
+    {
       "key": "customers.read",
       "area": "Customers",
       "label": "View customers",
@@ -363,6 +381,8 @@
       "chat.read",
       "chat.write",
       "orderlinks.manage",
+      "kitchen.read",
+      "kitchen.update",
       "customers.read",
       "customers.write",
       "products.read",
@@ -404,6 +424,8 @@
       "chat.read",
       "chat.write",
       "orderlinks.manage",
+      "kitchen.read",
+      "kitchen.update",
       "customers.read",
       "customers.write",
       "products.read",
@@ -458,6 +480,8 @@
       "chat.read",
       "chat.write",
       "orderlinks.manage",
+      "kitchen.read",
+      "kitchen.update",
       "customers.write",
       "stock.waste.record",
       "wastereasons.read"
@@ -476,6 +500,10 @@
       "suppliers.write",
       "stock.waste.record",
       "wastereasons.read"
+    ],
+    "Kitchen": [
+      "kitchen.read",
+      "kitchen.update"
     ]
   },
   "policies": {
@@ -520,6 +548,10 @@
     "OrdersRead": [
       "orders.read"
     ],
+    "OrdersLive": [
+      "orders.read",
+      "kitchen.read"
+    ],
     "OrdersWrite": [
       "orders.write"
     ],
@@ -531,6 +563,12 @@
     ],
     "OrdersSyncPolicy": [
       "orders.sync.policy"
+    ],
+    "KitchenRead": [
+      "kitchen.read"
+    ],
+    "KitchenUpdate": [
+      "kitchen.update"
     ],
     "ChatRead": [
       "chat.read"

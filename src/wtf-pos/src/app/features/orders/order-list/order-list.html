@@ -168,6 +168,38 @@
         </div>
       </div>
 
+      @if (showKitchenFilter()) {
+        <div class="rounded-xl border border-gray-200 bg-surface p-3" data-kitchen-filter>
+          <div class="mb-3 flex items-center justify-between">
+            <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Kitchen</p>
+            <button
+              type="button"
+              class="app-btn app-btn-secondary app-btn-xs"
+              (click)="selectKitchen(null)"
+            >
+              Clear
+            </button>
+          </div>
+          <div class="space-y-2">
+            @for (option of kitchenOptions; track option.id) {
+              <label
+                class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+              >
+                <span>{{ option.label }}</span>
+                <input
+                  type="radio"
+                  name="order-kitchen-filter"
+                  class="radio radio-sm"
+                  [checked]="selectedKitchen() === option.id"
+                  (change)="selectKitchen(option.id)"
+                  [attr.data-testid]="'order-kitchen-' + option.id"
+                />
+              </label>
+            }
+          </div>
+        </div>
+      }
+
       <div class="rounded-xl border border-gray-200 bg-surface p-3" data-source-filter>
         <div class="mb-3 flex items-center justify-between">
           <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Source</p>
@@ -761,6 +793,9 @@
                         @if (order.overriddenAt) {
                           <app-badge variant="amber">Overridden</app-badge>
                         }
+                        @if (kitchenChip(order); as chip) {
+                          <app-badge [variant]="chip.variant" data-testid="order-kitchen-chip">{{ chip.label }}</app-badge>
+                        }
                       </div>
 
                       <!-- Mobile: Row 3 - Time and Items -->
@@ -810,6 +845,9 @@
                         </app-badge>
                         @if (order.overriddenAt) {
                           <app-badge variant="amber">Overridden</app-badge>
+                        }
+                        @if (kitchenChip(order); as chip) {
+                          <app-badge [variant]="chip.variant" data-testid="order-kitchen-chip">{{ chip.label }}</app-badge>
                         }
                       </div>
 

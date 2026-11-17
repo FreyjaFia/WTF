@@ -11,6 +11,7 @@ export const AppRoutes = {
   Dashboard: '/dashboard',
   MyProfile: '/my-profile',
   OrdersRoot: '/orders',
+  Kitchen: '/kitchen',
   PublicOrder: (token: string) => `/shop/${token}`,
   OrdersList: '/orders/list',
   OrdersUnsynced: '/orders/unsynced',

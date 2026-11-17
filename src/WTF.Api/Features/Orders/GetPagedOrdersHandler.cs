@@ -5,6 +5,7 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Kitchen;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Domain.Data;
@@ -24,7 +25,8 @@ public sealed record GetPagedOrdersQuery(
     DateTimeOffset? From = null,
     DateTimeOffset? To = null,
     string? SortBy = null,
-    string? SortDirection = null) : IRequest<PagedResultDto<OrderDto>>;
+    string? SortDirection = null,
+    string? Kitchen = null) : IRequest<PagedResultDto<OrderDto>>;
 
 public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IHttpContextAccessor? httpContextAccessor = null)
     : IRequestHandler<GetPagedOrdersQuery, PagedResultDto<OrderDto>>
@@ -59,6 +61,15 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenan
             var to = request.To.Value.UtcDateTime;
             baseQuery = baseQuery.Where(o => o.CreatedAt <= to);
         }
+
+        // "open" is still with the kitchen (New, Preparing or Ready), "served" was handed over, "none" is not tracked by it.
+        baseQuery = request.Kitchen?.Trim().ToLowerInvariant() switch
+        {
+            "open" => baseQuery.Where(o => o.KitchenStatus != null && o.KitchenStatus < (byte)KitchenState.Served),
+            "served" => baseQuery.Where(o => o.KitchenStatus == (byte)KitchenState.Served),
+            "none" => baseQuery.Where(o => o.KitchenStatus == null),
+            _ => baseQuery
+        };
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {

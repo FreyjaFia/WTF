@@ -49,13 +49,14 @@ test.describe('custom roles: the roles API @roles @rbac', () => {
     shop = await openShop(request, platform);
   });
 
-  test('the six built-in roles are listed read-only, with their permissions', async () => {
+  test('the seven built-in roles are listed read-only, with their permissions', async () => {
     const roles = await shop.owner.json<Role[]>('GET', 'roles');
 
     expect(roles.filter((role) => role.isSystem).map((role) => role.name).sort()).toEqual(
-      ['Admin', 'AdminViewer', 'Cashier', 'ItemManager', 'Owner', 'StockManager'],
+      ['Admin', 'AdminViewer', 'Cashier', 'ItemManager', 'Kitchen', 'Owner', 'StockManager'],
     );
     expect(roles.find((role) => role.name === 'Cashier')?.permissions).toContain('orders.write');
+    expect(roles.find((role) => role.name === 'Kitchen')?.permissions).toContain('kitchen.update');
     expect(await status(shop.owner, 'PUT', `roles/${ROLE_IDS.Cashier}`, { id: ROLE_IDS.Cashier, name: 'Cashier', permissions: [] })).toBe(400);
     expect(await status(shop.owner, 'DELETE', `roles/${ROLE_IDS.Cashier}`)).toBe(400);
   });

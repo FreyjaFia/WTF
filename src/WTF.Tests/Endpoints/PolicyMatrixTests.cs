@@ -8,7 +8,7 @@ namespace WTF.Tests.Endpoints;
 public class PolicyMatrixTests : IDisposable
 {
     private static readonly string[] AllRoles =
-        [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.ItemManager, AppRoles.StockManager];
+        [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.ItemManager, AppRoles.StockManager, AppRoles.Kitchen];
 
     // Policy -> roles allowed. Kept independent of AppAuthorizationExtensions on purpose.
     private static readonly Dictionary<string, string[]> Expected = new()
@@ -27,6 +27,9 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.BrandManage] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.SchemaScriptHistoryRead] = [AppRoles.Owner],
         [AppPolicies.OrdersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
+        [AppPolicies.OrdersLive] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.Kitchen],
+        [AppPolicies.KitchenRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier, AppRoles.Kitchen],
+        [AppPolicies.KitchenUpdate] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier, AppRoles.Kitchen],
         [AppPolicies.OrdersWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
         [AppPolicies.OrdersOverride] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.SeniorPwdApply] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],

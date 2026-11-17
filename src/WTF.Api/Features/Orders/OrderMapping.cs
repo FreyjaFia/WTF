@@ -101,5 +101,6 @@ internal static class OrderMapping
             SeniorPwdMapping.ToDtos(seniorPwdRows, maskIds),
             order.CustomerAddress,
             reviewDetails,
-            order.CatalogSyncedAt);
+            order.CatalogSyncedAt,
+            KitchenStatus: order.KitchenStatus);
 }

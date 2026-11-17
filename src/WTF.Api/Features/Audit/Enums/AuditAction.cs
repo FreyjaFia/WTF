@@ -89,5 +89,6 @@ public enum AuditAction
     OfflineOrderAutoApproved,
     UnsyncedOrderRetried,
     UnsyncedOrderNoteOnly,
-    UnsyncedOrderDiscarded
+    UnsyncedOrderDiscarded,
+    OrderKitchenStatusChanged
 }

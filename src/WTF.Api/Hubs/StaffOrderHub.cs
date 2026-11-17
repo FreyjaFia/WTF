@@ -7,9 +7,9 @@ namespace WTF.Api.Hubs;
 /// <summary>
 /// Real time for the staff who work with orders, chat messages above all. It is separate from the dashboard hub on
 /// purpose: that one is for people who may open the dashboard, while cashiers, who answer customers, may only read
-/// orders. Like the other hubs it only pushes "something changed"; it has no methods a client can call.
+/// orders (or the kitchen board). Like the other hubs it only pushes "something changed"; it has no methods a client can call.
 /// </summary>
-[Authorize(Policy = AppPolicies.OrdersRead)]
+[Authorize(Policy = AppPolicies.OrdersLive)]
 public class StaffOrderHub : Hub
 {
     public override async Task OnConnectedAsync()

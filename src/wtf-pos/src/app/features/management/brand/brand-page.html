@@ -109,6 +109,25 @@
 
         <div class="card rounded-xl bg-surface shadow-lg">
           <div class="card-body space-y-3">
+            <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Kitchen</h2>
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-4 py-3">
+              <div>
+                <label for="brand-kitchenBoardEnabled" class="text-sm font-medium text-gray-900">Use kitchen board</label>
+                <p class="text-xs text-gray-500">Paid and accepted orders show on a kitchen screen with no prices. Needs a plan that includes the kitchen board</p>
+              </div>
+              <input
+                id="brand-kitchenBoardEnabled"
+                type="checkbox"
+                formControlName="kitchenBoardEnabled"
+                class="toggle toggle-neutral toggle-sm"
+                data-testid="brand-kitchenBoardEnabled"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="card rounded-xl bg-surface shadow-lg">
+          <div class="card-body space-y-3">
             <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Tax and discounts</h2>
             <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
               <div>

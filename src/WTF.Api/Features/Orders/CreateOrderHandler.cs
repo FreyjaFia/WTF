@@ -9,6 +9,7 @@ using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory;
+using WTF.Api.Features.Kitchen;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
@@ -241,6 +242,10 @@ public class CreateOrderHandler(
             ? await db.Database.BeginTransactionAsync(cancellationToken)
             : null;
 
+        var trackKitchen = !held
+            && request.Status is OrderStatusEnum.Pending or OrderStatusEnum.Completed
+            && await KitchenTracking.IsOnAsync(db, tenantFeatures, cancellationToken);
+
         var order = new Order
         {
             CreatedAt = createdAt,
@@ -263,6 +268,7 @@ public class CreateOrderHandler(
             ReviewReasons = held ? OfflineOrderReview.JoinReasons(holds) : null,
             CatalogSyncedAt = request.CatalogSyncedAt?.ToUniversalTime()
         };
+        KitchenTracking.StartIfTracked(order, trackKitchen);
 
         db.Orders.Add(order);
 

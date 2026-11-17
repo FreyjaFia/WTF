@@ -138,6 +138,20 @@
         <span [class.hidden]="isCollapsed()">Orders</span>
       </a>
       }
+
+      @if (authService.canReadKitchen()) {
+        <a
+          [routerLink]="routes.Kitchen"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Kitchen'"
+          data-testid="sidebar-kitchen"
+        >
+          <app-icon name="icon-coffee" [class]="'h-4.5 w-4.5 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Kitchen</span>
+        </a>
+      }
     </div>
 
     <div class="space-y-1">

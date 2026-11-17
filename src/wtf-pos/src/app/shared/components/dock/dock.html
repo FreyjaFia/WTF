@@ -23,6 +23,13 @@
       </a>
     }
 
+    @if (auth.canReadKitchen()) {
+      <a [routerLink]="routes.Kitchen" [routerLinkActive]="'dock-active'" data-testid="dock-kitchen">
+        <app-icon name="icon-coffee" [class]="'size-[1.2em]'" [fill]="'currentColor'"></app-icon>
+        <span class="dock-label">Kitchen</span>
+      </a>
+    }
+
     @if (auth.canReadInventory()) {
       <a [routerLink]="routes.InventoryRoot" [routerLinkActive]="'dock-active'">
         <span class="relative inline-flex">

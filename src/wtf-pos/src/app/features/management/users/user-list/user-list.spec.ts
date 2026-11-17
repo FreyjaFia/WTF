@@ -118,7 +118,7 @@ describe('UserListComponent', () => {
     });
     const options = c.roleOptions() as { id: number; label: string; count: number }[];
     expect(options.slice(-1)).toEqual([{ id: 100, label: 'Shift Lead', count: 4 }]);
-    expect(options).toHaveLength(7);
+    expect(options).toHaveLength(8);
     expect(c.getRoleLabel({ ...BOB, roleId: 100, roleName: 'Shift Lead' })).toBe('Shift Lead');
   });
 
@@ -140,7 +140,7 @@ describe('UserListComponent', () => {
     expect(c.roleCounts()[UserRoleEnum.Admin]).toBe(2);
     expect(c.roleCounts()[UserRoleEnum.Cashier]).toBe(1);
     expect(c.roleCounts()[UserRoleEnum.StockManager]).toBe(0);
-    expect(c.roleOptions().length).toBe(6);
+    expect(c.roleOptions().length).toBe(7);
     expect(c.statusOptions().map((o: { count: number }) => o.count)).toEqual([3, 1]);
   });
 
