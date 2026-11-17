@@ -281,3 +281,30 @@ linear, shipped on its own.
    the accountant for the Senior/PWD side.)
 5. Do pilot shops already run a paper promotion (stamp cards, "B1T1 Mondays")? That decides the first preset to ship.
 6. Should promotions be scoped per branch when branches arrive, or stay shop-wide?
+
+### More ideas, round 2 (18 Nov 2026)
+
+All fit the engine from step 0, so they stay consistent with the rest. "Fits" names the mechanism it reuses.
+
+| # | Idea | Example | Fits | Size | Value |
+| - | ---- | ------- | ---- | ---- | ----- |
+| A | **Add-on bundle price** | Any 2 add-ons for PHP 30, extra shot + syrup PHP 25 | Multi-buy on add-ons (A) | S once multi-buy exists | Medium |
+| B | **Upsell nudge price** | Add a croissant to any drink for PHP 60 (instead of 95) | Line rule with a trigger product in the cart | M | High |
+| C | **Time-limited flash price** | Today only: PHP 99 Iced Latte until sold out | Discounted Product + `MaxRedemptions` (exists), add a "Today" preset | S | Medium |
+| D | **Tiered quantity pricing** | Buy 3 pay 90 each, buy 6 pay 80 each | Multi-buy with tiers | S to M | Medium |
+| E | **Spend tiers** | 500 save 50, 1000 save 150 | Spend rule with several tiers, best tier wins | S on top of spend | Medium |
+| F | **Cash / pickup incentive** | Pre-order and pick up before 9 AM: 10% off | Order rule (C) with a pickup-time condition, customer link | M | Medium |
+| G | **Loyalty tier price** | Regular customers (10+ orders) get PHP 10 off drinks | Audience (type 7) on a line rule | S after audiences | Medium |
+| H | **Bulk / catering price** | 20+ cups: PHP 75 each, set a pickup date | Tiered quantity pricing with a minimum order | S to M | Medium (offices) |
+| I | **Off-peak boost** | Auto 10% off in slow hours, from the hourly sales report | Happy hour preset fed by the hourly report | S (just a preset and a suggestion) | Medium |
+| J | **Bundle upgrade at checkout** | Make it a combo: add fries and a drink for PHP 80 | Combo slots started from a cart item | M | High |
+| K | **Happy-hour for a group of staff or students** | ID-checked student price | Audience, ID capture like Senior/PWD; ask first | M | Low to medium |
+| L | **Seasonal / holiday campaigns** | Christmas set, Valentine's pair | Any type plus a start and end date and an image (exists) | none | Medium |
+| M | **Donation or round-up** | Round up to the next PHP 10 for a cause | Not a discount; a charge line, needs accounting | M | Low |
+
+**My picks from this list:** B (upsell nudge) and J (make it a combo) raise the average order, not just give discounts, and
+E/D are cheap once spend and multi-buy exist. I would skip K and M until a shop asks.
+
+Consistency note: A to H and L reuse the same rule shape and engine, so they add rows and editor presets rather than new
+order columns. Only B and J need a "trigger" idea (a rule that fires because another item is in the cart); build that once
+inside the engine so multi-buy, spend and these share it.
