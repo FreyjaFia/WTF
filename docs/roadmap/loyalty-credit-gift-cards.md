@@ -96,8 +96,7 @@ this, and the customer table stays free of money.
    locks the balance rows in a fixed order (customer credit, then cards by id, to avoid deadlocks), checks each covers its
    line, writes the order, `OrderPayments` and ledger rows, and commits. If a balance is short (another register spent it) the
    whole order is refused, naming the instrument and its new balance; nothing is half written.
-5. A customer-link order cannot spend credit or a card in the first version. Staff can add the tender at the counter when
-   they approve and complete it.
+5. A customer-link order cannot spend credit or a card in the first version (the customer would type a code on a public page, which invites guessing). The customer can still use a card: staff add it in the Pay panel when they approve and complete the order at the counter (pickup) or by phone. A later version may let the customer enter the code on the link, with the same lockout and a hold on the balance until the shop approves (needs the Cashless work).
 
 ### Phase 0 - Decisions and accountant check [Planned]
 
@@ -142,7 +141,7 @@ DTI/BIR, before launch:**
   with reason). Credit belongs to a named customer; a walk-in cannot hold credit (the checkout offers the quick customer
   dialog by name and phone).
 - **Spend:** a tender line, any amount up to the balance; may cover everything but the tip.
-- **Voiding a completed order is the existing way to cancel it** (`VoidOrderHandler`: a Completed order becomes Refunded, a note is required; a Pending one becomes Cancelled; the whole order, no partial). Everything below hangs on that action.
+- **Cancelling a completed order is the existing "Refund Order" button** (same `VoidOrderHandler` as "Cancel Order" on a pending order: a Completed order becomes Refunded and needs a note; the whole order, no partial). In the app there is no separate "void"; this plan says "refund" for a completed order and "cancel" for a pending one. Everything below hangs on that action.
 - **Void of an order paid with credit** returns to credit (`ReturnSpend`), never to cash unless an Admin chooses "refund to
   cash" with a reason (for example a deleted customer).
 - **Order override** of a completed order is blocked when it would change the total or tender of an order with a credit or card
@@ -296,7 +295,7 @@ and idempotency rules. Open design points: which products earn a stamp, what the
 
 ### Open questions for Pogi
 
-1. Gift cards: code only (decided). Presets and custom amounts (decided); what minimum and maximum, and are ₱200, ₱500, ₱1,000 the right presets?
+1. Gift cards: code only and presets plus custom amount (decided). Suggested limits, editable in settings: minimum ₱100, maximum ₱5,000 per card; presets ₱200, ₱500, ₱1,000. Change them?
 2. May a card be used at every branch (suggested yes)?
 3. Expiry: none until the law is checked (suggested). Who checks it?
 4. Store credit: do you want "refund as store credit" in the void dialog (the most useful route) and counter top-ups, or only
