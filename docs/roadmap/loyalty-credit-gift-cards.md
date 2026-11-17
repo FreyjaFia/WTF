@@ -122,7 +122,7 @@ DTI/BIR, before launch:**
 - Services: `ILedgerService` (append a row and move the cached balance in one transaction, idempotent, refuses a negative
   balance) and `ITenderService` (validates and applies tender lines inside the order transaction). Handlers never write a
   balance table directly; a test fails the build if code outside these services does.
-- Plan gating: one new key `storedvalue` in `PlanFeatures` (suggested Pro only; hidden menu items and the graceful "Not in
+- Plan gating: one new key `storedvalue` in `PlanFeatures` (Pro only (decided by Pogi, 18 Nov 2026); hidden menu items and the graceful "Not in
   your plan" page). A shop that downgrades keeps its balances; **spending of existing credit and cards stays allowed** until
   used up (customers paid for them); selling new ones stops; the owner sees a banner.
 - Permissions (added to the roles plan and `PolicyMatrixTests`): `storedvalue.view`, `storedvalue.sell` (Cashier up),
@@ -142,6 +142,7 @@ DTI/BIR, before launch:**
   with reason). Credit belongs to a named customer; a walk-in cannot hold credit (the checkout offers the quick customer
   dialog by name and phone).
 - **Spend:** a tender line, any amount up to the balance; may cover everything but the tip.
+- **Voiding a completed order is the existing way to cancel it** (`VoidOrderHandler`: a Completed order becomes Refunded, a note is required; a Pending one becomes Cancelled; the whole order, no partial). Everything below hangs on that action.
 - **Void of an order paid with credit** returns to credit (`ReturnSpend`), never to cash unless an Admin chooses "refund to
   cash" with a reason (for example a deleted customer).
 - **Order override** of a completed order is blocked when it would change the total or tender of an order with a credit or card
@@ -156,11 +157,12 @@ DTI/BIR, before launch:**
 
 ### Phase 3 - Gift cards [Planned]
 
-- **Selling.** "Sell gift card" on the POS: pick a preset or type an amount within limits, take cash or GCash, and the server
+- **Code only, no physical card (decided 18 Nov 2026).** The customer gets the code as a receipt print (with QR) and the cashier can also show it on screen for the customer to photograph or write down; there is nothing to hand over. Printed cards stay a later idea.
+- **Selling.** "Sell gift card" on the POS: pick a preset (₱200, ₱500, ₱1,000, editable by the Owner in settings) or type a custom amount within the minimum and maximum, take cash or GCash, and the server
   issues the card. The code is random, 16 characters from an alphabet without look-alikes (no 0/O, 1/I/L), at least 80 bits,
   shown **once** and printed on the receipt with a QR, value and expiry (if any). Only the hash and last four are stored. The
   card is `Active` once payment is recorded. A customer is optional (a named gift helps support).
-- **Using a card.** In the Pay panel, "Gift card": type the code or scan the QR/barcode with the camera (build the scanner once
+- **Using a card (how the customer redeems it).** The customer tells or shows the code (a photo of the receipt, a screenshot, or the QR). At checkout the cashier opens "Gift card" in the Pay panel and types the code or scans the QR with the camera (build the scanner once
   as a shared component; the inventory plan wants barcode scanning too). Only after a match does the screen show the last four
   and the balance. A wrong code gets one generic answer.
 - **Guessing is blocked:** lookups are rate limited per user and per shop (stricter than the `loyalty-policy` limiter, for
@@ -294,8 +296,7 @@ and idempotency rules. Open design points: which products earn a stamp, what the
 
 ### Open questions for Pogi
 
-1. Gift cards: physical cards you print and hand over, or only a code and QR on the receipt for now? Preset amounts (₱200,
-   ₱500, ₱1,000)? Any minimum or maximum?
+1. Gift cards: code only (decided). Presets and custom amounts (decided); what minimum and maximum, and are ₱200, ₱500, ₱1,000 the right presets?
 2. May a card be used at every branch (suggested yes)?
 3. Expiry: none until the law is checked (suggested). Who checks it?
 4. Store credit: do you want "refund as store credit" in the void dialog (the most useful route) and counter top-ups, or only
@@ -303,5 +304,4 @@ and idempotency rules. Open design points: which products earn a stamp, what the
 5. Who may sell, adjust, void and reissue: is "Cashier sells and spends; Admin adjusts, voids and reissues" right?
 6. Tips: only cash or GCash (the default), or also from a card or credit?
 7. Offline: is "spending needs a connection" acceptable for a coffee shop with shaky internet?
-8. Plan gating: Pro only (suggested), or also on Starter?
-9. The accountant questions in Phase 0: who asks them and when?
+8. The accountant questions in Phase 0: who asks them and when?
