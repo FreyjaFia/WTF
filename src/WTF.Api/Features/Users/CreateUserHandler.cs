@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Tenancy;
+using WTF.Api.Features.Branches;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users.DTOs;
 using WTF.Api.Services;
@@ -12,7 +14,7 @@ namespace WTF.Api.Features.Users;
 
 public record CreateUserCommand(string FirstName, string LastName, string Username, string Password, int RoleId) : IRequest<UserDto>;
 
-public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache, ICurrentTenant currentTenant) : IRequestHandler<CreateUserCommand, UserDto>
+public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache, ICurrentTenant currentTenant, ICurrentBranch? currentBranch = null, BranchScopeCache? branchScopeCache = null) : IRequestHandler<CreateUserCommand, UserDto>
 {
     public async Task<UserDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
@@ -37,9 +39,12 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             CreatedBy = userId
         };
 
+        user.Id = Guid.NewGuid();
         db.Users.Add(user);
+        await BranchAssignment.AssignNewUserAsync(db, user, currentBranch?.ActiveBranchId, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         permissionCache.Forget();
+        branchScopeCache?.Forget();
 
         await auditService.LogAsync(
             action: AuditAction.UserCreated,

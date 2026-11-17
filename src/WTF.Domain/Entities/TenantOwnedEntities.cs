@@ -217,3 +217,11 @@ public partial class PurchaseOrder : ITenantOwned
 public partial class PurchaseOrderLine : ITenantOwned
 {
 }
+
+public partial class Branch : ITenantOwned
+{
+}
+
+public partial class UserBranch : ITenantOwned
+{
+}

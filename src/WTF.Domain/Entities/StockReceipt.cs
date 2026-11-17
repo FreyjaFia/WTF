@@ -27,6 +27,10 @@ public partial class StockReceipt
 
     public Guid? PurchaseOrderId { get; set; }
 
+    public Guid BranchId { get; set; }
+
+    public virtual Branch Branch { get; set; } = null!;
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual PurchaseOrder? PurchaseOrder { get; set; }

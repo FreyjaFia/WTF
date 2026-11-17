@@ -27,6 +27,10 @@ public partial class ShortLink
 
     public Guid TenantId { get; set; }
 
+    public Guid BranchId { get; set; }
+
+    public virtual Branch Branch { get; set; } = null!;
+
     public virtual User? CreatedByNavigation { get; set; }
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();

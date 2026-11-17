@@ -44,3 +44,16 @@ internal sealed class SwitchableTenant : ICurrentTenant, ITenantSwitch
 
     public void Use(Guid tenantId) => _id = tenantId;
 }
+
+internal sealed class FixedBranch(Guid[] visible, Guid? active, bool writeCheck, Guid[]? allowed = null) : ICurrentBranch
+{
+    public bool FilterEnabled => true;
+
+    public IReadOnlyCollection<Guid> VisibleBranchIds => visible;
+
+    public bool WriteCheckEnabled => writeCheck;
+
+    public IReadOnlyCollection<Guid> AllowedBranchIds => allowed ?? visible;
+
+    public Guid? ActiveBranchId => active;
+}

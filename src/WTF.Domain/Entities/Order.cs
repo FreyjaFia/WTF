@@ -63,6 +63,10 @@ public partial class Order
 
     public string? CustomerAddress { get; set; }
 
+    public Guid BranchId { get; set; }
+
+    public virtual Branch Branch { get; set; } = null!;
+
     public virtual Conversation? Conversation { get; set; }
 
     public virtual User CreatedByNavigation { get; set; } = null!;

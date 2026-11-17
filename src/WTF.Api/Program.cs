@@ -44,6 +44,10 @@ builder.Host.UseSerilog();
 builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
+builder.Services.AddScoped<CurrentBranch>();
+builder.Services.AddScoped<ICurrentBranch>(sp => sp.GetRequiredService<CurrentBranch>());
+builder.Services.AddScoped<IBranchSwitch>(sp => sp.GetRequiredService<CurrentBranch>());
+builder.Services.AddSingleton<BranchScopeCache>();
 
 builder.Services.AddDbContext<WTFDbContext>(options =>
     options
@@ -458,6 +462,7 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseMiddleware<TenantRequestGuardMiddleware>();
 app.UseMiddleware<PermissionClaimsMiddleware>();
+app.UseMiddleware<BranchScopeMiddleware>();
 app.UseAuthorization();
 
 app.MapHub<DashboardHub>("/hubs/dashboard");

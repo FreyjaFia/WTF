@@ -12,11 +12,17 @@ namespace WTF.Domain.Data;
 public partial class WTFDbContext
 {
     private const string OrderNumberCounter = "OrderNumber";
+    private const string BranchFilterName = "Branch";
+    private const string TenantFilterName = "Tenant";
 
     private static readonly MethodInfo ApplyTenantFilterMethod = typeof(WTFDbContext)
         .GetMethod(nameof(ApplyTenantFilter), BindingFlags.NonPublic | BindingFlags.Instance)!;
 
+    private static readonly MethodInfo ApplyBranchFilterMethod = typeof(WTFDbContext)
+        .GetMethod(nameof(ApplyBranchFilter), BindingFlags.NonPublic | BindingFlags.Instance)!;
+
     private readonly ICurrentTenant _currentTenant = NoTenant.Instance;
+    private readonly ICurrentBranch _currentBranch = NoBranch.Instance;
 
     public WTFDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant currentTenant)
         : base(options)
@@ -24,11 +30,24 @@ public partial class WTFDbContext
         _currentTenant = currentTenant;
     }
 
+    public WTFDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant currentTenant, ICurrentBranch currentBranch)
+        : base(options)
+    {
+        _currentTenant = currentTenant;
+        _currentBranch = currentBranch;
+    }
+
     public bool TenantFilterEnabled => _currentTenant.FilterEnabled;
 
     private Guid? CurrentTenantId => _currentTenant.TenantId;
 
     public Guid? StampTenantId => _currentTenant.StampTenantId;
+
+    public bool BranchFilterEnabled => _currentBranch.FilterEnabled;
+
+    public IReadOnlyCollection<Guid> VisibleBranchIds => _currentBranch.VisibleBranchIds;
+
+    public Guid? ActiveBranchId => _currentBranch.ActiveBranchId;
 
     // Public links, logins and background jobs learn their tenant from data, not from a token.
     public void UseTenant(Guid tenantId)
@@ -42,6 +61,7 @@ public partial class WTFDbContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         ApplyTenantRules();
+        ApplyBranchRules();
         AssignOrderNumbers();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
@@ -49,6 +69,7 @@ public partial class WTFDbContext
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         ApplyTenantRules();
+        ApplyBranchRules();
         await AssignOrderNumbersAsync(cancellationToken);
         return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
@@ -63,6 +84,21 @@ public partial class WTFDbContext
             }
         }
 
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes().ToList())
+        {
+            if (typeof(IBranchOwned).IsAssignableFrom(entityType.ClrType))
+            {
+                ApplyBranchFilterMethod.MakeGenericMethod(entityType.ClrType).Invoke(this, [modelBuilder]);
+            }
+        }
+
+        // A limited user sees only their branches in the branch list; the children of branch-owned rows follow their parent.
+        modelBuilder.Entity<Branch>().HasQueryFilter(BranchFilterName, b => !BranchFilterEnabled || VisibleBranchIds.Contains(b.Id));
+        modelBuilder.Entity<OrderItem>().HasQueryFilter(BranchFilterName, i => !BranchFilterEnabled || VisibleBranchIds.Contains(i.Order.BranchId));
+        modelBuilder.Entity<StockCountLine>().HasQueryFilter(BranchFilterName, l => !BranchFilterEnabled || VisibleBranchIds.Contains(l.Count.BranchId));
+        modelBuilder.Entity<StockReceiptLine>().HasQueryFilter(BranchFilterName, l => !BranchFilterEnabled || VisibleBranchIds.Contains(l.Receipt.BranchId));
+        modelBuilder.Entity<PurchaseOrderLine>().HasQueryFilter(BranchFilterName, l => !BranchFilterEnabled || VisibleBranchIds.Contains(l.PurchaseOrder.BranchId));
+
         modelBuilder.Entity<UserRole>().HasQueryFilter(r => !TenantFilterEnabled || r.TenantId == null || r.TenantId == CurrentTenantId);
         modelBuilder.Entity<RolePermission>().HasQueryFilter(p => !TenantFilterEnabled || p.Role.TenantId == null || p.Role.TenantId == CurrentTenantId);
 
@@ -72,7 +108,85 @@ public partial class WTFDbContext
     private void ApplyTenantFilter<TEntity>(ModelBuilder modelBuilder)
         where TEntity : class, ITenantOwned
     {
-        modelBuilder.Entity<TEntity>().HasQueryFilter(e => !TenantFilterEnabled || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<TEntity>().HasQueryFilter(TenantFilterName, e => !TenantFilterEnabled || e.TenantId == CurrentTenantId);
+    }
+
+    private void ApplyBranchFilter<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, IBranchOwned
+    {
+        modelBuilder.Entity<TEntity>().HasQueryFilter(BranchFilterName, e => !BranchFilterEnabled || VisibleBranchIds.Contains(e.BranchId));
+    }
+
+    private void ApplyBranchRules()
+    {
+        var entries = ChangeTracker.Entries<IBranchOwned>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .ToList();
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        var filterEnabled = _currentBranch.WriteCheckEnabled;
+        var allowed = _currentBranch.AllowedBranchIds;
+        Guid? stamp = null;
+        var stampLoaded = false;
+
+        foreach (var entry in entries)
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    if (entry.Entity.BranchId == Guid.Empty)
+                    {
+                        if (!stampLoaded)
+                        {
+                            stamp = _currentBranch.ActiveBranchId ?? FindMainBranchId();
+                            stampLoaded = true;
+                        }
+
+                        if (stamp is { } branchId)
+                        {
+                            entry.Entity.BranchId = branchId;
+                        }
+                    }
+
+                    if (filterEnabled && !allowed.Contains(entry.Entity.BranchId))
+                    {
+                        throw new InvalidOperationException("A row cannot be saved for a branch the user may not use.");
+                    }
+
+                    break;
+
+                case EntityState.Modified:
+                case EntityState.Deleted:
+                    if (filterEnabled)
+                    {
+                        var property = entry.Property(nameof(IBranchOwned.BranchId));
+                        if (!allowed.Contains((Guid)property.OriginalValue!) || (Guid)property.CurrentValue! != (Guid)property.OriginalValue!)
+                        {
+                            throw new InvalidOperationException("A row of another branch cannot be changed.");
+                        }
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    // Public links and background jobs have no signed-in branch: their rows go to the shop's Main branch, unless the code named one.
+    private Guid? FindMainBranchId()
+    {
+        var tenantId = _currentTenant.StampTenantId ?? (_currentTenant.FilterEnabled ? null : TenantDefaults.DefaultTenantId);
+        if (tenantId is null || !Database.IsRelational())
+        {
+            return null;
+        }
+
+        return Branches.IgnoreQueryFilters()
+            .Where(b => b.TenantId == tenantId && b.IsMain)
+            .Select(b => (Guid?)b.Id)
+            .FirstOrDefault();
     }
 
     private void ApplyTenantRules()
@@ -154,8 +268,12 @@ public partial class WTFDbContext
         }
 
         var tenantId = RequireStampTenant();
-        var first = await ReserveOrderNumbersAsync(tenantId, orders.Count, cancellationToken);
-        Number(orders, first);
+        foreach (var branchOrders in orders.GroupBy(o => o.BranchId))
+        {
+            var list = branchOrders.ToList();
+            var first = await ReserveOrderNumbersAsync(tenantId, CounterName(branchOrders.Key), list.Count, cancellationToken);
+            Number(list, first);
+        }
     }
 
     private void AssignOrderNumbers()
@@ -167,9 +285,18 @@ public partial class WTFDbContext
         }
 
         var tenantId = RequireStampTenant();
-        var first = ReserveOrderNumbersAsync(tenantId, orders.Count, CancellationToken.None)
-            .GetAwaiter().GetResult();
-        Number(orders, first);
+        foreach (var branchOrders in orders.GroupBy(o => o.BranchId))
+        {
+            var list = branchOrders.ToList();
+            var first = ReserveOrderNumbersAsync(tenantId, CounterName(branchOrders.Key), list.Count, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            Number(list, first);
+        }
+    }
+
+    public static string CounterName(Guid branchId)
+    {
+        return branchId == Guid.Empty ? OrderNumberCounter : $"{OrderNumberCounter}:{branchId:D}";
     }
 
     private Guid RequireStampTenant()
@@ -197,7 +324,7 @@ public partial class WTFDbContext
 
     // One atomic statement per call, so two registers never get the same number. It joins the current transaction,
     // so a sale that rolls back also gives its number back.
-    private async Task<long> ReserveOrderNumbersAsync(Guid tenantId, int count, CancellationToken cancellationToken)
+    private async Task<long> ReserveOrderNumbersAsync(Guid tenantId, string counterName, int count, CancellationToken cancellationToken)
     {
         var connection = Database.GetDbConnection();
         var wasClosed = connection.State != ConnectionState.Open;
@@ -213,7 +340,7 @@ public partial class WTFDbContext
                 await using var update = CreateCounterCommand(connection,
                     "UPDATE dbo.TenantCounters SET NextValue = NextValue + @count OUTPUT inserted.NextValue - @count " +
                     "WHERE TenantId = @tenantId AND Name = @name;",
-                    tenantId, count);
+                    tenantId, counterName, count);
 
                 var reserved = await update.ExecuteScalarAsync(cancellationToken);
                 if (reserved is not null and not DBNull)
@@ -226,7 +353,7 @@ public partial class WTFDbContext
                     "INSERT INTO dbo.TenantCounters (TenantId, Name, NextValue) " +
                     "SELECT @tenantId, @name, @count + 1 WHERE NOT EXISTS " +
                     "(SELECT 1 FROM dbo.TenantCounters WHERE TenantId = @tenantId AND Name = @name);",
-                    tenantId, count);
+                    tenantId, counterName, count);
 
                 if (await insert.ExecuteNonQueryAsync(cancellationToken) > 0)
                 {
@@ -245,13 +372,13 @@ public partial class WTFDbContext
         }
     }
 
-    private DbCommand CreateCounterCommand(DbConnection connection, string sql, Guid tenantId, int count)
+    private DbCommand CreateCounterCommand(DbConnection connection, string sql, Guid tenantId, string counterName, int count)
     {
         var command = connection.CreateCommand();
         command.CommandText = sql;
         command.Transaction = Database.CurrentTransaction?.GetDbTransaction();
         AddParameter(command, "@tenantId", tenantId);
-        AddParameter(command, "@name", OrderNumberCounter);
+        AddParameter(command, "@name", counterName);
         AddParameter(command, "@count", (long)count);
         return command;
     }

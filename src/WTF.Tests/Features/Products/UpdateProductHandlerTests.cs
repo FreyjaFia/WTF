@@ -138,8 +138,9 @@ public class UpdateProductHandlerTests
     public async Task Handle_ConvertingToAddOnAfterBeingOrderedAsMainItem_Throws()
     {
         var product = ProductSeed.NewProduct();
-        var orderItem = new OrderItem { Id = Guid.NewGuid(), OrderId = Guid.NewGuid(), ProductId = product.Id, Quantity = 1, ParentOrderItemId = null };
-        await ProductSeed.SeedAsync(_dbName, product, orderItem);
+        var order = new Order { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid(), StatusId = 1 };
+        var orderItem = new OrderItem { Id = Guid.NewGuid(), OrderId = order.Id, ProductId = product.Id, Quantity = 1, ParentOrderItemId = null };
+        await ProductSeed.SeedAsync(_dbName, product, order, orderItem);
 
         await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(Command(product, isAddOn: true), CancellationToken.None));
 

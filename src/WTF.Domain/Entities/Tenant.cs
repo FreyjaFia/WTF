@@ -21,6 +21,8 @@ public partial class Tenant
 
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
+    public virtual ICollection<Branch> Branches { get; set; } = new List<Branch>();
+
     public virtual ICollection<ConversationMessage> ConversationMessages { get; set; } = new List<ConversationMessage>();
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();

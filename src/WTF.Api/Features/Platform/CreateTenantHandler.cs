@@ -99,6 +99,21 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
         db.UseTenant(tenant.Id);
         await Branding.BrandDefaults.SaveAsync(db, tenant.Id, Branding.BrandDefaults.For(name), cancellationToken);
 
+        // Every shop has a Main branch from the start, so code never has to ask whether a shop has branches.
+        var mainBranch = new Branch
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            Name = "Main",
+            Code = Branches.BranchCodes.FromShopName(name),
+            TimeZone = "Asia/Manila",
+            IsActive = true,
+            IsMain = true,
+            CreatedAt = now
+        };
+        db.Branches.Add(mainBranch);
+        await db.SaveChangesAsync(cancellationToken);
+
         // Users.CreatedBy is a required self-reference, so each first user is created by itself.
         db.Users.Add(new User
         {
@@ -111,7 +126,9 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
             RoleId = (int)UserRoleEnum.Owner,
             CreatedAt = now,
             CreatedBy = ownerId,
-            MustChangePassword = true
+            MustChangePassword = true,
+            DefaultBranchId = mainBranch.Id,
+            BranchScope = (byte)Branches.Enums.BranchScopeEnum.All
         });
 
         db.Users.Add(new User
@@ -124,8 +141,14 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
             IsActive = false,
             RoleId = (int)UserRoleEnum.Cashier,
             CreatedAt = now,
-            CreatedBy = ownerId
+            CreatedBy = ownerId,
+            DefaultBranchId = mainBranch.Id,
+            BranchScope = (byte)Branches.Enums.BranchScopeEnum.Selected
         });
+
+        db.UserBranches.AddRange(
+            new UserBranch { UserId = ownerId, BranchId = mainBranch.Id, CreatedAt = now },
+            new UserBranch { UserId = systemId, BranchId = mainBranch.Id, CreatedAt = now });
 
         await db.SaveChangesAsync(cancellationToken);
         await TenantCatalogTemplate.CopyAsync(db, tenant.Id, ownerId, cancellationToken);
