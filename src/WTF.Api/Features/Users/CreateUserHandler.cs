@@ -2,8 +2,8 @@
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Tenancy;
-using WTF.Api.Features.Branches;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Branches;
 using WTF.Api.Features.Users.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
