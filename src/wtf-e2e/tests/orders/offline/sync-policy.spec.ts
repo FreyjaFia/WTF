@@ -10,7 +10,7 @@ import { routeAppApiToTestApi } from '@utils/app-routing';
 import { VIEWPORTS, measureOverflow, overflowProblem } from '@utils/layout';
 import { unique } from '@utils/unique';
 
-const SHOTS = process.env.E2E_SHOTS_DIR ?? '/mnt/project-files/offline-phase-7/policy';
+const SHOTS = process.env.E2E_SHOTS_DIR ?? 'test-results/offline-phase-7/policy';
 const POLICY_PATH = '/management/sync-policy';
 const SOLD_AT = '2026-06-10T04:00:00Z';
 

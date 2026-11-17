@@ -10,7 +10,7 @@ import { UnsyncedOrdersPage } from '@pages/unsynced-orders.page';
 import { measureOverflow, overflowProblem, VIEWPORTS } from '@utils/layout';
 import { unique } from '@utils/unique';
 
-const SHOTS = process.env.E2E_UNSYNCED_SHOTS_DIR ?? '/mnt/project-files/offline-phase-7/unsynced';
+const SHOTS = process.env.E2E_UNSYNCED_SHOTS_DIR ?? 'test-results/offline-phase-7/unsynced';
 const NOT_FOUND = 'One or more selected products/add-ons were not found.';
 const NOTE_HEADING = 'Unsynced offline sale recorded for the cash drawer';
 

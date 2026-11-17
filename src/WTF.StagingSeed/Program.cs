@@ -1462,6 +1462,18 @@ async Task EnsureBranchesAsync(WTFDbContext db, Guid tenantId, (string Name, str
             continue;
         }
 
+        var existingMain = isMain ? await db.Branches.IgnoreQueryFilters().FirstOrDefaultAsync(b => b.TenantId == tenantId && b.IsMain) : null;
+        if (existingMain is not null)
+        {
+            // The branches script already gave the shop its Main branch; the demo shop uses that one under its real name.
+            existingMain.Name = name;
+            existingMain.Code = code;
+            existingMain.Address = address;
+            existingMain.Phone = phone;
+            added.Add($"branch {name} ({code})");
+            continue;
+        }
+
         db.Branches.Add(new Branch
         {
             Id = Guid.NewGuid(),

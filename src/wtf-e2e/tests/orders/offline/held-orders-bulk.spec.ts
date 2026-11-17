@@ -8,7 +8,7 @@ import { LoginPage } from '@pages/login.page';
 import { today } from '@utils/dates';
 import { VIEWPORTS, measureOverflow, overflowProblem } from '@utils/layout';
 
-const SHOTS = process.env.E2E_SHOTS_DIR ?? '/mnt/project-files/offline-phase-7/held-orders';
+const SHOTS = process.env.E2E_SHOTS_DIR ?? 'test-results/offline-phase-7/held-orders';
 
 interface CloseRow {
   readonly section: string;
