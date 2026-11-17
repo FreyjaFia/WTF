@@ -220,3 +220,45 @@ test.describe("compact pagination and sub page headers @layout @paging", () => {
     });
   }
 });
+
+const BAR_PAGES = [
+  ROUTES.items,
+  ROUTES.customers,
+  ROUTES.users,
+  ROUTES.auditLogs,
+  ROUTES.wasteReasons,
+];
+
+test.describe("pagination bar has no spacing below it @layout @paging", () => {
+  for (const url of BAR_PAGES) {
+    test(`${url}: nothing between the bar and the page edge on a phone`, async ({
+      signIn,
+      api,
+    }) => {
+      await Promise.all([
+        api.items.create({}),
+        api.customers.create("Gap check"),
+      ]);
+      const page = await signIn("owner");
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.goto(url);
+      await expect(bar(page)).toBeVisible();
+      const spacing = await page.evaluate(() => {
+        let total = 0;
+        let el = document.querySelector("app-pagination")
+          ?.parentElement as HTMLElement | null;
+        while (el && !el.classList.contains("app-content")) {
+          const style = getComputedStyle(el);
+          total +=
+            parseFloat(style.paddingBottom) + parseFloat(style.marginBottom);
+          el = el.parentElement;
+        }
+        return total;
+      });
+      expect(
+        spacing,
+        "space below the bar would leave a gap above the dock",
+      ).toBe(0);
+    });
+  }
+});
