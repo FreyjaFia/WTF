@@ -19,6 +19,7 @@ public static class AppPolicies
     public const string AuditRead = "AuditRead";
     public const string SchemaScriptHistoryRead = "SchemaScriptHistoryRead";
     public const string OrdersRead = "OrdersRead";
+    public const string OrdersLive = "OrdersLive";
     public const string OrdersWrite = "OrdersWrite";
     public const string OrdersOverride = "OrdersOverride";
     public const string OrderLinksManage = "OrderLinksManage";
@@ -46,6 +47,8 @@ public static class AppPolicies
     public const string ReportsRead = "ReportsRead";
     public const string ReportsGenerate = "ReportsGenerate";
     public const string SeniorPwdApply = "SeniorPwdApply";
+    public const string KitchenRead = "KitchenRead";
+    public const string KitchenUpdate = "KitchenUpdate";
 
     public static string RequireFeature(string feature)
     {

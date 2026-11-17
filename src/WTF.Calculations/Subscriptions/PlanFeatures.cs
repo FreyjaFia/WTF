@@ -18,6 +18,7 @@ public static class PlanFeatures
     public const string Workbook = "workbook";
     public const string Audit = "audit";
     public const string CustomRoles = "customroles";
+    public const string Kitchen = "kitchen";
 
     public static readonly IReadOnlyList<PlanFeatureDefinition> Catalog =
     [
@@ -29,7 +30,8 @@ public static class PlanFeatures
         new(Chat, [OrderLinks]),
         new(Workbook, []),
         new(Audit, []),
-        new(CustomRoles, [])
+        new(CustomRoles, []),
+        new(Kitchen, [])
     ];
 
     public static readonly IReadOnlyList<string> Gateable = [.. Catalog.Select(f => f.Key)];

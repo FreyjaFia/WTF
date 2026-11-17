@@ -129,6 +129,7 @@ export class UserListComponent implements OnInit {
       [UserRoleEnum.AdminViewer]: 0,
       [UserRoleEnum.ItemManager]: 0,
       [UserRoleEnum.StockManager]: 0,
+      [UserRoleEnum.Kitchen]: 0,
     };
 
     for (const [key, value] of Object.entries(this.facets())) {
@@ -150,6 +151,7 @@ export class UserListComponent implements OnInit {
       UserRoleEnum.AdminViewer,
       UserRoleEnum.ItemManager,
       UserRoleEnum.StockManager,
+      UserRoleEnum.Kitchen,
     ].map((roleId) => ({
       id: roleId,
       label: userRoleLabel({ roleId }),

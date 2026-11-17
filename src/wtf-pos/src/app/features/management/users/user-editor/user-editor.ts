@@ -77,6 +77,7 @@ export class UserEditorComponent implements OnInit {
     { label: 'Admin Viewer', value: UserRoleEnum.AdminViewer },
     { label: 'Item Manager', value: UserRoleEnum.ItemManager },
     { label: 'Stock Manager', value: UserRoleEnum.StockManager },
+    { label: 'Kitchen', value: UserRoleEnum.Kitchen },
   ];
   protected readonly userRoleOptions = signal<UserRoleOption[]>([...this.allUserRoleOptions]);
   protected readonly isOwnAccount = signal(false);

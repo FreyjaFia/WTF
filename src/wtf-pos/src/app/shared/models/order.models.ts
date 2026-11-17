@@ -150,6 +150,8 @@ export interface OrderDto {
   /** The lines whose product took stock, so a refund only asks what happens to those. */
   stockLineIds?: string[] | null;
   seniorPwdPersons?: SeniorPwdPersonDto[] | null;
+  /** 0 new, 1 preparing, 2 ready, 3 served. Null when the kitchen board does not track this order. */
+  kitchenStatus?: number | null;
 }
 
 export interface OrderHistoryDto {

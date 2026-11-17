@@ -80,6 +80,7 @@ export class OrderService {
     searchTerm?: string | null;
     /** Only orders from this source; leave out for all. */
     source?: OrderSourceEnum | null;
+    kitchen?: 'open' | 'served' | 'none';
     statuses?: OrderStatusEnum[];
     from?: string;
     to?: string;
@@ -108,6 +109,10 @@ export class OrderService {
 
     if (query?.source !== undefined && query?.source !== null) {
       params = params.set('source', String(query.source));
+    }
+
+    if (query?.kitchen) {
+      params = params.set('kitchen', query.kitchen);
     }
 
     query?.statuses?.forEach((status) => {

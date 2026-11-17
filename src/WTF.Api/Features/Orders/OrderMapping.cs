@@ -98,5 +98,6 @@ internal static class OrderMapping
             stockWarnings,
             stockLineIds,
             SeniorPwdMapping.ToDtos(seniorPwdRows, maskIds),
-            order.CustomerAddress);
+            order.CustomerAddress,
+            order.KitchenStatus);
 }

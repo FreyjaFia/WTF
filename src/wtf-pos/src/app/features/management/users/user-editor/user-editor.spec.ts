@@ -142,7 +142,7 @@ describe('UserEditorComponent', () => {
 
     it('keeps the built-in list when the roles cannot be loaded', () => {
       setup();
-      expect(c.userRoleOptions().length).toBe(5);
+      expect(c.userRoleOptions().length).toBe(6);
     });
 
     it('does not let you change your own role', () => {
@@ -174,12 +174,12 @@ describe('UserEditorComponent', () => {
       expect(c.userRoleOptions().map((r: { value: number }) => r.value)).not.toContain(
         UserRoleEnum.Owner,
       );
-      expect(c.userRoleOptions().length).toBe(5);
+      expect(c.userRoleOptions().length).toBe(6);
     });
 
     it('offers the Owner role to owners', () => {
       setup({ owner: true });
-      expect(c.userRoleOptions().length).toBe(6);
+      expect(c.userRoleOptions().length).toBe(7);
     });
 
     it('requires password and role, and reports field errors', () => {

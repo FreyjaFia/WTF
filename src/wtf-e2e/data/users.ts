@@ -1,4 +1,4 @@
-export type Role = 'owner' | 'admin' | 'cashier' | 'viewer' | 'stockmgr' | 'itemmgr';
+export type Role = 'owner' | 'admin' | 'cashier' | 'viewer' | 'stockmgr' | 'itemmgr' | 'kitchen';
 
 export const ROLE_IDS = {
   Admin: 1,
@@ -7,6 +7,7 @@ export const ROLE_IDS = {
   Owner: 4,
   ItemManager: 5,
   StockManager: 6,
+  Kitchen: 7,
 } as const;
 
 export const USERNAMES: Record<Role, string> = {
@@ -16,6 +17,7 @@ export const USERNAMES: Record<Role, string> = {
   viewer: process.env.E2E_USER_VIEWER ?? 'viewer',
   stockmgr: process.env.E2E_USER_STOCKMGR ?? 'stockmgr',
   itemmgr: process.env.E2E_USER_ITEMMGR ?? 'itemmgr',
+  kitchen: process.env.E2E_USER_KITCHEN ?? 'kitchen',
 };
 
 export const LANDING_PATH: Record<Role, string> = {
@@ -25,6 +27,7 @@ export const LANDING_PATH: Record<Role, string> = {
   cashier: '/orders/editor',
   stockmgr: '/inventory/attention',
   itemmgr: '/inventory/items',
+  kitchen: '/kitchen',
 };
 
 // Stock and item managers loop on login (app bug), so the tests open these pages directly.

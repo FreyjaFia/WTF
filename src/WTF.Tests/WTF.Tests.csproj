@@ -32,6 +32,9 @@
     <None Include="..\..\tools\sql\20261130_plan_feature_catalog.sql"
           Link="Sql\20261130_plan_feature_catalog.sql"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\tools\sql\20261210_add_kitchen_board.sql"
+          Link="Sql\20261210_add_kitchen_board.sql"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

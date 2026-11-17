@@ -11,6 +11,10 @@ function fallbackRouteFor(auth: AuthService): string {
     return AppRoutes.OrdersList;
   }
 
+  if (auth.canReadKitchen()) {
+    return AppRoutes.Kitchen;
+  }
+
   if (auth.canReadManagement()) {
     return AppRoutes.Dashboard;
   }

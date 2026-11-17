@@ -59,6 +59,20 @@
                   @if (currentOrder.overriddenAt) {
                     <app-badge variant="amber">Overridden</app-badge>
                   }
+                  @if (kitchenChipLabel(currentOrder); as chip) {
+                    <app-badge variant="default" data-testid="order-kitchen-chip">{{ chip }}</app-badge>
+                  }
+                  @if (canMarkServed(currentOrder)) {
+                    <button
+                      type="button"
+                      class="app-btn app-btn-secondary app-btn-xs"
+                      [disabled]="isMarkingServed()"
+                      (click)="markServed(currentOrder)"
+                      data-testid="order-mark-served"
+                    >
+                      Mark served
+                    </button>
+                  }
                 </div>
                 <p class="mt-1 text-sm text-gray-500">
                   {{ getOrderDate(currentOrder) | date: 'EEE, d MMM y · h:mm a' }}

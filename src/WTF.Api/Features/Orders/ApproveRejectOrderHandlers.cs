@@ -2,8 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Conversations;
+using WTF.Api.Features.Kitchen;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
@@ -27,7 +29,8 @@ public class ApproveOrderHandler(
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
     IConversationNotifier conversationNotifier,
-    ISender sender) : IRequestHandler<ApproveOrderCommand, OrderDto?>
+    ISender sender,
+    ITenantFeatures tenantFeatures) : IRequestHandler<ApproveOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(ApproveOrderCommand request, CancellationToken cancellationToken)
     {
@@ -42,6 +45,7 @@ public class ApproveOrderHandler(
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         order.StatusId = (int)OrderStatusEnum.Pending;
         order.AcceptedAt = DateTime.UtcNow;
+        KitchenTracking.StartIfTracked(order, await KitchenTracking.IsOnAsync(db, tenantFeatures, cancellationToken));
         order.UpdatedAt = order.AcceptedAt;
         order.UpdatedBy = userId;
         var chat = await ConversationStore.AddSystemMessageAsync(

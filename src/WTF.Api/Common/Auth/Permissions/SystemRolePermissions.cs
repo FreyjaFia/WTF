@@ -13,6 +13,8 @@ public static class SystemRolePermissions
             PermissionKeys.OrdersSeniorPwdApply,
             "chat.read",
             "chat.write",
+            PermissionKeys.KitchenRead,
+            PermissionKeys.KitchenUpdate,
             "orderlinks.manage",
             "customers.read",
             "customers.write",
@@ -69,6 +71,8 @@ public static class SystemRolePermissions
             PermissionKeys.OrdersSeniorPwdApply,
             "chat.read",
             "chat.write",
+            PermissionKeys.KitchenRead,
+            PermissionKeys.KitchenUpdate,
             "orderlinks.manage",
             "customers.write",
             "stock.waste.record",
@@ -90,6 +94,11 @@ public static class SystemRolePermissions
             "suppliers.write",
             "stock.waste.record",
             "wastereasons.read"
+        ],
+        [AppRoles.Kitchen] =
+        [
+            PermissionKeys.KitchenRead,
+            PermissionKeys.KitchenUpdate
         ]
     };
 

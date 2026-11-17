@@ -23,6 +23,7 @@ describe('Login', () => {
     canReadManagement: ReturnType<typeof vi.fn>;
     canWriteOrders: ReturnType<typeof vi.fn>;
     canReadOrders: ReturnType<typeof vi.fn>;
+    canReadKitchen: ReturnType<typeof vi.fn>;
     canReadStockMovements: ReturnType<typeof vi.fn>;
     canReadItems: ReturnType<typeof vi.fn>;
     canOpenManagementMenu: ReturnType<typeof vi.fn>;
@@ -66,6 +67,7 @@ describe('Login', () => {
       canReadManagement: vi.fn(() => false),
       canWriteOrders: vi.fn(() => true),
       canReadOrders: vi.fn(() => true),
+      canReadKitchen: vi.fn(() => false),
       canReadStockMovements: vi.fn(() => false),
       canReadItems: vi.fn(() => false),
       canOpenManagementMenu: vi.fn(() => false),

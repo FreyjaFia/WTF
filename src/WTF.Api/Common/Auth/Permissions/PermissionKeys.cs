@@ -4,4 +4,6 @@ public static class PermissionKeys
 {
     public const string OrdersOverride = "orders.override";
     public const string OrdersSeniorPwdApply = "orders.seniorpwd.apply";
+    public const string KitchenRead = "kitchen.read";
+    public const string KitchenUpdate = "kitchen.update";
 }

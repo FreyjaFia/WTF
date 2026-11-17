@@ -10,6 +10,7 @@ import {
   CatalogCacheService,
   ConversationInboxService,
   InventoryService,
+  KitchenService,
   OrderService,
   PromotionService,
   SignalRService,
@@ -34,6 +35,7 @@ import {
   DiscountedProductItemDto,
   DiscountedProductPromotionDto,
   FulfillmentTypeEnum,
+  KitchenStateEnum,
   OrderDto,
   OrderStockMovementDto,
   OrderSourceEnum,
@@ -91,6 +93,7 @@ export class OrderDetails implements OnInit {
   private readonly inbox = inject(ConversationInboxService);
   private readonly inventoryService = inject(InventoryService);
   private readonly signalR = inject(SignalRService);
+  private readonly kitchenService = inject(KitchenService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly showChat = signal(false);
@@ -101,6 +104,7 @@ export class OrderDetails implements OnInit {
   });
 
   protected readonly order = signal<OrderDto | null>(null);
+  protected readonly isMarkingServed = signal(false);
   protected readonly productImageById = signal<Record<string, string | null>>({});
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
@@ -755,6 +759,48 @@ export class OrderDetails implements OnInit {
       next: (movements) => this.stockMovements.set(movements),
       error: () => this.stockMovements.set([]),
     });
+  }
+
+  protected kitchenChipLabel(order: OrderDto): string | null {
+    switch (order.kitchenStatus) {
+      case KitchenStateEnum.New:
+        return 'Kitchen: new';
+      case KitchenStateEnum.Preparing:
+        return 'Kitchen: making';
+      case KitchenStateEnum.Ready:
+        return 'Kitchen: ready';
+      case KitchenStateEnum.Served:
+        return 'Served';
+      default:
+        return null;
+    }
+  }
+
+  protected canMarkServed(order: OrderDto): boolean {
+    return (
+      order.kitchenStatus != null && order.kitchenStatus < KitchenStateEnum.Served && this.authService.canUpdateKitchen()
+    );
+  }
+
+  protected markServed(order: OrderDto): void {
+    if (order.kitchenStatus == null) {
+      return;
+    }
+
+    this.isMarkingServed.set(true);
+    this.kitchenService
+      .move(order.id, { to: KitchenStateEnum.Served, from: order.kitchenStatus })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isMarkingServed.set(false);
+          this.loadOrder(true);
+        },
+        error: (err: Error) => {
+          this.isMarkingServed.set(false);
+          this.alertService.error(err.message);
+        },
+      });
   }
 
   private loadOrder(silent = false): void {

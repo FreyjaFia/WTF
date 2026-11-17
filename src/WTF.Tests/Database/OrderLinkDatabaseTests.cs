@@ -349,7 +349,7 @@ public class OrderLinkDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            await new ApproveOrderHandler(db, TestRequest.As(setup.Staff.Id, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), Substitute.For<WTF.Api.Services.IConversationNotifier>(), GetById())
+            await new ApproveOrderHandler(db, TestRequest.As(setup.Staff.Id, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), Substitute.For<WTF.Api.Services.IConversationNotifier>(), GetById(), TestFakes.Features)
                 .Handle(new ApproveOrderCommand(ids[0]), default);
         }
 

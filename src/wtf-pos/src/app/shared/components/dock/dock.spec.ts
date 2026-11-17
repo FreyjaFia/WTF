@@ -22,6 +22,7 @@ describe('DockComponent', () => {
       canReadManagement: () => perms.canReadManagement ?? false,
       canWriteOrders: () => perms.canWriteOrders ?? false,
       canReadOrders: () => perms.canReadOrders ?? false,
+      canReadKitchen: () => false,
       canReadInventory: () => perms.canReadInventory ?? false,
       canReadStockMovements: () => false,
       permissionsVersion: signal(1),

@@ -12,10 +12,12 @@ using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Inventory;
+using WTF.Api.Features.Kitchen;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
+using WTF.Calculations.Kitchen;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Domain.Data;
@@ -387,6 +389,29 @@ public class UpdateOrderHandler(
         await using var ownTransaction = db.Database.CurrentTransaction is null
             ? await db.Database.BeginTransactionAsync(cancellationToken)
             : null;
+
+        // The kitchen compares what it was given with what the order holds now, before the lines are replaced.
+        if (order.KitchenStatus is { } kitchenState)
+        {
+            var names = activeProductMap.ToDictionary(p => p.Key, p => p.Value.Name);
+            var diff = KitchenBoardRules.Diff(
+                KitchenLineKeys.FromOrderItems(order.OrderItems),
+                KitchenLineKeys.FromRequest(request.Items, names));
+            var outcome = KitchenBoardRules.AfterEdit((KitchenState)kitchenState, diff);
+            if (outcome.Kind != KitchenChangeKind.None)
+            {
+                order.KitchenChangeKind = (byte)outcome.Kind;
+                order.KitchenChangeNote = outcome.Note;
+                order.KitchenChangedAt = order.UpdatedAt;
+                if (outcome.NewState is { } movedTo)
+                {
+                    order.KitchenStatus = (byte)movedTo;
+                    order.ReadyAt = movedTo < KitchenState.Ready ? null : order.ReadyAt;
+                    order.KitchenServedAt = null;
+                    order.KitchenStartedAt = movedTo >= KitchenState.Preparing ? order.KitchenStartedAt : null;
+                }
+            }
+        }
 
         // Update items: remove old, add new
         var seniorPwdBefore = SeniorPwdAudit.Snapshot(order.OrderSeniorPwdDiscounts);

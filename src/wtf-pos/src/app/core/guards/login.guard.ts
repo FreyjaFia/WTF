@@ -12,7 +12,11 @@ export const loginGuard: CanActivateFn = () => {
       ? AppRoutes.Dashboard
       : auth.canWriteOrders()
         ? AppRoutes.OrdersEditor
-        : AppRoutes.OrdersList;
+        : auth.canReadOrders()
+          ? AppRoutes.OrdersList
+          : auth.canReadKitchen()
+            ? AppRoutes.Kitchen
+            : AppRoutes.OrdersList;
     router.navigateByUrl(route, { replaceUrl: true });
     return false;
   }

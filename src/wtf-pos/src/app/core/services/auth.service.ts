@@ -469,6 +469,14 @@ export class AuthService {
     return this.can(Permissions.OrdersWrite);
   }
 
+  public canReadKitchen(): boolean {
+    return this.can(Permissions.KitchenRead);
+  }
+
+  public canUpdateKitchen(): boolean {
+    return this.can(Permissions.KitchenUpdate);
+  }
+
   public canApplySeniorPwd(): boolean {
     return this.can(Permissions.OrdersSeniorPwdApply);
   }
@@ -569,6 +577,7 @@ export class AuthService {
       AppRoles.Cashier,
       AppRoles.ItemManager,
       AppRoles.StockManager,
+      AppRoles.Kitchen,
     ];
 
     const matchedRole = prioritizedRoles.find((role) => this.hasRole(role));

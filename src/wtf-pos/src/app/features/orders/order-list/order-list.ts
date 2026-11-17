@@ -24,6 +24,7 @@ import {
   ListStateService,
   OfflineOrderService,
   OrderService,
+  PlanStore,
   SignalRService,
 } from '@core/services';
 import {
@@ -41,6 +42,7 @@ import type { CartItemDto } from '@shared/models';
 import {
   FulfillmentTypeEnum,
   OrderDto,
+  KitchenStateEnum,
   OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
@@ -60,12 +62,14 @@ import type { PendingOrder } from '@core/services/db';
 const PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
+type KitchenFilter = 'open' | 'served';
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
 interface OrderListState {
   searchTerm: string;
   selectedStatuses: OrderStatusEnum[];
   selectedSources?: OrderSourceEnum[];
+  selectedKitchen?: KitchenFilter | null;
   selectedDateRanges: string[];
   customStartDate: string;
   customEndDate: string;
@@ -109,6 +113,7 @@ export class OrderList implements OnInit, OnDestroy {
   private readonly connectivity = inject(ConnectivityService);
   private readonly signalRService = inject(SignalRService);
   private readonly authService = inject(AuthService);
+  private readonly planStore = inject(PlanStore);
   protected readonly offlineOrderService = inject(OfflineOrderService);
   protected readonly isOnline = this.connectivity.isOnline;
   protected readonly routes = AppRoutes;
@@ -153,6 +158,12 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
   protected readonly selectedSources = signal<OrderSourceEnum[]>([]);
+  protected readonly selectedKitchen = signal<KitchenFilter | null>(null);
+  protected readonly kitchenOptions: { id: KitchenFilter; label: string }[] = [
+    { id: 'open', label: 'With the kitchen' },
+    { id: 'served', label: 'Served' },
+  ];
+  protected readonly showKitchenFilter = computed(() => this.planStore.hasFeature('kitchen'));
   protected readonly sourceOptions: { id: OrderSourceEnum; label: string }[] = [
     { id: OrderSourceEnum.Pos, label: 'Shop orders' },
     { id: OrderSourceEnum.CustomerLink, label: 'Customer link orders' },
@@ -440,6 +451,7 @@ export class OrderList implements OnInit, OnDestroy {
     return {
       searchTerm: this.filterForm.controls.searchTerm.value,
       source: filter.source,
+      kitchen: this.selectedKitchen() ?? undefined,
       statuses: [...filter.statuses],
       from: filter.bounds.from,
       to: filter.bounds.to,
@@ -605,6 +617,27 @@ export class OrderList implements OnInit, OnDestroy {
     this.resetAndLoadOrders();
   }
 
+  protected selectKitchen(kitchen: KitchenFilter | null): void {
+    this.selectedKitchen.set(kitchen);
+    this.saveState();
+    this.resetAndLoadOrders();
+  }
+
+  protected kitchenChip(order: OrderDto): { label: string; variant: BadgeVariant } | null {
+    switch (order.kitchenStatus) {
+      case KitchenStateEnum.New:
+        return { label: 'Kitchen: new', variant: 'default' };
+      case KitchenStateEnum.Preparing:
+        return { label: 'Kitchen: making', variant: 'amber' };
+      case KitchenStateEnum.Ready:
+        return { label: 'Kitchen: ready', variant: 'success' };
+      case KitchenStateEnum.Served:
+        return { label: 'Served', variant: 'info' };
+      default:
+        return null;
+    }
+  }
+
   protected clearSourceSelections(): void {
     this.selectedSources.set([]);
     this.saveState();
@@ -616,6 +649,7 @@ export class OrderList implements OnInit, OnDestroy {
     () =>
       selectedFilterCount(this.selectedStatuses().length, this.filterOptions().length) +
       selectedFilterCount(this.selectedSources().length, this.sourceOptions.length) +
+      (this.selectedKitchen() ? 1 : 0) +
       (this.selectedDateRanges().length > 0 ? 1 : 0),
   );
 
@@ -644,6 +678,7 @@ export class OrderList implements OnInit, OnDestroy {
     });
     this.selectedStatuses.set([]);
     this.selectedSources.set([]);
+    this.selectedKitchen.set(null);
     this.selectedDateRanges.set([]);
     this.customStartDate.set('');
     this.customEndDate.set('');
@@ -1067,6 +1102,7 @@ export class OrderList implements OnInit, OnDestroy {
       searchTerm: '',
       selectedStatuses: [],
       selectedSources: [],
+      selectedKitchen: null,
       selectedDateRanges: [],
       customStartDate: '',
       customEndDate: '',
@@ -1082,6 +1118,7 @@ export class OrderList implements OnInit, OnDestroy {
     );
     this.selectedStatuses.set(state.selectedStatuses ?? []);
     this.selectedSources.set(state.selectedSources ?? []);
+    this.selectedKitchen.set(state.selectedKitchen ?? null);
     this.selectedDateRanges.set(state.selectedDateRanges ?? []);
     this.customStartDate.set(state.customStartDate ?? '');
     this.customEndDate.set(state.customEndDate ?? '');
@@ -1094,6 +1131,7 @@ export class OrderList implements OnInit, OnDestroy {
       searchTerm: this.filterForm.controls.searchTerm.value ?? '',
       selectedStatuses: this.selectedStatuses(),
       selectedSources: this.selectedSources(),
+      selectedKitchen: this.selectedKitchen(),
       selectedDateRanges: this.selectedDateRanges(),
       customStartDate: this.customStartDate(),
       customEndDate: this.customEndDate(),

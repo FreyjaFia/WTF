@@ -23,4 +23,5 @@ public record OrderDto(
     List<string>? StockWarnings = null,
     List<Guid>? StockLineIds = null,
     List<OrderSeniorPwdDto>? SeniorPwdPersons = null,
-    string? CustomerAddress = null);
+    string? CustomerAddress = null,
+    byte? KitchenStatus = null);

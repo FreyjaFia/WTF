@@ -3,6 +3,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   notifications: '/notifications',
   ordersList: '/orders/list',
+  kitchen: '/kitchen',
   orderEditor: '/orders/editor',
   orderEditorById: (id: string): string => `/orders/editor/${id}`,
   orderDetails: (id: string): string => `/orders/details/${id}`,

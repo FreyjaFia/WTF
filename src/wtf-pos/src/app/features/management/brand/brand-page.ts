@@ -8,7 +8,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import { BrandDto } from '@shared/models/subscription.models';
 
 type BrandField = {
-  name: Exclude<keyof BrandDto, 'logoUrl' | 'seniorPwdEnabled' | 'vatRegistered'>;
+  name: Exclude<keyof BrandDto, 'logoUrl' | 'seniorPwdEnabled' | 'vatRegistered' | 'kitchenBoardEnabled'>;
   label: string;
   placeholder: string;
 };
@@ -56,6 +56,7 @@ export class BrandPageComponent implements OnInit {
     primaryColor: ['#6f4e37', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
     seniorPwdEnabled: [false],
     vatRegistered: [false],
+    kitchenBoardEnabled: [false],
   });
 
   protected readonly logoUrl = signal<string | null>(null);
@@ -133,6 +134,7 @@ export class BrandPageComponent implements OnInit {
       registrationText: value.registrationText || null,
       seniorPwdEnabled: value.seniorPwdEnabled,
       vatRegistered: value.vatRegistered,
+      kitchenBoardEnabled: value.kitchenBoardEnabled,
     };
 
     this.isSaving.set(true);
@@ -165,6 +167,7 @@ export class BrandPageComponent implements OnInit {
       primaryColor: brand.primaryColor,
       seniorPwdEnabled: brand.seniorPwdEnabled ?? false,
       vatRegistered: brand.vatRegistered ?? false,
+      kitchenBoardEnabled: brand.kitchenBoardEnabled ?? false,
     };
   }
 

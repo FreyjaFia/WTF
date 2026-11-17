@@ -17,7 +17,7 @@ public class PermissionCatalogTests
     private static readonly string[] Features = [PlanFeatures.Core, .. PlanFeatures.Gateable];
 
     private static readonly string[] ShopRoles =
-        [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.ItemManager, AppRoles.StockManager];
+        [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.ItemManager, AppRoles.StockManager, AppRoles.Kitchen];
 
     private static readonly Lazy<SharedCatalog> Shared = new(() =>
     {
@@ -85,7 +85,7 @@ public class PermissionCatalogTests
     }
 
     [Fact]
-    public void SystemRoles_AreTheSixShopRoles()
+    public void SystemRoles_AreTheSevenShopRoles()
     {
         SystemRolePermissions.Bundles.Keys.OrderBy(k => k).ShouldBe(ShopRoles.OrderBy(k => k));
     }

@@ -43,5 +43,7 @@ public partial class TenantSetting
 
     public bool VatRegistered { get; set; }
 
+    public bool KitchenBoardEnabled { get; set; }
+
     public virtual Tenant Tenant { get; set; } = null!;
 }

@@ -32,7 +32,7 @@ public class ApproveRejectOrderHandlerTests
     }
 
     private ApproveOrderHandler Approve() =>
-        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, _conversations, Sender());
+        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, _conversations, Sender(), TestFakes.Features);
 
     private MarkOrderReadyHandler Ready() =>
         new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, _conversations, Sender());

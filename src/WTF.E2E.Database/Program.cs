@@ -143,6 +143,7 @@ static async Task SeedDefaultShopAsync(WTFDbContext db)
         CurrencySymbol = "₱",
         CurrencyCode = "PHP",
         CurrencyDecimals = 2,
+        KitchenBoardEnabled = true,
     });
     await db.SaveChangesAsync();
 }
@@ -158,6 +159,7 @@ static void SeedUsers(WTFDbContext db, string password)
         ("viewer", UserRoleEnum.AdminViewer),
         ("stockmgr", UserRoleEnum.StockManager),
         ("itemmgr", UserRoleEnum.ItemManager),
+        ("kitchen", UserRoleEnum.Kitchen),
     };
 
     foreach (var (username, role) in accounts)

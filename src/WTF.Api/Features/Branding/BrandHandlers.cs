@@ -24,7 +24,8 @@ public record BrandDto(
     string? RegistrationText,
     string PrimaryColor,
     bool? SeniorPwdEnabled = null,
-    bool? VatRegistered = null);
+    bool? VatRegistered = null,
+    bool? KitchenBoardEnabled = null);
 
 // What the public customer page may know: the look and the contact lines, nothing about the shop's setup.
 public record PublicBrandDto(
@@ -44,7 +45,7 @@ public static class BrandDefaults
 
     public static BrandDto ToDto(TenantSetting s) => new(
         s.ShopName, s.ShortName, s.Tagline, s.LogoUrl, s.Address, s.Phone, s.Email, s.ReceiptHeader, s.ReceiptFooter,
-        s.RegistrationText, s.PrimaryColor, s.SeniorPwdEnabled, s.VatRegistered);
+        s.RegistrationText, s.PrimaryColor, s.SeniorPwdEnabled, s.VatRegistered, s.KitchenBoardEnabled);
 
     public static BrandDto WithAbsoluteLogo(BrandDto brand, IHttpContextAccessor http) =>
         brand with { LogoUrl = UrlExtensions.ToAbsoluteUrl(http, brand.LogoUrl) };
@@ -142,6 +143,11 @@ public static class BrandDefaults
             settings.VatRegistered = vatRegistered;
         }
 
+        if (brand.KitchenBoardEnabled is { } kitchenBoardEnabled)
+        {
+            settings.KitchenBoardEnabled = kitchenBoardEnabled;
+        }
+
         settings.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -173,7 +179,7 @@ public class GetBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, IHtt
 
 public record UpdateBrandCommand(BrandDto Brand) : IRequest<BrandDto>;
 
-public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, Services.IAuditService audit, IHttpContextAccessor http) : IRequestHandler<UpdateBrandCommand, BrandDto>
+public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, Services.IAuditService audit, IHttpContextAccessor http, ITenantFeatures tenantFeatures) : IRequestHandler<UpdateBrandCommand, BrandDto>
 {
     public async Task<BrandDto> Handle(UpdateBrandCommand request, CancellationToken cancellationToken)
     {
@@ -183,6 +189,8 @@ public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, S
         await BrandDefaults.SaveAsync(db, tenantId, request.Brand, cancellationToken);
 
         var after = await BrandDefaults.LoadAsync(db, tenantId, cancellationToken);
+        // The kitchen switch is part of the shop's feature list, which is remembered for a few seconds.
+        tenantFeatures.Forget(tenantId);
         await audit.LogAsync(
             Audit.Enums.AuditAction.ShopBrandUpdated,
             Audit.Enums.AuditEntityType.Shop,

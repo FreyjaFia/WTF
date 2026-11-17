@@ -2,8 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory;
+using WTF.Api.Features.Kitchen;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
@@ -24,7 +26,8 @@ public class ApproveHeldOrderHandler(
     IAuditService auditService,
     IConversationNotifier conversationNotifier,
     ISender sender,
-    IOrderStockService stockService) : IRequestHandler<ApproveHeldOrderCommand, OrderDto?>
+    IOrderStockService stockService,
+    ITenantFeatures tenantFeatures) : IRequestHandler<ApproveHeldOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(ApproveHeldOrderCommand request, CancellationToken cancellationToken)
     {
@@ -43,6 +46,7 @@ public class ApproveHeldOrderHandler(
         order.StatusId = (int)OrderStatusEnum.Completed;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
+        KitchenTracking.StartIfTracked(order, await KitchenTracking.IsOnAsync(db, tenantFeatures, cancellationToken));
         await db.SaveChangesAsync(cancellationToken);
 
         // The goods were handed over when the order was sold, so approving it takes the stock whatever the balance is.

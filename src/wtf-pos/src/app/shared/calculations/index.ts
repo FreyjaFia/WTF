@@ -19,3 +19,4 @@ export * from './senior-pwd';
 export * from './plan-features';
 export * from './pagination';
 export * from './order-list-filter';
+export * from './kitchen-board';
