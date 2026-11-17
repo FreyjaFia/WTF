@@ -728,25 +728,31 @@ jobs:
             exit 0
           fi
 
+          # One query for everything already applied, instead of one container and connection per script.
+          applied_names="$(docker run --rm \
+            mcr.microsoft.com/mssql-tools \
+            /opt/mssql-tools/bin/sqlcmd \
+            -S "$SQL_SERVER" \
+            -d "$SQL_DATABASE" \
+            -U "$SQL_USERNAME" \
+            -P "$SQL_PASSWORD" \
+            -C \
+            -h -1 \
+            -W \
+            -b \
+            -Q "SET NOCOUNT ON; SELECT ScriptName FROM dbo.SchemaScriptHistory;")"
+
+          if printf '%s\n' "$applied_names" | grep -Eq '^(Msg [0-9]+|Sqlcmd:)'; then
+            echo "Could not read the applied scripts:"
+            echo "$applied_names"
+            exit 1
+          fi
+
           for script in "${scripts[@]}"; do
             script_name="$(basename "$script")"
             script_name_sql="$(printf "%s" "$script_name" | sed "s/'/''/g")"
 
-            applied_count="$(docker run --rm \
-              -v "$PWD:/workspace" \
-              mcr.microsoft.com/mssql-tools \
-              /opt/mssql-tools/bin/sqlcmd \
-              -S "$SQL_SERVER" \
-              -d "$SQL_DATABASE" \
-              -U "$SQL_USERNAME" \
-              -P "$SQL_PASSWORD" \
-              -C \
-              -h -1 \
-              -W \
-              -Q "SET NOCOUNT ON; SELECT COUNT(1) FROM dbo.SchemaScriptHistory WHERE ScriptName = N'$script_name_sql';" \
-              | tr -d '[:space:]')"
-
-            if [ "$applied_count" != "0" ]; then
+            if printf '%s\n' "$applied_names" | tr -d '\r' | sed 's/[[:space:]]*$//' | grep -Fxq -- "$script_name"; then
               echo "Skipping ${script_name} (already applied)."
               continue
             fi
