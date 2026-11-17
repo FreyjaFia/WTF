@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Branches.DTOs;
