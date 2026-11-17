@@ -76,6 +76,8 @@ describe('system role permissions vs the API policies (golden)', () => {
     StockWasteReview: ['Owner', 'Admin'],
     ExpensesRead: ['Owner', 'Admin', 'AdminViewer'],
     ExpensesWrite: ['Owner', 'Admin'],
+    BranchesRead: ['Owner', 'Admin', 'AdminViewer'],
+    BranchesManage: ['Owner'],
     WasteReasonsManage: ['Owner', 'Admin'],
     SubscriptionBilling: ['Owner', 'Admin'],
     BrandManage: ['Owner', 'Admin'],

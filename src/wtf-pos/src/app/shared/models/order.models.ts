@@ -112,6 +112,8 @@ export interface OrderBundlePromotionDto {
 export interface OrderDto {
   id: string;
   orderNumber: number;
+  branchId?: string | null;
+  branchCode?: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt?: string | null;

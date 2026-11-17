@@ -71,6 +71,9 @@
           <label class="text-sm font-medium text-gray-700">Most people
             <input formControlName="maxUsers" type="number" placeholder="No limit" class="input input-bordered mt-1 w-full bg-surface font-normal" />
           </label>
+          <label class="text-sm font-medium text-gray-700">Most branches
+            <input formControlName="maxBranches" type="number" placeholder="No limit" class="input input-bordered mt-1 w-full bg-surface font-normal" />
+          </label>
           <fieldset class="col-span-2 mt-1 flex flex-col gap-4" data-testid="plan-features">
             <legend class="text-sm font-medium text-gray-700">Features</legend>
             @for (group of groups(); track group.name) {

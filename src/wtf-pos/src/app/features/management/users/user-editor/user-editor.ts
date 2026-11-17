@@ -17,6 +17,7 @@ import {
   UserService,
 } from '@core/services';
 import { AvatarComponent, IconComponent, PageTitleComponent } from '@shared/components';
+import { UserBranchAccessComponent } from '@shared/components/user-branch-access/user-branch-access';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CreateUserDto, UpdateUserDto, UserRoleEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -38,6 +39,7 @@ const PROFILE_PASSWORD_MIN_LENGTH = 8;
   selector: 'app-user-editor',
   imports: [
     CommonModule,
+    UserBranchAccessComponent,
     ReactiveFormsModule,
     IconComponent,
     AvatarComponent,
@@ -61,6 +63,7 @@ export class UserEditorComponent implements OnInit {
 
   // UI state signals
   protected readonly isEditMode = signal(false);
+  protected readonly canEditBranchAccess = (): boolean => this.isEditMode() && this.authService.canManageBranches();
   protected readonly isProfileMode = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);

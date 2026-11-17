@@ -68,6 +68,7 @@ describe('UserEditorComponent', () => {
     };
     auth = {
       isOwner: vi.fn(() => opts.owner ?? false),
+      canManageBranches: vi.fn(() => false),
       getToken: vi.fn(() => (opts.token === undefined ? tokenFor({ sub: 'me1' }) : opts.token)),
       getCurrentRoleLabel: vi.fn(() => 'Cashier'),
       updateMe: vi.fn(() => of(void 0)),

@@ -26,6 +26,7 @@ import {
   OrderService,
   PlanStore,
   SignalRService,
+  BranchService,
 } from '@core/services';
 import {
   BadgeComponent,
@@ -109,6 +110,7 @@ export class OrderList implements OnInit, OnDestroy {
   private readonly listScroll = inject(ListScrollService);
   private readonly stateKey = 'orders:order-list';
   private readonly orderService = inject(OrderService);
+  protected readonly branchService = inject(BranchService);
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
   private readonly listState = inject(ListStateService);

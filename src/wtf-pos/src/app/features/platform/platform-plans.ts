@@ -52,6 +52,7 @@ export class PlatformPlansComponent implements OnInit {
     name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(60)] }),
     monthlyPrice: new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
     maxUsers: new FormControl<number | null>(null, { validators: [Validators.min(1)] }),
+    maxBranches: new FormControl<number | null>(null, { validators: [Validators.min(1)] }),
     isActive: new FormControl(true, { nonNullable: true }),
   });
 
@@ -85,6 +86,7 @@ export class PlatformPlansComponent implements OnInit {
       name: plan.name,
       monthlyPrice: plan.monthlyPrice,
       maxUsers: plan.maxUsers,
+      maxBranches: plan.maxBranches ?? null,
       isActive: plan.isActive,
     });
     this.selected.set(normalizeFeatures(plan.features));
@@ -129,6 +131,7 @@ export class PlatformPlansComponent implements OnInit {
         monthlyPrice: Number(v.monthlyPrice),
         features: this.selected(),
         maxUsers: v.maxUsers === null || v.maxUsers === undefined || `${v.maxUsers}` === '' ? null : Number(v.maxUsers),
+        maxBranches: v.maxBranches === null || v.maxBranches === undefined || `${v.maxBranches}` === '' ? null : Number(v.maxBranches),
         isActive: v.isActive,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
