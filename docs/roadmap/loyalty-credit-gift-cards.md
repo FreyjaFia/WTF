@@ -172,6 +172,7 @@ DTI/BIR, before launch:**
 - **Partial use** is normal: the card stays `Active` with the remainder, at zero it becomes `Used`. **No cash back** for a
   remaining balance.
 - **Refund of an order paid with a card** returns to the same card (`ReturnSpend`), even if it expired meanwhile.
+- **Why shown once (decided 18 Nov 2026: hash and reissue, not encrypted storage).** Only a hash is kept so nobody with database or screen access can read live codes. The "Card issued" screen stays open until the receipt is printed and has a Reprint button; after that a lost code is fixed by reissue. Looking a card up for support uses the last four, the sale receipt number or the customer name.
 - **Lost card:** an Admin voids it and **reissues** a new card for the balance in one transaction, two audit entries and a
   reason; the customer must give the last four or the sale receipt number. A reprint of a code is a reissue.
 - **Refunding a card that was sold** (customer changes their mind) is allowed only while unused, by an Admin
