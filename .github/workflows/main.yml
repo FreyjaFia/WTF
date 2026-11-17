@@ -113,17 +113,17 @@ jobs:
         working-directory: src/wtf-pos
         run: npm test -- --watch=false
 
-  # Browser tests (Playwright) against a throwaway database, split over 2 runners (each has its own SQL Server container,
+  # Browser tests (Playwright) against a throwaway database, split over 4 runners (each has its own SQL Server container,
   # API and app). A failing test turns the job red, but no other job lists this one in "needs", so it cannot hold up a
   # build or a deploy yet. To make it a requirement, add test-e2e to the "needs" of the build and deploy jobs.
   test-e2e:
-    name: Test E2E (browser, shard ${{ matrix.shard }} of 2)
+    name: Test E2E (browser, shard ${{ matrix.shard }} of 4)
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     # The same kind of throw-away SQL Server the API tests use. The password only protects this container.
     services:
       sqlserver:
@@ -175,7 +175,7 @@ jobs:
       - name: Run browser tests
         env:
           E2E_SQL: Server=localhost,1433;User Id=sa;Password=Wtf-Test-Passw0rd!;TrustServerCertificate=true;Encrypt=false
-        run: bash src/wtf-e2e/run.sh --shard=${{ matrix.shard }}/2
+        run: bash src/wtf-e2e/run.sh --shard=${{ matrix.shard }}/4
 
       - name: Upload the test report
         if: always()
