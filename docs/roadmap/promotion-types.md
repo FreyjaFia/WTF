@@ -119,6 +119,8 @@ cases, validation, order save paths, offline, UI, seed and tests). Every type al
 
 #### 3. Combo slots (multi-slot Mix & Match) [mechanism B, size M] **Build third**
 
+**Update 18 Nov (Pogi):** build this as "Any" on Fixed Bundle items instead: each bundle item is either one product or "any of" a product list, category or sub-category (a slot with its own count). Mix & Match stays as is. Same bundle machinery and `BundleRules` per item; the size and dependencies below do not change. The slot table and the migration script below then belong to `FixedBundlePromotionItems`, and no existing Mix & Match is converted.
+
 - **What**: any drink + any pastry for PHP 199; a "Barkada" set of 4 drinks for PHP 500; a breakfast set until 10 AM
   (combo plus the existing schedule). Already decided in [promotions](promotions.md) (Decision of 20 Oct); listed here for the
   order and size.
