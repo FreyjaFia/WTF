@@ -112,6 +112,8 @@ Planned implementation slices:
 
 ### Promotion Ideas for Later (20 Oct 2026) [Ideas, none started]
 
+A build plan for these ideas (mechanisms, stacking rules, sizes and order) is in [promotion-types](promotion-types.md).
+
 Ideas beyond the three types that exist (Fixed Bundle, Mix & Match, Discounted Product). The older "Phase 2+" table above
 already lists percentage/category discounts, spend thresholds, add-on upsell, free size upgrade; they are included here with
 a rough value and effort. Schedule (days and hours), usage limits (`MaxRedemptions`) and `MaxPerOrder` already exist for all

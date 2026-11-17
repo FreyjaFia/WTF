@@ -23,6 +23,7 @@ update its file and the status in the table below.
 | Setup lists (units and similar) | Setup page built; units and other lists planned | [setup-lists](roadmap/setup-lists.md) |
 | Dynamic Catalog Management | Built 6 Nov 2026; browser run and production check to do | [dynamic-catalog](roadmap/dynamic-catalog.md) |
 | Promotions / Bundles | Phase 1 completed; ideas for later | [promotions](roadmap/promotions.md) |
+| More promotion types (category, multi-buy, combos, spend, coupons) | Plan only (17 Nov 2026), branch `promotion-types-plan` | [promotion-types](roadmap/promotion-types.md) |
 | List paging (infinite scroll for Orders, pagination elsewhere) | Built on branch `list-paging`, not merged | [list-paging](roadmap/list-paging.md) |
 | Automated Testing Plan | Mostly completed | [automated-testing](roadmap/automated-testing.md) |
 | Customer Ordering Links | Completed | [customer-ordering-links](roadmap/customer-ordering-links.md) (design; [build history](roadmap/customer-ordering-links-build-history.md)) |
