@@ -179,7 +179,7 @@ static void SeedUsers(WTFDbContext db, string password)
         db.Users.Add(user);
         if (single)
         {
-            db.UserBranches.Add(new UserBranch { UserId = user.Id, BranchId = E2eIds.MainBranch, CreatedAt = DateTime.UtcNow });
+            db.UserBranches.Add(new UserBranch { TenantId = TenantDefaults.DefaultTenantId, UserId = user.Id, BranchId = E2eIds.MainBranch, CreatedAt = DateTime.UtcNow });
         }
     }
 
@@ -187,7 +187,7 @@ static void SeedUsers(WTFDbContext db, string password)
     var linkUser = NewUser("customer-link", "Customer", "Link", "!", UserRoleEnum.Cashier, active: false);
     linkUser.BranchScope = 1;
     db.Users.Add(linkUser);
-    db.UserBranches.Add(new UserBranch { UserId = linkUser.Id, BranchId = E2eIds.MainBranch, CreatedAt = DateTime.UtcNow });
+    db.UserBranches.Add(new UserBranch { TenantId = TenantDefaults.DefaultTenantId, UserId = linkUser.Id, BranchId = E2eIds.MainBranch, CreatedAt = DateTime.UtcNow });
 }
 
 static User NewUser(string username, string firstName, string lastName, string hash, UserRoleEnum role, bool active)

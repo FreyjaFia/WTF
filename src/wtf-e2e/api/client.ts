@@ -7,6 +7,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export interface CallOptions {
   readonly body?: unknown;
   readonly accept?: string;
+  readonly headers?: Record<string, string>;
 }
 
 export class ApiClient {
@@ -49,6 +50,8 @@ export class ApiClient {
     if (options.accept) {
       headers.Accept = options.accept;
     }
+
+    Object.assign(headers, options.headers);
 
     return this.request.fetch(`${API_ORIGIN}/api/${path.replace(/^\//, '')}`, { method, headers, data: options.body });
   }

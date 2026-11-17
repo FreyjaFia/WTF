@@ -29,6 +29,12 @@
     </div>
   </div>
 
+  @if (branchService.isMultiBranch()) {
+    <div class="border-b border-gray-200 px-3 py-2" [class.flex]="isCollapsed()" [class.justify-center]="isCollapsed()">
+      <app-branch-switcher align="start" [compact]="isCollapsed()" />
+    </div>
+  }
+
   <div class="overflow-visible border-b border-gray-200 px-4 py-4">
     <div
       class="flex items-center gap-3"
