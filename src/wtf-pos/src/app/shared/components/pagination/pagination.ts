@@ -30,6 +30,9 @@ export class PaginationComponent {
     lastRowFor(this.page(), this.pageSize(), this.totalCount()),
   );
   protected readonly items = computed(() => pageItems(this.page(), this.totalPages()));
+  protected readonly pageNumbers = computed(() =>
+    Array.from({ length: this.totalPages() }, (_, index) => index + 1),
+  );
   protected readonly visible = computed(() => this.totalCount() > 0);
 
   protected goToPage(target: number): void {
@@ -39,6 +42,10 @@ export class PaginationComponent {
     }
 
     this.pageChange.emit(next);
+  }
+
+  protected selectPage(event: Event): void {
+    this.goToPage(Number((event.target as HTMLSelectElement).value));
   }
 
   protected changePageSize(event: Event): void {

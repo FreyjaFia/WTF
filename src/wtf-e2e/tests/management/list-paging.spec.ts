@@ -71,7 +71,7 @@ test.describe('paginated lists: customers @management @paging', () => {
     await bar(page).getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page).toHaveURL(/[?&]page=2/);
 
-    await bar(page).locator('select').selectOption('10');
+    await bar(page).getByLabel('Rows per page').selectOption('10');
     await expect(rows(page)).toHaveCount(10);
     await expect(bar(page)).toContainText(`1 – 10 of ${COUNT}`);
     await expect(page).not.toHaveURL(/page=/);
@@ -83,7 +83,7 @@ test.describe('paginated lists: customers @management @paging', () => {
     await expect(bar(page)).toContainText(`1 – 10 of ${COUNT}`);
 
     await page.reload();
-    await expect(bar(page).locator('select')).toHaveValue('10');
+    await expect(bar(page).getByLabel('Rows per page')).toHaveValue('10');
   });
 
   test('coming back from a customer returns to the same page', async ({ api, signIn }) => {
@@ -111,7 +111,10 @@ test.describe('paginated lists: customers @management @paging', () => {
       await expect(bar(page)).toBeVisible();
       await bar(page).scrollIntoViewIfNeeded();
       if (viewport.width < 640) {
-        await expect(bar(page)).toContainText('Page 1 of 3');
+        await expect(bar(page).getByLabel('Go to page')).toHaveValue('1');
+        await expect(bar(page)).toContainText('of 3');
+        await bar(page).getByLabel('Go to page').selectOption('3');
+        await expect(page).toHaveURL(/[?&]page=3/);
         await expect(bar(page).getByRole('button', { name: 'Page 2', exact: true })).toBeHidden();
       } else {
         await expect(bar(page).getByRole('button', { name: 'Page 2', exact: true })).toBeVisible();

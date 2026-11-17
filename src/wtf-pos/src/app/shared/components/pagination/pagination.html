@@ -26,10 +26,12 @@
       <button
         type="button"
         class="app-btn app-btn-secondary app-btn-sm"
+        aria-label="Previous"
         [disabled]="disabled() || page() <= 1"
         (click)="goToPage(page() - 1)"
       >
-        Previous
+        <span class="text-base leading-none sm:hidden" aria-hidden="true">&lsaquo;</span>
+        <span class="hidden sm:inline">Previous</span>
       </button>
       <div class="hidden items-center gap-1 sm:flex">
         @for (item of items(); track $index) {
@@ -51,16 +53,29 @@
           }
         }
       </div>
-      <span class="px-1 text-xs whitespace-nowrap text-gray-500 sm:hidden">
-        Page {{ page() }} of {{ totalPages() }}
-      </span>
+      <label class="flex items-center gap-1 text-xs whitespace-nowrap text-gray-500 sm:hidden">
+        <span>Page</span>
+        <select
+          class="bg-surface rounded-lg px-1.5 py-1 text-sm text-gray-700 ring-1 ring-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
+          aria-label="Go to page"
+          [disabled]="disabled()"
+          (change)="selectPage($event)"
+        >
+          @for (number of pageNumbers(); track number) {
+            <option [value]="number" [selected]="number === page()">{{ number }}</option>
+          }
+        </select>
+        <span>of {{ totalPages() }}</span>
+      </label>
       <button
         type="button"
         class="app-btn app-btn-secondary app-btn-sm"
+        aria-label="Next"
         [disabled]="disabled() || page() >= totalPages()"
         (click)="goToPage(page() + 1)"
       >
-        Next
+        <span class="text-base leading-none sm:hidden" aria-hidden="true">&rsaquo;</span>
+        <span class="hidden sm:inline">Next</span>
       </button>
     </nav>
   </div>

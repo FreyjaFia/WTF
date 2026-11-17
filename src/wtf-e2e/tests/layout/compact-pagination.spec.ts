@@ -44,6 +44,25 @@ test.describe('compact pagination and sub page headers @layout @paging', () => {
       expect(heading.y - content.y, 'no extra margin above the title').toBeLessThanOrEqual(40);
     });
 
+    test(`ingredients and cost: the list gets the screen under the pinned search on ${viewport.name}`, async ({ api, signIn }) => {
+      for (let i = 0; i < 30; i += 10) {
+        await Promise.all(Array.from({ length: 10 }, () => api.products.create({ price: 100 })));
+      }
+
+      const page = await signIn('owner');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto(ROUTES.ingredients);
+      await expect(bar(page)).toBeVisible();
+      const firstRow = await box(page, '[data-testid="coverage-row"]');
+      expect(firstRow.y, 'the first product starts in the upper two thirds').toBeLessThan(viewport.height * 0.65);
+      const barBox = await box(page, 'app-pagination');
+      expect(barBox.height).toBeLessThan(72);
+      expect(overflowProblem(await measureOverflow(page))).toBeNull();
+      if (process.env.E2E_SHOTS) {
+        await page.screenshot({ path: `${process.env.E2E_SHOTS}/ingredients-${viewport.width}.png` });
+      }
+    });
+
     test(`an open report has one header and one back button on ${viewport.name}`, async ({ signIn }) => {
       const page = await signIn('owner');
       await page.setViewportSize({ width: viewport.width, height: viewport.height });

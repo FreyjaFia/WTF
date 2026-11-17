@@ -596,8 +596,8 @@ describe('AuditLogsComponent', () => {
         expect(select.value).toBe('10');
 
         const buttons = Array.from(root.querySelectorAll('nav button')) as HTMLButtonElement[];
-        const previous = buttons.find((b) => b.textContent?.trim() === 'Previous')!;
-        const next = buttons.find((b) => b.textContent?.trim() === 'Next')!;
+        const previous = buttons.find((b) => b.getAttribute('aria-label') === 'Previous')!;
+        const next = buttons.find((b) => b.getAttribute('aria-label') === 'Next')!;
         expect(previous.disabled).toBe(true);
         expect(next.disabled).toBe(false);
       });
@@ -609,7 +609,7 @@ describe('AuditLogsComponent', () => {
         const { fixture, vm } = create();
         const next = Array.from(
           (fixture.nativeElement as HTMLElement).querySelectorAll('nav button'),
-        ).find((b) => b.textContent?.trim() === 'Next') as HTMLButtonElement;
+        ).find((b) => b.getAttribute('aria-label') === 'Next') as HTMLButtonElement;
 
         next.click();
 
@@ -627,7 +627,7 @@ describe('AuditLogsComponent', () => {
 
         const next = Array.from(
           (fixture.nativeElement as HTMLElement).querySelectorAll('nav button'),
-        ).find((b) => b.textContent?.trim() === 'Next') as HTMLButtonElement;
+        ).find((b) => b.getAttribute('aria-label') === 'Next') as HTMLButtonElement;
         expect(next.disabled).toBe(true);
       });
 

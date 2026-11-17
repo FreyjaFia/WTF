@@ -72,11 +72,11 @@ test.describe('paginated lists: inventory items @inventory @items @paging', () =
     const page = await signIn('owner');
     await openAndSearch(page, stamp);
 
-    await bar(page).locator('select').selectOption('10');
+    await bar(page).getByLabel('Rows per page').selectOption('10');
     await expect(bar(page)).toContainText(`1 – 10 of ${COUNT}`);
 
     await page.reload();
-    await expect(bar(page).locator('select')).toHaveValue('10');
+    await expect(bar(page).getByLabel('Rows per page')).toHaveValue('10');
   });
 
   for (const viewport of VIEWPORTS) {
