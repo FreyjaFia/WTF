@@ -56,6 +56,10 @@ end the business, so this test is the gate for Phase 3.
 
 ### Phase 1 - Branches inside one shop [Planned]
 
+Superseded by [multiple-branches](multiple-branches.md) (13 Nov 2026): that file has the current branch design, roles and
+scope, the switch-on and switch-off scenarios, and how the Senior/PWD, Offline Phase 7, customer address, plan gating and
+kitchen plans behave per branch. The text below is the first draft.
+
 Goal: one owner, several locations, with their own stock, orders and staff, and reports that can show one branch or all.
 
 **Data model** (`tools/sql/<date>_add_branches.sql`, idempotent, then `tools/dbsync.bat`)
