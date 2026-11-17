@@ -1,7 +1,44 @@
-## Multiple Branches per Shop [Planned, plan written 13 Nov 2026, decisions made 13 Nov 2026]
+## Multiple Branches per Shop [Phases 1, 2 (API and list), 3 and the staging seed built on branch `multiple-branches`, not merged; phases 4 to 8 open]
 
 One shop (tenant) with several locations (branches). Each branch sells, makes, counts and closes its own day; the owner
-sees one branch or all of them. This file is the plan only. Nothing is built.
+sees one branch or all of them. The sections after "Build status" are the plan; where this status and the plan differ,
+this status wins.
+
+### Build status (17 Nov 2026)
+
+Built on branch `multiple-branches` (from main at v1.22.1), not merged:
+
+| Phase | State |
+| --- | --- |
+| 1 Hidden foundation | Built. `Branches`, `UserBranches`, `BranchId` on 10 tables (orders, expenses, stock counts, movements, receipts, wastes, purchase orders, short links, Senior/PWD rows, audit log), `IBranchOwned`, EF named filters "Tenant" and "Branch", `ICurrentBranch`, `X-Branch-Id` middleware, per-branch order counters. |
+| 2 Orders carry the branch | Built for the API and the order list. Orders return `branchId` and `branchCode`, the paged list filters by `branchId`, customer link orders land in the link's branch, only the offline routes may name a branch. Not built: the `MKT-0042` display prefix in push texts, receipts, chat and the daily close; the offline queue still sends no branch (sync uses the active branch). |
+| 3 Management and switcher | Built. Branches page (list, add, edit, close with checklist and staff move, reopen, make main), branch switcher in the header and sidebar, staff "Branch access" in the user editor, `branches` plan key (Business), `MaxBranches` on plans (Starter 1, Pro 1, Business 3) with the cap check, permissions `branches.read` / `branches.manage`. |
+| 4 Inventory by branch | Not built. `Items.CurrentQuantity` is still the one shop-wide stock; no `ItemBranchStock`, no transfers. The stock-related close checks are skipped until it exists. |
+| 5 Reports and Daily Close by branch | Not built. Reports follow the branch filter of the picked branch (or all). |
+| 6 Kitchen and hub groups | Not built. |
+| 7 Settings by branch | Not built (`BranchSettings`). VAT and TIN per branch stay out until the accountant confirms. |
+| 8 End to end | `tests/management/branches.spec.ts` (branch wall, codes, permissions, add and close at 375, 820 and 1440). Two shops and the full ON and OFF tables are still to do. |
+
+Deviations from the plan below:
+
+- `ItemBranchStock`, `StockTransfers` and `BranchSettings` are left to phases 4 and 7.
+- `BranchId` has no SQL default, so the script must run right before the API deploy (no old API running against the new schema).
+- Defaults for staff: Cashier and StockManager are "Selected" on the Main branch; every other role, custom roles included, is "All".
+- Order items, count lines, receipt lines and purchase order lines are filtered through their parent, which adds a join.
+- Closing a branch switches the app to reload on a branch change (the app starts over on the new branch).
+- The switcher is a dropdown on every width (fixed full-width panel below 640 px), not a bottom sheet.
+- No Angular mirror of `BranchCapRules` (the cap is enforced on the API).
+
+SQL scripts (run in this order, both safe to run twice): `tools/sql/20261220_add_branches.sql`, then
+`tools/sql/20261221_add_plan_max_branches.sql`. They were run and checked on a throwaway cloud database, not on the real
+`WTF` database; run `tools/dbsync.bat` on the laptop against `.\SQLEXPRESS` after them.
+
+Staging demo: the seed makes the shop "Makati" (main), "BGC" and "Quezon City", cashiers and stock managers spread across
+them, and orders in each branch with their own order numbers; the second shop (Starter) has one Main branch.
+
+### The plan
+
+The text below is the plan as written on 13 Nov 2026 and is kept for the phases that are still open.
 
 It replaces "Phase 1 - Branches inside one shop" in [multiple-branches-and-tenants](multiple-branches-and-tenants.md)
 (that section stays as the first draft; this file wins where they differ). Branding (Phase 2) and selling to other stores
