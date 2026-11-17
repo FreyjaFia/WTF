@@ -237,7 +237,7 @@ public class CatalogChangeLogWriterTests
         {
             var tenant = new FixedTenant(Guid.NewGuid());
             var brand = BrandDefaults.For("Shop") with { SeniorPwdEnabled = true, VatRegistered = true };
-            await new UpdateBrandHandler(TestDb.Create(e.Db, tenant), tenant, TestFakes.Audit(), e.Http()).Handle(new UpdateBrandCommand(brand), default);
+            await new UpdateBrandHandler(TestDb.Create(e.Db, tenant), tenant, TestFakes.Audit(), e.Http(), TestFakes.Features).Handle(new UpdateBrandCommand(brand), default);
         }, CatalogEntityTypes.TenantSettings, nameof(TenantSetting.SeniorPwdEnabled)),
     ];
 

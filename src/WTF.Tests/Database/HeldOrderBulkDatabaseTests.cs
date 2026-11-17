@@ -53,5 +53,5 @@ public class HeldOrderBulkDatabaseTests
     }
 
     private static HeldOrderApprover Approver(WTF.Domain.Data.WTFDbContext db) =>
-        new(db, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Conversations(), TestFakes.Stock(db));
+        new(db, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
 }

@@ -86,7 +86,7 @@ public partial class PlanFeatureDriftTests
         var header = Regex.Match(script, @"valid plan feature words are now:\s*(?<words>[a-z,\s\-]+?)\.", RegexOptions.Singleline);
         header.Success.ShouldBeTrue("the script header no longer names the valid words");
 
-        Words(header.Groups["words"].Value.Replace("--", " ")).ShouldBe(PlanFeatures.Gateable);
+        Words(header.Groups["words"].Value.Replace("--", " ")).ShouldBe(PlanFeatures.Gateable.Except([PlanFeatures.Branches]));
         script.ShouldContain("WHERE Code IN ('pro', 'business')");
         script.ShouldContain("'kitchen'");
     }

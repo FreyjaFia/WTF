@@ -25,7 +25,7 @@ public class HeldOrderBulkApproveTests
     private Product? _product;
 
     private HeldOrderApprover Approver(WTFDbContext db) =>
-        new(db, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(db));
+        new(db, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
 
     private BulkApproveHeldOrdersHandler Bulk(IHeldOrderApprover? approver = null, WTFDbContext? db = null)
     {
