@@ -51,6 +51,7 @@ export interface PlanDto {
   monthlyPrice: number;
   features: string[];
   maxUsers: number | null;
+  maxBranches?: number | null;
   isActive: boolean;
   shopCount: number;
 }
@@ -132,5 +133,6 @@ export interface UpdatePlanRequest {
   monthlyPrice: number;
   features: string[];
   maxUsers: number | null;
+  maxBranches?: number | null;
   isActive: boolean;
 }

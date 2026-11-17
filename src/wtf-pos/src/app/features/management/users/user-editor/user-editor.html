@@ -464,6 +464,9 @@
           }
         </div>
       </form>
+      @if (canEditBranchAccess() && userId) {
+        <app-user-branch-access [userId]="userId" />
+      }
     </div>
   }
 

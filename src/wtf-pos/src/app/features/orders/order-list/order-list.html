@@ -672,6 +672,9 @@
                       <!-- Mobile: Row 1 - Order # -->
                       <div class="lg:hidden">
                         <span class="font-semibold text-gray-900">#{{ order.orderNumber }}</span>
+                        @if (branchService.isMultiBranch() && order.branchCode) {
+                          <app-badge variant="info" data-testid="order-branch">{{ order.branchCode }}</app-badge>
+                        }
                       </div>
 
                       <!-- Mobile: Row 2 - Status Badge -->
@@ -704,7 +707,12 @@
 
                       <!-- Desktop: Order # -->
                       <div class="hidden lg:col-span-2 lg:block">
-                        <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
+                        <div class="flex items-center gap-2 font-semibold text-gray-900">
+                          #{{ order.orderNumber }}
+                          @if (branchService.isMultiBranch() && order.branchCode) {
+                            <app-badge variant="info" data-testid="order-branch">{{ order.branchCode }}</app-badge>
+                          }
+                        </div>
                         @if (order.customerName?.trim()) {
                           <div class="truncate text-xs text-gray-500">{{ order.customerName }}</div>
                         }

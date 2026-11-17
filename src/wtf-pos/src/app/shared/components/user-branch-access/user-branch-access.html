@@ -1,0 +1,63 @@
+@if (branchService.isMultiBranch()) {
+  <section class="bg-surface mt-6 rounded-xl p-4 shadow-lg" data-testid="user-branch-access">
+    <h2 class="text-base font-semibold text-gray-900">Branch access</h2>
+    <p class="mb-3 text-xs text-gray-500">Which branches this person can work in.</p>
+    <label class="mb-3 flex cursor-pointer items-center gap-3">
+      <input
+        type="checkbox"
+        class="toggle toggle-primary"
+        [checked]="isAll()"
+        data-testid="branch-access-all"
+        (change)="setAll($any($event.target).checked)"
+      />
+      <span class="text-sm text-gray-700">All branches</span>
+    </label>
+    @if (!isAll()) {
+      <ul class="mb-3 space-y-2">
+        @for (branch of branchService.branches(); track branch.id) {
+          <li>
+            <label class="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                [checked]="selectedIds().includes(branch.id)"
+                [attr.data-testid]="'branch-access-' + branch.code"
+                (change)="toggle(branch.id, $any($event.target).checked)"
+              />
+              <span class="text-sm text-gray-700">{{ branch.name }}</span>
+            </label>
+          </li>
+        }
+      </ul>
+    }
+    <label for="branch-access-default" class="mb-1 block text-xs font-semibold text-gray-500">
+      Starts in
+    </label>
+    <select
+      id="branch-access-default"
+      class="select select-bordered mb-3 w-full"
+      (change)="chooseDefault($event)"
+    >
+      <option value="">Main branch</option>
+      @for (branch of branchService.branches(); track branch.id) {
+        @if (isAll() || selectedIds().includes(branch.id)) {
+          <option [value]="branch.id" [selected]="branch.id === defaultId()">
+            {{ branch.name }}
+          </option>
+        }
+      }
+    </select>
+    @if (error()) {
+      <p class="mb-2 text-sm text-red-600" role="alert">{{ error() }}</p>
+    }
+    <button
+      type="button"
+      class="app-btn app-btn-primary app-btn-sm"
+      [disabled]="isSaving()"
+      data-testid="save-branch-access"
+      (click)="save()"
+    >
+      Save Access
+    </button>
+  </section>
+}
