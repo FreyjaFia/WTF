@@ -7,8 +7,8 @@
       <span class="text-xs whitespace-nowrap text-gray-500" data-testid="pagination-range">
         {{ firstRow() }} &ndash; {{ lastRow() }} of {{ totalCount() }}
       </span>
-      <label class="hidden items-center gap-2 text-xs text-gray-500 sm:flex">
-        <span>Rows per page</span>
+      <label class="flex items-center gap-2 text-xs text-gray-500">
+        <span class="hidden sm:inline">Rows per page</span>
         <select
           class="bg-surface rounded-lg px-2 py-1 text-sm text-gray-700 ring-1 ring-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
           aria-label="Rows per page"
@@ -30,8 +30,18 @@
         [disabled]="disabled() || page() <= 1"
         (click)="goToPage(page() - 1)"
       >
-        <span class="text-base leading-none sm:hidden" aria-hidden="true">&lsaquo;</span>
-        <span class="hidden sm:inline">Previous</span>
+        <svg
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
       </button>
       <div class="hidden items-center gap-1 sm:flex">
         @for (item of items(); track $index) {
@@ -54,7 +64,7 @@
         }
       </div>
       <label class="flex items-center gap-1 text-xs whitespace-nowrap text-gray-500 sm:hidden">
-        <span>Page</span>
+        <span class="hidden">Page</span>
         <select
           class="bg-surface rounded-lg px-1.5 py-1 text-sm text-gray-700 ring-1 ring-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
           aria-label="Go to page"
@@ -74,8 +84,18 @@
         [disabled]="disabled() || page() >= totalPages()"
         (click)="goToPage(page() + 1)"
       >
-        <span class="text-base leading-none sm:hidden" aria-hidden="true">&rsaquo;</span>
-        <span class="hidden sm:inline">Next</span>
+        <svg
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 18l6-6-6-6" />
+        </svg>
       </button>
     </nav>
   </div>

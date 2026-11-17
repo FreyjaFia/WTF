@@ -25,6 +25,12 @@ test.describe('compact pagination and sub page headers @layout @paging', () => {
       const barBox = await box(page, 'app-pagination');
       expect(barBox.height, 'the paginator is one slim row').toBeLessThan(viewport.width < 640 ? 64 : 72);
 
+      await expect(bar(page).getByLabel('Rows per page')).toBeVisible();
+      const barWidth = await page.evaluate(() => {
+        const nav = document.querySelector('app-pagination > div') as HTMLElement;
+        return { scroll: nav.scrollWidth, client: nav.clientWidth };
+      });
+      expect(barWidth.scroll, 'the bar content fits without overflowing').toBeLessThanOrEqual(barWidth.client);
       const firstRow = await box(page, 'app-waste-reasons li');
       expect(firstRow.y + firstRow.height <= barBox.y || firstRow.y >= barBox.y + barBox.height, 'the first row is not covered').toBe(true);
 
