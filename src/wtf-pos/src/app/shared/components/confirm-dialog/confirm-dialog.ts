@@ -59,6 +59,7 @@ export class ConfirmDialogComponent {
   readonly busyLabel = input('');
   readonly cancelLabel = input('Cancel');
   readonly isBusy = input(false);
+  readonly confirmDisabled = input(false);
   readonly confirmPlacement = input<ConfirmPlacement>('primary');
   readonly secondaryTone = input<SecondaryTone>('danger');
   readonly confirmed = output<void>();

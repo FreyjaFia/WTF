@@ -1,0 +1,372 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Branches</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">The shop's locations and who works at each</p>
+      </div>
+      @if (canManage()) {
+        <button
+          type="button"
+          class="app-btn app-btn-primary app-btn-sm"
+          data-testid="add-branch"
+          (click)="openAdd()"
+        >
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          Add Branch
+        </button>
+      }
+    </div>
+
+    @if (!isAndroid) {
+      <div class="ml-auto flex items-center justify-end gap-2">
+        <button
+          class="app-btn app-btn-ghost p-2"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh branches"
+        >
+          <app-icon
+            name="icon-refresh"
+            [class]="
+              isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600'
+            "
+            [fill]="'currentColor'"
+          />
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  } @else {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (sortedBranches().length === 0) {
+        <div class="bg-surface rounded-lg p-8 text-center shadow-lg">
+          <p class="text-lg font-semibold text-gray-700">No branches found</p>
+        </div>
+      } @else {
+        <div class="space-y-2 pb-4 lg:space-y-3">
+          <div
+            class="bg-surface sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 px-4 pt-3 pb-5 lg:grid"
+          >
+            <app-sort-header
+              class="col-span-4"
+              label="Name"
+              align="start"
+              [active]="sortColumn() === 'name'"
+              [direction]="sortDirection()"
+              (sorted)="toggleSort('name')"
+            />
+            <app-sort-header
+              class="col-span-2"
+              label="Code"
+              align="center"
+              [active]="sortColumn() === 'code'"
+              [direction]="sortDirection()"
+              (sorted)="toggleSort('code')"
+            />
+            <app-sort-header
+              class="col-span-2"
+              label="Staff"
+              align="center"
+              [active]="sortColumn() === 'staff'"
+              [direction]="sortDirection()"
+              (sorted)="toggleSort('staff')"
+            />
+            <app-sort-header
+              class="col-span-3"
+              label="Status"
+              align="center"
+              [active]="sortColumn() === 'status'"
+              [direction]="sortDirection()"
+              (sorted)="toggleSort('status')"
+            />
+            <div class="col-span-1"></div>
+          </div>
+          <ul class="space-y-2 lg:space-y-3" data-testid="branch-list">
+            @for (branch of pager.rows(); track branch.id; let last = $last) {
+              <li
+                class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                [class.opacity-70]="!branch.isActive"
+                [attr.data-testid]="'branch-row-' + branch.code"
+              >
+                <div class="min-w-0 flex-1 lg:col-span-4 lg:flex-none">
+                  <p class="font-semibold wrap-break-word text-gray-900">{{ branch.name }}</p>
+                  @if (branch.address) {
+                    <p class="text-xs wrap-break-word text-gray-500">{{ branch.address }}</p>
+                  }
+                  <div
+                    class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 lg:hidden"
+                  >
+                    <app-badge [variant]="branch.isActive ? 'success' : 'default'">
+                      {{ branch.isActive ? 'Open' : 'Closed' }}
+                    </app-badge>
+                    @if (branch.isMain) {
+                      <app-badge variant="info">Main</app-badge>
+                    }
+                    <span>{{ branch.code }}</span>
+                    <span>{{ branch.staffCount }} staff</span>
+                  </div>
+                </div>
+                <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                  {{ branch.code }}
+                </div>
+                <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                  {{ branch.staffCount }}
+                </div>
+                <div class="hidden items-center justify-center gap-1.5 lg:col-span-3 lg:flex">
+                  <app-badge [variant]="branch.isActive ? 'success' : 'default'">
+                    {{ branch.isActive ? 'Open' : 'Closed' }}
+                  </app-badge>
+                  @if (branch.isMain) {
+                    <app-badge variant="info">Main</app-badge>
+                  }
+                </div>
+                @if (canManage()) {
+                  <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
+                    <div class="dropdown dropdown-end" [class.dropdown-top]="last">
+                      <button
+                        type="button"
+                        class="app-btn app-btn-ghost p-1.5"
+                        tabindex="0"
+                        aria-label="Branch actions"
+                      >
+                        <app-icon
+                          name="icon-ellipsis-vertical"
+                          [class]="'h-5 w-5 text-gray-600'"
+                          [fill]="'currentColor'"
+                        />
+                      </button>
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                      >
+                        <li>
+                          <button type="button" class="app-menu-item" (click)="openEdit(branch)">
+                            <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                            Edit
+                          </button>
+                        </li>
+                        @if (branch.isActive && !branch.isMain) {
+                          <li>
+                            <button
+                              type="button"
+                              class="app-menu-item"
+                              (click)="openMakeMain(branch)"
+                            >
+                              <app-icon name="icon-storefront" [class]="'h-4 w-4 text-gray-600'" />
+                              Make Main
+                            </button>
+                          </li>
+                        }
+                        @if (branch.isActive && !branch.isMain) {
+                          <li>
+                            <button
+                              type="button"
+                              class="app-menu-item-danger"
+                              (click)="openClose(branch)"
+                            >
+                              <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                              Close
+                            </button>
+                          </li>
+                        }
+                        @if (!branch.isActive) {
+                          <li>
+                            <button
+                              type="button"
+                              class="app-menu-item-success"
+                              (click)="openReopen(branch)"
+                            >
+                              <app-icon name="icon-refresh" [class]="'text-brand-ink h-4 w-4'" />
+                              Reopen
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+
+        <app-pagination
+          label="Branch pages"
+          [page]="pager.page()"
+          [pageSize]="pager.pageSize()"
+          [totalCount]="pager.totalCount()"
+          (pageChange)="pager.goTo($event)"
+          (pageSizeChange)="pager.setPageSize($event)"
+        />
+      }
+    </app-pull-to-refresh>
+  }
+</div>
+
+@if (dialog() === 'edit') {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-edit"
+    [heading]="selected() ? 'Edit Branch' : 'Add Branch'"
+    [confirmLabel]="selected() ? 'Save' : 'Add Branch'"
+    busyLabel="Saving..."
+    [isBusy]="isSaving()"
+    (confirmed)="saveBranch()"
+    (cancelled)="closeDialog()"
+  >
+    The code is the short prefix on this branch's order numbers.
+    <div dialogExtra class="mt-4 space-y-3 text-left" [formGroup]="form">
+      <div>
+        <label for="branch-name" class="mb-1 block text-xs font-semibold text-gray-500">Name</label>
+        <input
+          id="branch-name"
+          type="text"
+          maxlength="60"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="name"
+        />
+      </div>
+      <div>
+        <label for="branch-code" class="mb-1 block text-xs font-semibold text-gray-500">Code</label>
+        <input
+          id="branch-code"
+          type="text"
+          maxlength="5"
+          class="input input-bordered w-full uppercase outline-transparent"
+          formControlName="code"
+        />
+      </div>
+      <div>
+        <label for="branch-address" class="mb-1 block text-xs font-semibold text-gray-500">
+          Address
+        </label>
+        <input
+          id="branch-address"
+          type="text"
+          maxlength="200"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="address"
+        />
+      </div>
+      <div>
+        <label for="branch-phone" class="mb-1 block text-xs font-semibold text-gray-500">
+          Phone
+        </label>
+        <input
+          id="branch-phone"
+          type="tel"
+          maxlength="30"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="phone"
+        />
+      </div>
+      @if (formError()) {
+        <p class="text-sm text-red-600" role="alert">{{ formError() }}</p>
+      }
+    </div>
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'close' && selected(); as branch) {
+  <app-confirm-dialog
+    variant="danger"
+    icon="icon-delete"
+    heading="Close Branch"
+    confirmLabel="Close Branch"
+    busyLabel="Closing..."
+    [isBusy]="isSaving()"
+    [confirmDisabled]="!closeCheck()?.canClose"
+    (confirmed)="confirmClose()"
+    (cancelled)="closeDialog()"
+  >
+    <span class="font-medium wrap-break-word text-gray-700">{{ branch.name }}</span>
+    stops taking new orders. Its past orders stay in the reports.
+    <div dialogExtra class="mt-4 space-y-3 text-left" data-testid="close-branch-check">
+      @if (closeCheck(); as check) {
+        <ul class="space-y-1 text-sm text-gray-700">
+          <li>{{ check.openOrders }} open orders</li>
+          <li>{{ check.heldOrders }} orders held for review</li>
+          <li>{{ check.openPurchaseOrders }} open purchase orders</li>
+          <li>{{ check.staffAssigned }} staff assigned</li>
+        </ul>
+        @for (blocker of check.blockers; track blocker) {
+          <p class="text-sm text-red-600" role="alert">{{ blocker }}</p>
+        }
+        @if (check.staffWithNoOtherBranch.length > 0 && otherActiveBranches().length > 0) {
+          <div>
+            <label for="branch-move-staff" class="mb-1 block text-xs font-semibold text-gray-500">
+              Move staff with no other branch to
+            </label>
+            <select
+              id="branch-move-staff"
+              class="select select-bordered w-full"
+              data-testid="branch-move-staff"
+              (change)="chooseMoveTarget($event)"
+            >
+              @for (other of otherActiveBranches(); track other.id) {
+                <option [value]="other.id" [selected]="other.id === moveStaffTo()">
+                  {{ other.name }}
+                </option>
+              }
+            </select>
+          </div>
+        }
+      } @else if (!formError()) {
+        <div class="flex justify-center py-2">
+          <span class="loading loading-spinner"></span>
+        </div>
+      }
+      @if (formError()) {
+        <p class="text-sm text-red-600" role="alert">{{ formError() }}</p>
+      }
+    </div>
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'reopen' && selected(); as branch) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-refresh"
+    heading="Reopen Branch"
+    confirmLabel="Reopen"
+    busyLabel="Reopening..."
+    [isBusy]="isSaving()"
+    (confirmed)="confirmReopen()"
+    (cancelled)="closeDialog()"
+  >
+    <span class="font-medium wrap-break-word text-gray-700">{{ branch.name }}</span>
+    will take orders again.
+    @if (formError()) {
+      <p dialogExtra class="mt-3 text-sm text-red-600" role="alert">{{ formError() }}</p>
+    }
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'main' && selected(); as branch) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-storefront"
+    heading="Make Main Branch"
+    confirmLabel="Make Main"
+    busyLabel="Saving..."
+    [isBusy]="isSaving()"
+    (confirmed)="confirmMakeMain()"
+    (cancelled)="closeDialog()"
+  >
+    <span class="font-medium wrap-break-word text-gray-700">{{ branch.name }}</span>
+    becomes the main branch. New staff and customer links start there.
+    @if (formError()) {
+      <p dialogExtra class="mt-3 text-sm text-red-600" role="alert">{{ formError() }}</p>
+    }
+  </app-confirm-dialog>
+}

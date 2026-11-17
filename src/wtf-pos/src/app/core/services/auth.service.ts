@@ -553,6 +553,14 @@ export class AuthService {
     return this.can(Permissions.WasteReasonsManage);
   }
 
+  public canReadBranches(): boolean {
+    return this.can(Permissions.BranchesRead);
+  }
+
+  public canManageBranches(): boolean {
+    return this.can(Permissions.BranchesManage);
+  }
+
   public canReadExpenses(): boolean {
     return this.can(Permissions.ExpensesRead);
   }

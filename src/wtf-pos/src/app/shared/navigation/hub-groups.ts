@@ -180,6 +180,14 @@ export function managementGroups(auth: AuthService): HubGroup[] {
           canShow: () => auth.canReadUsers(),
         },
         {
+          id: 'branches',
+          label: 'Branches',
+          icon: 'icon-storefront',
+          description: 'The shop\'s locations and who works at each.',
+          route: AppRoutes.ManagementBranches,
+          canShow: () => auth.canReadBranches(),
+        },
+        {
           id: 'roles',
           label: 'Roles',
           icon: 'icon-lock',
