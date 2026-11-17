@@ -31,6 +31,7 @@ async function openAndSearch(page: Page, stamp: string): Promise<void> {
     await search.fill(stamp);
     await expect(rows(page).first()).toContainText(stamp, { timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
+  await expect(page.locator('app-pagination')).toContainText(`of ${COUNT}`);
 }
 
 const bar = (page: Page) => page.locator('app-pagination');

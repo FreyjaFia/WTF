@@ -50,3 +50,4 @@ export * from './expense.service';
 export * from './catalog-lookup.service';
 export * from './catalog-setup.service';
 export * from './list-scroll.service';
+export * from './section-nav.service';

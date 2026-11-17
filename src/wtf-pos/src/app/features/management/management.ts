@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { IconComponent } from '@shared/components';
 import { SectionSwitcherComponent } from '@shared/components/section-switcher/section-switcher';
-import { AuthService } from '@core/services';
+import { AuthService, SectionNavService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { managementGroups, visibleGroups } from '@shared/navigation/hub-groups';
 import { filter, map } from 'rxjs';
@@ -17,6 +17,7 @@ import { filter, map } from 'rxjs';
 export class ManagementComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly sectionNav = inject(SectionNavService);
 
   protected readonly hubRoute = AppRoutes.ManagementRoot;
   protected readonly switcherGroups = computed(() =>
@@ -34,6 +35,6 @@ export class ManagementComponent {
   // Only the top screen of a section gets the way back: deeper pages (editors, details, a Setup list) bring their own back arrow.
   protected readonly showBackToHub = computed(() => {
     const path = this.currentUrl().split(/[?#]/)[0].split('/').filter(Boolean);
-    return path.length === 2 && path[0] === 'management';
+    return path.length === 2 && path[0] === 'management' && !this.sectionNav.hidden();
   });
 }

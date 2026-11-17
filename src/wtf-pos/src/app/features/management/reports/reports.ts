@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -12,6 +12,7 @@ import {
   FileDownloadService,
   PlanStore,
   ReportsService,
+  SectionNavService,
   UserService,
 } from '@core/services';
 import {
@@ -112,7 +113,7 @@ interface MonthOption {
   templateUrl: './reports.html',
   host: { class: 'flex-1 min-h-0' },
 })
-export class ReportsComponent implements OnInit {
+export class ReportsComponent implements OnInit, OnDestroy {
   private readonly reportsService = inject(ReportsService);
   private readonly lookups = inject(CatalogLookupService);
   private readonly fileDownload = inject(FileDownloadService);
@@ -122,6 +123,7 @@ export class ReportsComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly plans = inject(PlanStore);
+  private readonly sectionNav = inject(SectionNavService);
 
   protected readonly selectedType = signal<ReportType | null>(null);
   protected readonly rows = signal<ReportRow[]>([]);
@@ -164,12 +166,13 @@ export class ReportsComponent implements OnInit {
     { value: 'Week', label: 'Week' },
     { value: 'Month', label: 'Month' },
   ];
-  protected readonly wasteGroupByOptions: readonly { value: WasteReportGroupBy; label: string }[] = [
-    { value: 'item', label: 'Item' },
-    { value: 'reason', label: 'Reason' },
-    { value: 'staff', label: 'Staff' },
-    { value: 'day', label: 'Day' },
-  ];
+  protected readonly wasteGroupByOptions: readonly { value: WasteReportGroupBy; label: string }[] =
+    [
+      { value: 'item', label: 'Item' },
+      { value: 'reason', label: 'Reason' },
+      { value: 'staff', label: 'Staff' },
+      { value: 'day', label: 'Day' },
+    ];
   protected readonly sourceOptions: readonly { value: ReportSource | null; label: string }[] = [
     { value: null, label: 'All Orders' },
     { value: 0, label: 'Shop Orders' },
@@ -187,7 +190,9 @@ export class ReportsComponent implements OnInit {
     { value: FixedBundleReportTypeFilterId, label: 'Fixed Bundle' },
     { value: MixMatchReportTypeFilterId, label: 'Mix & Match' },
   ]);
-  protected readonly catalog = computed<{ group: ReportGroup; description: string; reports: ReportDefinition[] }[]>(() =>
+  protected readonly catalog = computed<
+    { group: ReportGroup; description: string; reports: ReportDefinition[] }[]
+  >(() =>
     REPORT_GROUPS.map((section) => ({
       ...section,
       reports: REPORT_DEFINITIONS.filter(
@@ -287,6 +292,10 @@ export class ReportsComponent implements OnInit {
     );
   });
 
+  public constructor() {
+    effect(() => this.sectionNav.hidden.set(this.selectedType() !== null));
+  }
+
   public ngOnInit(): void {
     void this.lookups.ensureLoaded();
     this.applyPreset(DatePresets.ThisMonth);
@@ -300,6 +309,10 @@ export class ReportsComponent implements OnInit {
     if (match) {
       this.openReport(match.type);
     }
+  }
+
+  public ngOnDestroy(): void {
+    this.sectionNav.hidden.set(false);
   }
 
   protected openReport(type: ReportType): void {
@@ -433,17 +446,19 @@ export class ReportsComponent implements OnInit {
     }
 
     this.isGeneratingMonthlyWorkbook.set(true);
-    this.reportsService.generateMonthlyWorkbook(filter.year, filter.month, filter.source).subscribe({
-      next: (status) => {
-        this.isGeneratingMonthlyWorkbook.set(false);
-        this.monthlyWorkbookStatus.set(status);
-        this.alertService.success(`Monthly workbook generated: ${status.fileName}`);
-      },
-      error: (error: Error) => {
-        this.isGeneratingMonthlyWorkbook.set(false);
-        this.alertService.error(error.message);
-      },
-    });
+    this.reportsService
+      .generateMonthlyWorkbook(filter.year, filter.month, filter.source)
+      .subscribe({
+        next: (status) => {
+          this.isGeneratingMonthlyWorkbook.set(false);
+          this.monthlyWorkbookStatus.set(status);
+          this.alertService.success(`Monthly workbook generated: ${status.fileName}`);
+        },
+        error: (error: Error) => {
+          this.isGeneratingMonthlyWorkbook.set(false);
+          this.alertService.error(error.message);
+        },
+      });
   }
 
   protected downloadMonthlyWorkbook(): void {
@@ -457,38 +472,42 @@ export class ReportsComponent implements OnInit {
     }
 
     this.isDownloadingMonthlyWorkbook.set(true);
-    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month, filter.source).subscribe({
-      next: (status) => {
-        this.monthlyWorkbookStatus.set(status);
-        if (!status.exists) {
-          this.isDownloadingMonthlyWorkbook.set(false);
-          this.alertService.info('Monthly workbook is not generated yet. Generate it first.');
-          return;
-        }
-
-        this.reportsService.downloadMonthlyWorkbook(filter.year, filter.month, filter.source).subscribe({
-          next: (blob) => {
-            const fileName =
-              status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
-            void this.fileDownload
-              .saveBlob(
-                blob,
-                fileName,
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              )
-              .finally(() => this.isDownloadingMonthlyWorkbook.set(false));
-          },
-          error: (error: Error) => {
+    this.reportsService
+      .getMonthlyWorkbookStatus(filter.year, filter.month, filter.source)
+      .subscribe({
+        next: (status) => {
+          this.monthlyWorkbookStatus.set(status);
+          if (!status.exists) {
             this.isDownloadingMonthlyWorkbook.set(false);
-            this.alertService.error(error.message);
-          },
-        });
-      },
-      error: (error: Error) => {
-        this.isDownloadingMonthlyWorkbook.set(false);
-        this.alertService.error(error.message);
-      },
-    });
+            this.alertService.info('Monthly workbook is not generated yet. Generate it first.');
+            return;
+          }
+
+          this.reportsService
+            .downloadMonthlyWorkbook(filter.year, filter.month, filter.source)
+            .subscribe({
+              next: (blob) => {
+                const fileName =
+                  status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
+                void this.fileDownload
+                  .saveBlob(
+                    blob,
+                    fileName,
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  )
+                  .finally(() => this.isDownloadingMonthlyWorkbook.set(false));
+              },
+              error: (error: Error) => {
+                this.isDownloadingMonthlyWorkbook.set(false);
+                this.alertService.error(error.message);
+              },
+            });
+        },
+        error: (error: Error) => {
+          this.isDownloadingMonthlyWorkbook.set(false);
+          this.alertService.error(error.message);
+        },
+      });
   }
 
   protected canDownloadMonthlyWorkbook(): boolean {
@@ -660,10 +679,12 @@ export class ReportsComponent implements OnInit {
       return;
     }
 
-    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month, filter.source).subscribe({
-      next: (status) => this.monthlyWorkbookStatus.set(status),
-      error: () => this.monthlyWorkbookStatus.set(null),
-    });
+    this.reportsService
+      .getMonthlyWorkbookStatus(filter.year, filter.month, filter.source)
+      .subscribe({
+        next: (status) => this.monthlyWorkbookStatus.set(status),
+        error: () => this.monthlyWorkbookStatus.set(null),
+      });
   }
 
   private getMonthlyWorkbookFilterOrShowError(

@@ -1,5 +1,5 @@
 @if (current(); as kind) {
-  <div class="flex h-full min-h-0 flex-col pt-4 md:pt-0">
+  <div class="flex h-full min-h-0 flex-col">
     <div class="flex min-h-0 flex-1 flex-col">
       @if (catalogSection(); as section) {
         <app-catalog [kind]="section" [backRoute]="setupRoute" />
