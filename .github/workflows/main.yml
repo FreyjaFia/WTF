@@ -105,7 +105,15 @@ jobs:
           cache: npm
           cache-dependency-path: src/wtf-pos/package-lock.json
 
+      - name: Cache app node_modules
+        id: app-modules
+        uses: actions/cache@v4
+        with:
+          path: src/wtf-pos/node_modules
+          key: ${{ runner.os }}-node20-app-modules-${{ hashFiles('src/wtf-pos/package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.app-modules.outputs.cache-hit != 'true'
         working-directory: src/wtf-pos
         run: npm ci
 
@@ -160,15 +168,45 @@ jobs:
             src/wtf-pos/package-lock.json
             src/wtf-e2e/package-lock.json
 
+      - name: Cache app node_modules
+        id: app-modules
+        uses: actions/cache@v4
+        with:
+          path: src/wtf-pos/node_modules
+          key: ${{ runner.os }}-node20-app-modules-${{ hashFiles('src/wtf-pos/package-lock.json') }}
+
       - name: Install app dependencies
+        if: steps.app-modules.outputs.cache-hit != 'true'
         working-directory: src/wtf-pos
         run: npm ci
 
-      - name: Install test dependencies and the browser
+      - name: Cache test node_modules
+        id: e2e-modules
+        uses: actions/cache@v4
+        with:
+          path: src/wtf-e2e/node_modules
+          key: ${{ runner.os }}-node20-e2e-modules-${{ hashFiles('src/wtf-e2e/package-lock.json') }}
+
+      - name: Install test dependencies
+        if: steps.e2e-modules.outputs.cache-hit != 'true'
+        working-directory: src/wtf-e2e
+        run: npm ci
+
+      - name: Cache Playwright browser
+        id: playwright-browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/wtf-e2e/package-lock.json') }}
+
+      - name: Install the browser
         working-directory: src/wtf-e2e
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
+          if [ "${{ steps.playwright-browser.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       # run.sh builds the API, creates a WTF_E2E_* database on the container, starts the API (5290) and the app (4300),
       # runs the tests and drops the database. It waits for the container to accept logins.
