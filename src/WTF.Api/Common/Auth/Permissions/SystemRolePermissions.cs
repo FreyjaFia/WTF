@@ -42,7 +42,8 @@ public static class SystemRolePermissions
             "users.read",
             "users.write",
             "brand.manage",
-            "subscription.billing"
+            "subscription.billing",
+            "branches.read"
         ],
         [AppRoles.AdminViewer] =
         [
@@ -60,7 +61,8 @@ public static class SystemRolePermissions
             "promotions.read",
             "dashboard.read",
             "reports.read",
-            "users.read"
+            "users.read",
+            "branches.read"
         ],
         [AppRoles.Cashier] =
         [

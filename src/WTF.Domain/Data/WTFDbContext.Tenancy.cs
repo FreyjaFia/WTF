@@ -12,7 +12,7 @@ namespace WTF.Domain.Data;
 public partial class WTFDbContext
 {
     private const string OrderNumberCounter = "OrderNumber";
-    private const string BranchFilterName = "Branch";
+    public const string BranchFilterName = "Branch";
     private const string TenantFilterName = "Tenant";
 
     private static readonly MethodInfo ApplyTenantFilterMethod = typeof(WTFDbContext)

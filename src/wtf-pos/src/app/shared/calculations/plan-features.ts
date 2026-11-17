@@ -18,6 +18,7 @@ export const PLAN_FEATURE_KEYS = [
   'workbook',
   'audit',
   'customroles',
+  'branches',
 ] as const;
 
 export type PlanFeatureKey = (typeof PLAN_FEATURE_KEYS)[number];
@@ -33,6 +34,7 @@ export const PlanFeatureCatalog: readonly PlanFeatureDefinition[] = [
   { key: 'workbook', label: 'Monthly workbook', description: 'The monthly Excel report workbook.', group: 'Insight', needs: [] },
   { key: 'audit', label: 'Audit log', description: 'See who changed what.', group: 'Control', needs: [] },
   { key: 'customroles', label: 'Custom roles', description: 'Create your own roles and choose what each can do.', group: 'Control', needs: [] },
+  { key: 'branches', label: 'Branches', description: 'Run several locations, each with its own orders, stock and staff.', group: 'Control', needs: [] },
 ];
 
 export function isKnownFeature(key: string): boolean {

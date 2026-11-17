@@ -15,9 +15,9 @@ public static class PlatformEndpoints
 
     public record ImpersonateRequest(string Reason, bool AllowWrites);
 
-    public record CreatePlanRequest(string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive);
+    public record CreatePlanRequest(string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive, int? MaxBranches = null);
 
-    public record UpdatePlanRequest(string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive);
+    public record UpdatePlanRequest(string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive, int? MaxBranches = null);
 
     public record SetSubscriptionRequest(int PlanId, DateTime? PeriodEnd, int GraceDays, decimal DiscountPercent, string? Notes);
 
@@ -80,10 +80,10 @@ public static class PlatformEndpoints
         group.MapGet("/plan-features", async (ISender sender) => Results.Ok(await sender.Send(new GetPlanFeaturesQuery())));
 
         group.MapPost("/plans", async ([FromBody] CreatePlanRequest request, ISender sender) =>
-            Results.Ok(await sender.Send(new CreatePlanCommand(request.Code, request.Name, request.MonthlyPrice, request.Features, request.MaxUsers, request.IsActive))));
+            Results.Ok(await sender.Send(new CreatePlanCommand(request.Code, request.Name, request.MonthlyPrice, request.Features, request.MaxUsers, request.IsActive, request.MaxBranches))));
 
         group.MapPut("/plans/{id:int}", async (int id, [FromBody] UpdatePlanRequest request, ISender sender) =>
-            Results.Ok(await sender.Send(new UpdatePlanCommand(id, request.Name, request.MonthlyPrice, request.Features, request.MaxUsers, request.IsActive))));
+            Results.Ok(await sender.Send(new UpdatePlanCommand(id, request.Name, request.MonthlyPrice, request.Features, request.MaxUsers, request.IsActive, request.MaxBranches))));
 
         group.MapGet("/tenants/{id:guid}/subscription", async (Guid id, ISender sender) =>
             Results.Ok(await sender.Send(new GetTenantSubscriptionQuery(id))));

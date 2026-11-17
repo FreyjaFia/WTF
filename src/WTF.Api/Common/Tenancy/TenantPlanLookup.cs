@@ -13,10 +13,10 @@ public static class TenantPlanLookup
             .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(s => s.TenantId == tenantId)
-            .Select(s => new { s.Plan.Name, s.Plan.Features, s.Plan.MaxUsers })
+            .Select(s => new { s.Plan.Name, s.Plan.Features, s.Plan.MaxUsers, s.Plan.MaxBranches })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return plan is null ? new TenantPlan(string.Empty, PlanFeatures.All()) : new TenantPlan(plan.Name, PlanFeatures.Parse(plan.Features), plan.MaxUsers);
+        return plan is null ? new TenantPlan(string.Empty, PlanFeatures.All()) : new TenantPlan(plan.Name, PlanFeatures.Parse(plan.Features), plan.MaxUsers, plan.MaxBranches);
     }
 
     // Straight from the database, for jobs and tests. A request with no shop (tests, platform area) is never blocked.

@@ -18,7 +18,8 @@ public static class PlanFeatureCatalog
         [PlanFeatures.Chat] = new("Order chat", "Chat with customers about their orders.", "Customer ordering"),
         [PlanFeatures.Workbook] = new("Monthly workbook", "The monthly Excel report workbook.", "Insight"),
         [PlanFeatures.Audit] = new("Audit log", "See who changed what.", "Control"),
-        [PlanFeatures.CustomRoles] = new("Custom roles", "Create your own roles and choose what each can do.", "Control")
+        [PlanFeatures.CustomRoles] = new("Custom roles", "Create your own roles and choose what each can do.", "Control"),
+        [PlanFeatures.Branches] = new("Branches", "Run several locations, each with its own orders, stock and staff.", "Control")
     };
 
     public static IReadOnlyList<PlanFeatureEntry> Entries { get; } =

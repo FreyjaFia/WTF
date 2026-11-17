@@ -13,6 +13,9 @@ public partial class PlanFeatureDriftTests
 {
     private static readonly string[] LegacyWords = ["pos", "orders", "reports", "offline"];
 
+    // Added to the catalog after 20261130_plan_feature_catalog.sql was written; that script is never edited, so a later script adds them.
+    private static readonly string[] AddedLater = [PlanFeatures.Branches];
+
     private static string Script() =>
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Sql", "20261130_plan_feature_catalog.sql"));
 
@@ -48,7 +51,7 @@ public partial class PlanFeatureDriftTests
 
         var listed = Words(match.Groups["words"].Value.Replace("--", " "));
 
-        listed.ShouldBe(PlanFeatures.Gateable);
+        listed.ShouldBe(PlanFeatures.Gateable.Except(AddedLater));
     }
 
     [Fact]
@@ -57,7 +60,7 @@ public partial class PlanFeatureDriftTests
         var match = BusinessInsert().Match(Script());
         match.Success.ShouldBeTrue();
 
-        Words(match.Groups["features"].Value).Order().ShouldBe(PlanFeatures.Gateable.Order());
+        Words(match.Groups["features"].Value).Order().ShouldBe(PlanFeatures.Gateable.Except(AddedLater).Order());
     }
 
     [Fact]

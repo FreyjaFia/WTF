@@ -82,5 +82,11 @@ public enum AuditAction
     UserRoleChanged,
     SeniorPwdDiscountApplied,
     SeniorPwdDiscountRemoved,
-    SeniorPwdIdsExported
+    SeniorPwdIdsExported,
+    BranchCreated,
+    BranchUpdated,
+    BranchClosed,
+    BranchReopened,
+    BranchMainChanged,
+    BranchScopeChanged
 }

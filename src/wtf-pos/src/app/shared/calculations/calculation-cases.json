@@ -1860,7 +1860,8 @@
     { "key": "chat", "label": "Order chat", "description": "Chat with customers about their orders.", "group": "Customer ordering", "needs": ["orderlinks"] },
     { "key": "workbook", "label": "Monthly workbook", "description": "The monthly Excel report workbook.", "group": "Insight", "needs": [] },
     { "key": "audit", "label": "Audit log", "description": "See who changed what.", "group": "Control", "needs": [] },
-    { "key": "customroles", "label": "Custom roles", "description": "Create your own roles and choose what each can do.", "group": "Control", "needs": [] }
+    { "key": "customroles", "label": "Custom roles", "description": "Create your own roles and choose what each can do.", "group": "Control", "needs": [] },
+    { "key": "branches", "label": "Branches", "description": "Run several locations, each with its own orders, stock and staff.", "group": "Control", "needs": [] }
   ],
   "planFeatures": [
     { "name": "old words are ignored", "text": "pos,orders,reports,offline", "expected": [], "unknown": ["pos", "orders", "reports", "offline"] },

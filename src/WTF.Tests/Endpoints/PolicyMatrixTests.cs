@@ -25,6 +25,8 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.PlatformAdmin] = [AppRoles.PlatformAdmin],
         [AppPolicies.SubscriptionBilling] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.BrandManage] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.BranchesRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.BranchesManage] = [AppRoles.Owner],
         [AppPolicies.SchemaScriptHistoryRead] = [AppRoles.Owner],
         [AppPolicies.OrdersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
         [AppPolicies.OrdersWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],

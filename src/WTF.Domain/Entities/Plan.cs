@@ -21,6 +21,8 @@ public partial class Plan
 
     public int SortOrder { get; set; }
 
+    public int? MaxBranches { get; set; }
+
     public virtual ICollection<TenantInvoice> TenantInvoices { get; set; } = new List<TenantInvoice>();
 
     public virtual ICollection<TenantSubscription> TenantSubscriptions { get; set; } = new List<TenantSubscription>();
