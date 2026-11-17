@@ -311,6 +311,194 @@ become an append-only ledger like the ones above before anything earns or spends
 promotions, with a ledger entry per redemption and a refund that returns the stamp). It can reuse this plan's ledger service
 and idempotency rules. Open design points: which products earn a stamp, what the free reward is, and expiry.
 
+### Detailed build steps per phase (task list for the build threads)
+
+**Phase 1 - Foundation**
+1. Script `tools/sql/<date>_add_stored_value.sql`: tables, indexes (unique `IdempotencyKey` per tenant; unique `CodeHash` per tenant;
+   index on `GiftCardId` + `CreatedAt`; index on `CustomerId` + `CreatedAt`), check constraints (`Balance >= 0`, `AvailableBalance >= 0`),
+   `PaymentMethods` rows 3 to 4 (and 5 Promo card), `TenantId` filters, settings row, tenant lists (backfill and enforce scripts are
+   not needed for new tables; add them to the platform export and delete lists). Run twice on a throwaway database.
+2. `tools\dbsync.bat` on the database used; say which; remove only true duplicate scaffold classes.
+3. `WTF.Calculations/StoredValue/`: `TenderSplit`, `StoredValueRules`, `CardCode` (alphabet and check-digit rules, no randomness
+   inside), plus `shared/calculations/stored-value-rules.ts` and cases in `calculation-cases.json`.
+4. API services: `ILedgerService`, `ITenderService`, `IGiftCardCodeService` (generate with `RandomNumberGenerator`, HMAC hash with
+   `StoredValue:CodeHashKey` from secrets, never in the repo), `IStoredValueLookupGuard` (rate limit and lockout).
+5. Settings endpoints, permission keys, `PlanFeatures.StoredValue`, audit enum values, `RouteTableTests` and `PolicyMatrixTests`.
+6. Order create and refund paths call `ITenderService`; existing orders without tender lines still work (read `PaymentMethodId`).
+7. Staging seed and reset keep list.
+
+**Phase 2 - Store credit**
+1. Customer details credit card and history; customer picker chip.
+2. Add credit dialog (amount, cash or GCash, optional note), adjust dialog (signed amount, required reason), both audited.
+3. Refund dialog gets "Refund as store credit" (only with a customer).
+4. Pay panel credit row, preview math from the shared rules, server enforcement.
+5. Expiry job (off by default), integrity job for credit.
+6. Reports: credit balances, credit movement; Daily Close lines.
+
+**Phase 3 - Gift cards**
+1. Sell dialog (presets, custom amount, min and max, payment, optional customer), "Card issued" screen with Print and Reprint.
+2. Code lookup endpoint with generic answers, rate limits and lockout; scanner component (camera, manual entry fallback).
+3. Pay panel gift card row; multiple cards on one order (up to 3), each a tender line.
+4. Refund routing, reissue, void-sold-card, move balance to credit, expiry setting and job.
+5. Promo cards: single and batch generation, campaign name, monthly cap, CSV of codes shown once, Promo cards report.
+6. Gift cards list and details pages with filters drawer; settings page.
+
+**Phase 4 - Reports**: liability, gift cards, promo cards, credit, Payments split, Daily Close lines, workbook sheets, dashboard tile,
+report switch "Include gift card and credit sales in totals".
+
+**Phase 5 - Customer link**: code box, holds, approval and release, balance page, expiry of holds, stray-hold job.
+
+### Test scenarios
+
+Each scenario names its setup (S), action (A) and expected result (E). Amounts are pesos. "Real SQL" means the existing real-SQL test
+suite; "Shared" means a case in `calculation-cases.json` that both the C# and Angular runs load; "UI" means a Playwright check at
+375, 820 and 1440 on a throwaway database.
+
+**A. Calculations (Shared)**
+1. Split, one card covers all: total 180, card 200. E: card 180, cash 0, card left 20.
+2. Split, card short: total 180, card 100. E: card 100, cash or GCash 80.
+3. Split, credit then card then cash: total 500, credit 120, card 200. E: credit 120, card 200, cash 180 (fixed order: credit, cards by id, then cash).
+4. Tip never covered: total 180, tip 20, card 500. E: card 180, tip 20 paid in cash or GCash, card left 320.
+5. Two cards: total 300, card A 100, card B 150. E: A 100, B 150, cash 50.
+6. Senior/PWD first: item 100, VAT-registered. E: tender is applied to 71.43, not 100.
+7. Promotion first: bundle price 199 on a 250 list. E: tender is applied to 199.
+8. Rounding: total 89.29 and credit 89.29. E: exactly 0 left, no cent drift.
+9. Preset and custom amount limits: 99.99 refused, 100 accepted, 5,000 accepted, 5,000.01 refused, 0 and negative refused.
+10. Code alphabet and format: never contains 0, O, 1, I or L; always 16 characters; typed lower case or with spaces or dashes is accepted after normalizing.
+11. Expiry date: sold at 23:30 on 31 Jan with 6 months, shop time zone Asia/Manila. E: valid through the end of 31 Jul (Asia/Manila), UTC stored.
+12. Zero-balance state: balance reaches exactly 0 gives `Used`; a refund return makes it `Active` again.
+
+**B. Gift card selling**
+1. Sell 500 for cash. E: card Active, balance 500, `StoredValueSales` row, ledger Issue 500, audit `GiftCardSold`, Daily Close "Gift cards sold 500", drawer cash expected +500, no order, no change in any sales report.
+2. Sell 500 for GCash. E: same, tender GCash; drawer cash unchanged.
+3. Sell with a customer attached. E: card shows owner; the customer's details list the card by last four.
+4. Min and max. E: 99 and 5,001 refused with a clear message; settings can change limits; a change applies to new sales only.
+5. Plan gating: Starter shop. E: menu hidden, route shows "Not in your plan", API 403 `not_in_plan`.
+6. Cashier sells; AdminViewer cannot. E: 403 for AdminViewer.
+7. Sold offline. E: the Sell button is disabled with "Needs connection"; nothing queued.
+8. Double click on Sell. E: one card only (idempotency key).
+9. Code shown once: after leaving the Card issued screen, no endpoint returns the code (API test: response never contains the code or hash), the database holds only the hash and last four, logs hold neither.
+10. Reprint on the issued screen works until closed; after closing, Reprint is gone.
+11. Receipt: contains the code, QR, value, expiry if any, branch and cashier; summary image likewise.
+
+**C. Gift card redemption at the counter**
+1. Full use: card 500, order 180. E: card 320, order paid, tender line Gift card 180, order is a normal sale, sales reports show 180 gross.
+2. Partial then rest cash: card 100, order 180. E: card 0 and Used, cash or GCash 80, change rules unchanged.
+3. Typed with spaces and lower case. E: found.
+4. Scanned QR. E: found; scanner denied permission falls back to typing.
+5. Wrong code. E: generic "Code not found"; audit `GiftCardLookupFailed`; counter increments.
+6. Rate limit and lockout: 5 wrong in a minute by one cashier. E: further lookups by that cashier refused for 15 minutes with "Too many tries"; Owner and Admin get a notification; another cashier is not locked; a correct code is also refused during the lockout.
+7. Voided card, Used card, Expired card, Inactive card. E: each refused with its own clear (but non-leaky) message after a valid lookup; the balance is shown only for Active cards.
+8. Two cards on one order. E: both applied in id order; each ledger row has the order id.
+9. Same card twice on one order. E: refused (one line per card).
+10. Tip with a card. E: refused; tip stays cash or GCash.
+11. Redeem across branches. E: allowed; the ledger stores sale branch and redeem branch.
+12. Another shop's code. E: answers exactly like a wrong code, no leak (cross-tenant test).
+13. Offline. E: gift card option disabled with "Needs connection"; the cashier takes cash; an offline order never contains a gift-card tender (the queue rejects it client side, the sync rejects it server side if forced).
+14. Connection drops after tapping Pay. E: retry returns the saved order; the card is charged once; if the first request never reached the server, the retry creates the order once.
+15. Order with a card tender then order override. E: blocked when total or tender changes; note-only edit allowed.
+
+**D. Double-spend and concurrency (Real SQL)**
+1. Two registers spend the same card (balance 100) at the same time with 80 each. E: one succeeds, one refused naming the card and its new balance; balance 20; no partial order exists.
+2. 20 parallel spends of 10 on a card with 100. E: exactly 10 succeed, balance 0, ledger sum equals cached balance.
+3. A spend and a refund return at the same time. E: both apply, balance correct.
+4. Same request sent twice (same idempotency key). E: one order, one ledger row.
+5. Deadlock check: order A uses credit then card 1 then card 2; order B uses card 2 then card 1 in the cart. E: both lock in the fixed order; no deadlock exception; one may wait.
+6. Check constraint backstop: a test handler that skips the balance check still cannot make the balance negative (the database refuses).
+7. Cached balance after a random sequence of 500 operations equals the ledger sum; the integrity job reports no mismatch; a deliberately edited cached balance is reported as `BalanceMismatchFound`, and nothing is silently fixed.
+8. Hold race (Phase 5): two link orders each holding 80 of a 100 card. E: the second is refused (available balance 20).
+
+**E. Refunds and cancellations**
+1. Refund a completed order paid fully with a card. E: status Refunded, note required, card balance back to what it was, ledger `ReturnSpend`, audit.
+2. Refund an order paid with card 100 + cash 80. E: card gets 100 back; the cash part follows the existing cash refund rules.
+3. Refund when the card has expired meanwhile. E: allowed; balance returns; the card stays Expired but shows the returned balance and is usable only through an Admin extension or reissue (document the choice: returned money is kept on an expired card and the Admin can reissue it).
+4. Refund when the card was voided or reissued meanwhile. E: the return goes to the reissued card.
+5. Cancel a pending order that has a card tender (created with a hold, Phase 5, or counter orders not yet completed). E: hold released or spend returned; no balance leak.
+6. Refund-as-credit on a cash order. E: credit increases by the order total, ledger `RefundToCredit`, no cash leaves the drawer.
+7. Refund an order twice (double click or two admins). E: the second is refused ("already voided").
+8. Refund an order paid with credit, customer later deactivated. E: credit returns; the customer record stays readable.
+9. "Refund to cash instead" by an Admin with a reason. E: allowed for card and credit; audit includes the reason; Cashier cannot.
+10. Refund of the sold card itself (customer changes their mind), unused. E: Admin only, card Void, cash or GCash returned, Daily Close shows a negative "Gift cards sold" correction line; used card refused.
+11. Part-used card sold-refund attempt. E: refused with "Card has been used".
+
+**F. Lost card, reissue and support**
+1. Admin finds a card by last four, by receipt number, by customer name. E: found; two cards with the same last four show both with sale date and amount.
+2. Reissue. E: old card Void, new card Active with the same balance, one transaction, two audit entries, reason required, the new code shown once; the old code now answers "not valid".
+3. Reissue by a Cashier. E: 403.
+4. Reissue a Used card (balance 0). E: refused.
+5. Reissue while an order is mid-checkout using the old card. E: the checkout fails with "Card changed" and nothing is half written.
+
+**G. Store credit**
+1. Top-up 300 cash. E: credit 300, `StoredValueSales`, Daily Close "Credit sold 300", not a sale.
+2. Walk-in cannot receive credit. E: refund-as-credit option hidden; API refuses without a customer.
+3. Spend 120 of 300 on a 120 order. E: credit 180.
+4. Spend with a tip. E: tip paid in cash or GCash.
+5. Credit and card together. E: order of use credit, card, cash.
+6. Adjust by an Admin (+50 with reason; -500 when balance is 300). E: first works and is audited; second refused (cannot go negative).
+7. Cashier adjust. E: 403.
+8. Daily adjustment cap. E: after the cap, a further adjustment by that Admin is refused until tomorrow (Owner not capped).
+9. Credit shared across branches. E: top-up at Makati, spend at Cebu, ledger rows carry both branches.
+10. Merge or delete customer. E: a customer with credit cannot be deleted; the dialog says so; merging is out of scope.
+11. Offline. E: credit option disabled with "Needs connection".
+12. Expiry on (test config): credit untouched for N months. E: nightly job writes `Expire`, Admin notification a week before.
+
+**H. Promo cards**
+1. Admin generates one card of 100 with campaign "Opening week". E: card Active, `Source = Promo`, no `StoredValueSales`, Daily Close unchanged, audit.
+2. Batch of 50 x 100. E: 50 cards, one-time download of codes, second download impossible, batch audited.
+3. Monthly cap of 5,000 per Admin. E: the batch that would exceed is refused with the remaining allowance.
+4. Cashier tries to generate. E: 403.
+5. Spend a promo card on a 180 order. E: normal sale 180, tender line "Promo card" 100, Promo cards report shows issued, spent, outstanding.
+6. Expired promo card. E: refused; the Promo report shows it as expired; no income booked.
+7. Reissue and void of a promo card. E: same as a sold card, `Source` stays Promo.
+
+**I. Customer link (Phase 5)**
+1. Valid card at link checkout. E: only the last four and the amount to use are shown; the order is PendingApproval with a hold; the available balance drops, the balance does not.
+2. Staff approve. E: hold becomes spend; order Pending or Completed as before; receipt shows the card.
+3. Staff reject or customer cancels. E: hold released.
+4. Shop never answers. E: when the order expires or is auto-cancelled, the hold is released; the stray-hold job releases holds with no live order.
+5. Wrong codes on the link. E: generic answer, per-link and per-address and per-card rate limits, lockout, Owner notification.
+6. Card of another shop on this shop's link. E: same as wrong.
+7. Revoked or expired link. E: 404 as today; no card lookup.
+8. Balance page. E: shows balance, expiry and dates and amounts of uses; never names, customers, branches or order numbers.
+9. Held card used at the counter in the meantime. E: counter sees only the available balance.
+10. Lapsed subscription. E: link answers 503 as today; no lookups.
+
+**J. Reports and Daily Close**
+Worked day (use for the hand-worked check): Makati opens with a drawer of 1,000. Sales: 3 orders 180 + 250 + 120 = 550 (180 cash, 250 gift card, 120 GCash). One gift card sold for 500 cash. One credit top-up 300 GCash. The 180 cash order is then refunded in cash.
+1. Sales report. E: gross 550, refunded 180, net 370 (the card sale and top-up are not in it); with the switch on, totals show 1,170 (370 + 500 + 300) with the two extra lines labelled.
+2. Payments report. E: cash 180 (refunded 180), GCash 120, gift card 250; stored-value tender is 250 of 550 gross, 45.5% (the card sale and the GCash top-up appear only in the stored-value lines).
+3. Daily Close. E: gift cards sold 500, credit sold 300, tender lines per method, cash expected = 1,000 + 180 (cash sale) + 500 (card sold for cash) - 180 (cash refund) = 1,500; the GCash top-up and GCash order are not in the drawer. Check by hand against the screen.
+4. Liability report. E: opening + issued - spent - expired - voided = closing, per branch and for all; the sum of the card list's balances equals the closing figure.
+5. Totals row equals the sum of the rows on screen, Excel, PDF and CSV for every new table.
+6. Promo cards report. E: the campaign row equals the batch.
+7. Gift cards list never shows or exports a full code; Cashier cannot export; filters drawer and sorting work; columns collapse to cards below 1280.
+8. Dashboard tile appears only when the feature is in the plan; links to the liability report.
+
+**K. Security and tenancy**
+1. Every new route is in `RouteTableTests` and needs authorization; policy matrix covers Owner, Admin, Cashier, AdminViewer, StockManager, ItemManager and a custom role.
+2. A user from shop A cannot read, list or spend shop B's cards, credit or ledgers (ids guessed from the URL).
+3. Ids from the request body for tenant, branch or customer are ignored.
+4. A branch-restricted user cannot see another branch's stored-value activity in reports.
+5. Logs and audit text never contain a full code, a hash, a full phone number or a balance (log scan test with a sample run).
+6. "Sign in as" (platform, read-only) can view but not sell, spend or adjust; the attempt is audited.
+7. Tenant export contains ledgers with hashes only; tenant delete removes every new table.
+8. Downgrade to Starter: balances stay; spending existing cards and credit still works; selling and top-up and promo generation are refused; the banner shows.
+9. Suspended or lapsed shop: writes are refused as today (402); offline sync is not affected because it never carries stored-value tenders.
+10. Brute force from many IPs against one shop's lookup: the per-shop limit holds even when the per-user limit is not hit.
+
+**L. UI (375, 820, 1440; default and cafe styles; 200 ms ease-out)**
+1. Pay panel: bottom sheet on 375, side panel from 820; the amount steppers, balance chips and the "Still to pay" line never overflow; keyboard does not cover the Pay button on 375.
+2. Gift card entry: scanner opens, denies gracefully, manual entry works; wrong code message does not move the layout.
+3. Sell dialog: presets, custom amount, validation text, issued screen with QR; print preview.
+4. Lists: filters drawer, sortable headers, cards under 1280; no horizontal scroll; empty states.
+5. Offline banner: stored-value rows disabled with the reason; the rest of checkout works.
+6. Edit pages ask "Discard Changes?" on back; settings validate min below max and presets within limits.
+7. Not-in-plan page and hidden menu items for a Starter shop.
+8. Accessibility: focus visible on all new controls, labels on the code field, announce lockout and errors.
+
+**M. Staging demo data check**
+After a staging deploy: the seeded shop shows three customers with credit and history, three cards (untouched, part-spent, used), one promo campaign with a batch, orders paid by card and split tender, a refund returned to a card, and the liability report numbers equal the hand-worked ones. Running the seed twice leaves the same totals.
+
 ### Open questions for Pogi
 
 1. Gift cards: code only and presets plus custom amount (decided). Suggested limits, editable in settings: minimum ₱100, maximum ₱5,000 per card; presets ₱200, ₱500, ₱1,000. Change them?
