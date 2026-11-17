@@ -1,5 +1,5 @@
 @if (branchService.isMultiBranch()) {
-  <div class="dropdown dropdown-end z-35" data-testid="branch-switcher">
+  <div class="dropdown z-35" [class.dropdown-end]="align() === 'end'" data-testid="branch-switcher">
     <button
       type="button"
       tabindex="0"
@@ -8,11 +8,13 @@
       data-testid="branch-switcher-button"
     >
       <app-icon name="icon-storefront" [class]="'h-4.5 w-4.5 shrink-0 text-gray-500'" />
-      <span class="truncate">{{ branchService.activeLabel() }}</span>
+      @if (!compact()) {
+        <span class="truncate">{{ branchService.activeLabel() }}</span>
+      }
     </button>
     <ul
       tabindex="0"
-      class="dropdown-content menu bg-base-100 rounded-box z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] p-2 shadow"
+      class="dropdown-content menu bg-base-100 rounded-box z-50 mt-2 w-64 p-2 shadow max-sm:fixed max-sm:inset-x-4 max-sm:top-16 max-sm:w-auto"
       data-testid="branch-switcher-menu"
     >
       @if (branchService.canSeeAll()) {

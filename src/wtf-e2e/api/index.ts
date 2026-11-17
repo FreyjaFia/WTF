@@ -1,5 +1,6 @@
 import { APIRequestContext } from '@playwright/test';
 import { ApiClient } from '@api/client';
+import { BranchesApi } from '@api/branches';
 import { CustomersApi } from '@api/customers';
 import { ItemsApi } from '@api/items';
 import { OrdersApi } from '@api/orders';
@@ -11,6 +12,7 @@ import { WasteApi } from '@api/waste';
 
 export class Api {
   public readonly client: ApiClient;
+  public readonly branches: BranchesApi;
   public readonly items: ItemsApi;
   public readonly products: ProductsApi;
   public readonly orders: OrdersApi;
@@ -22,6 +24,7 @@ export class Api {
 
   public constructor(request: APIRequestContext) {
     this.client = new ApiClient(request);
+    this.branches = new BranchesApi(this.client);
     this.items = new ItemsApi(this.client);
     this.products = new ProductsApi(this.client);
     this.orders = new OrdersApi(this.client);

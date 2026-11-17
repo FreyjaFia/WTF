@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { BranchService } from '@core/services/branch.service';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { ALL_BRANCHES } from '@shared/models';
@@ -9,6 +9,9 @@ import { ALL_BRANCHES } from '@shared/models';
   templateUrl: './branch-switcher.html',
 })
 export class BranchSwitcherComponent {
+  public readonly align = input<'start' | 'end'>('end');
+  public readonly compact = input(false);
+
   protected readonly branchService = inject(BranchService);
   protected readonly allBranches = ALL_BRANCHES;
 

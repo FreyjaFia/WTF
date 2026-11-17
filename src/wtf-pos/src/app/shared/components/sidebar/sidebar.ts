@@ -9,9 +9,11 @@ import {
   ImageCacheService,
   StockAttentionService,
   BrandService,
+  BranchService,
   followStockPermission,
 } from '@core/services';
 import { appVersion } from '@environments/version';
+import { BranchSwitcherComponent } from '@shared/components/branch-switcher/branch-switcher';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { IconComponent } from '@shared/components/icons/icon/icon';
@@ -29,6 +31,7 @@ import { filter, map } from 'rxjs';
     RouterLink,
     RouterLinkActive,
     AvatarComponent,
+    BranchSwitcherComponent,
     IconComponent,
     ConfirmDialogComponent,
     NotificationBellComponent,
@@ -42,6 +45,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   protected readonly authService = inject(AuthService);
   protected readonly brand = inject(BrandService);
+  protected readonly branchService = inject(BranchService);
   protected readonly router = inject(Router);
   protected readonly routes = AppRoutes;
   private readonly currentUrl = toSignal(

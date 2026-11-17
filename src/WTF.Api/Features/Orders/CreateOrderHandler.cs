@@ -649,6 +649,8 @@ public class CreateOrderHandler(
             }
         }
 
+        await db.Entry(order).Reference(o => o.Branch).LoadAsync(cancellationToken);
+
         return OrderMapping.ToDto(
             order,
             items,
