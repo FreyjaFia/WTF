@@ -124,11 +124,6 @@
   letter-spacing: -0.005em;
 }
 
-[data-theme='cafe'] .app-content h1 {
-  font-size: 2rem;
-  line-height: 1.1;
-}
-
 /* Sidebar: a menu card. Serif section names, dashed rules, items that stamp in when active. */
 [data-theme='cafe'] .app-sidebar {
   background-color: #fbf5e9;
@@ -377,6 +372,12 @@
 /* Sticky page and column headers were white strips on the cream canvas; give them the canvas color
    (opaque, so rows scrolling underneath stay hidden). */
 [data-theme='cafe'] .app-content .sticky[class*='top-0'][class*='bg-surface'] {
+  background-color: var(--shell-bg);
+}
+
+/* The docked pagination bar was a lighter box on the cream canvas; give its strip the canvas color
+   (opaque, so rows scrolling underneath stay hidden behind its rounded corners). */
+[data-theme='cafe'] .app-content app-pagination {
   background-color: var(--shell-bg);
 }
 

@@ -362,3 +362,10 @@ body {
 .app-drawer-panel.translate-x-full {
   box-shadow: none;
 }
+
+/* With the bottom dock showing, a docked pagination bar sits right above it instead of 16px higher. */
+@media (max-width: 639px) {
+  .app-content:has(app-pagination) {
+    padding-bottom: 0;
+  }
+}
