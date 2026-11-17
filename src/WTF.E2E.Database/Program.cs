@@ -134,6 +134,17 @@ static async Task SeedDefaultShopAsync(WTFDbContext db)
         GraceDays = 7,
         UpdatedAt = now,
     });
+    db.Branches.Add(new Branch
+    {
+        Id = E2eIds.MainBranch,
+        TenantId = TenantDefaults.DefaultTenantId,
+        Name = "Main",
+        Code = "MAI",
+        TimeZone = "Asia/Manila",
+        IsActive = true,
+        IsMain = true,
+        CreatedAt = now,
+    });
     db.TenantSettings.Add(new TenantSetting
     {
         TenantId = TenantDefaults.DefaultTenantId,
@@ -164,11 +175,21 @@ static void SeedUsers(WTFDbContext db, string password)
 
     foreach (var (username, role) in accounts)
     {
-        db.Users.Add(NewUser(username, username, "E2E", hash, role, active: true));
+        var user = NewUser(username, username, "E2E", hash, role, active: true);
+        var single = role is UserRoleEnum.Cashier or UserRoleEnum.StockManager;
+        user.BranchScope = (byte)(single ? 1 : 0);
+        db.Users.Add(user);
+        if (single)
+        {
+            db.UserBranches.Add(new UserBranch { UserId = user.Id, BranchId = E2eIds.MainBranch, CreatedAt = DateTime.UtcNow });
+        }
     }
 
     // Owns orders placed through a customer link. Inactive, and "!" is not a valid hash, so nobody can sign in as it.
-    db.Users.Add(NewUser("customer-link", "Customer", "Link", "!", UserRoleEnum.Cashier, active: false));
+    var linkUser = NewUser("customer-link", "Customer", "Link", "!", UserRoleEnum.Cashier, active: false);
+    linkUser.BranchScope = 1;
+    db.Users.Add(linkUser);
+    db.UserBranches.Add(new UserBranch { UserId = linkUser.Id, BranchId = E2eIds.MainBranch, CreatedAt = DateTime.UtcNow });
 }
 
 static User NewUser(string username, string firstName, string lastName, string hash, UserRoleEnum role, bool active)
@@ -186,6 +207,7 @@ static User NewUser(string username, string firstName, string lastName, string h
         CreatedAt = DateTime.UtcNow,
         CreatedBy = id,
         TenantId = TenantDefaults.DefaultTenantId,
+        DefaultBranchId = E2eIds.MainBranch,
     };
 }
 
@@ -305,4 +327,9 @@ internal sealed class ThrowawayContext(DbContextOptions<WTFDbContext> options) :
     {
         // Intentionally empty: the provider and connection are already configured through the options.
     }
+}
+
+internal static class E2eIds
+{
+    public static readonly Guid MainBranch = new("00000000-0000-0000-0000-0000000000b1");
 }

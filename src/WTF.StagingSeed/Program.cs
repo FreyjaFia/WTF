@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Branches;
+using WTF.Api.Features.Branches.Enums;
 using WTF.Api.Features.Branding;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Inventory.Counts;
@@ -100,6 +102,13 @@ async Task SeedMainShopAsync()
         }
     }
 
+    await EnsureBranchesAsync(db, shopId, new (string Name, string Code, string? Address, string? Phone, bool IsMain)[]
+    {
+        ("Makati", "MKT", "1 Coffee Street, Makati City", "02 8123 4567", true),
+        ("BGC", "BGC", "26th Street corner 7th Avenue, Bonifacio Global City, Taguig", "02 8555 0192", false),
+        ("Quezon City", "QC", "45 Tomas Morato Avenue, Quezon City", "02 8921 7733", false),
+    });
+
     // Accounts: one per role, same password
     var accounts = new (string Username, string First, string Last, UserRoleEnum Role)[]
     {
@@ -124,6 +133,7 @@ async Task SeedMainShopAsync()
     }
 
     await db.SaveChangesAsync();
+    await AssignBranchesAsync(db, shopId);
 
     var owner = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Username == OwnerUsername);
     var cashier = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Username == "cashier") ?? owner;
@@ -764,12 +774,15 @@ async Task SeedStarterShopAsync()
 
     await BrandDefaults.SaveAsync(db, starterTenantId, BrandDefaults.For("Starter Demo Cafe"), CancellationToken.None);
 
+    await EnsureBranchesAsync(db, starterTenantId, [("Main", BranchCodes.FromShopName("Starter Demo Cafe"), "7 Bonifacio Street, Pasig City", "02 8777 1450", true)]);
+
     var ownerUser = NewUser("starterowner", "Mark", "Tan", UserRoleEnum.Owner, starterTenantId);
     var linkUser = NewUser("starter-link", "Customer", "Link", UserRoleEnum.Cashier, starterTenantId);
     linkUser.IsActive = false;
     db.Users.Add(ownerUser);
     db.Users.Add(linkUser);
     await db.SaveChangesAsync();
+    await AssignBranchesAsync(db, starterTenantId);
 
     await using (var transaction = await db.Database.BeginTransactionAsync())
     {
@@ -869,6 +882,7 @@ async Task SeedBulkMainShopAsync(WTFDbContext db, User owner, User manager, User
     }
 
     await db.SaveChangesAsync();
+    await AssignBranchesAsync(db, shopId);
     var cashiers = staffUsers.Where(u => u.RoleId == (int)UserRoleEnum.Cashier && u.IsActive).Append(cashier).ToList();
     var stockStaff = staffUsers.Where(u => u.RoleId == (int)UserRoleEnum.StockManager).Append(manager).ToList();
 
@@ -1413,6 +1427,7 @@ async Task SeedStarterBulkAsync()
     }
 
     await db.SaveChangesAsync();
+    await AssignBranchesAsync(db, starterTenantId);
 
     var products = await db.Products.Where(p => !p.IsAddOn && p.IsActive).ToDictionaryAsync(p => p.Name);
     var names = products.Keys.ToList();
@@ -1436,6 +1451,70 @@ async Task SeedStarterBulkAsync()
     }
 
     added.Add("Starter Demo Cafe: 2 more staff, 3 more customers and 45 orders over the last month");
+}
+
+async Task EnsureBranchesAsync(WTFDbContext db, Guid tenantId, (string Name, string Code, string? Address, string? Phone, bool IsMain)[] branches)
+{
+    foreach (var (name, code, address, phone, isMain) in branches)
+    {
+        if (await db.Branches.IgnoreQueryFilters().AnyAsync(b => b.TenantId == tenantId && b.Code == code))
+        {
+            continue;
+        }
+
+        db.Branches.Add(new Branch
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            Name = name,
+            Code = code,
+            Address = address,
+            Phone = phone,
+            TimeZone = "Asia/Manila",
+            IsActive = true,
+            IsMain = isMain,
+            CreatedAt = now.AddDays(-45),
+        });
+        added.Add($"branch {name} ({code})");
+    }
+
+    await db.SaveChangesAsync();
+}
+
+// Cashiers and stock managers work in one branch each, spread across the branches in turn; everyone else sees all of them.
+async Task AssignBranchesAsync(WTFDbContext db, Guid tenantId)
+{
+    var branches = await db.Branches.IgnoreQueryFilters()
+        .Where(b => b.TenantId == tenantId && b.IsActive)
+        .OrderByDescending(b => b.IsMain).ThenBy(b => b.Code)
+        .ToListAsync();
+    if (branches.Count == 0)
+    {
+        return;
+    }
+
+    var main = branches[0];
+    var users = await db.Users.IgnoreQueryFilters()
+        .Where(u => u.TenantId == tenantId && u.DefaultBranchId == null)
+        .OrderBy(u => u.Username)
+        .ToListAsync();
+    var turn = 0;
+    foreach (var user in users)
+    {
+        var single = user.RoleId is (int)UserRoleEnum.Cashier or (int)UserRoleEnum.StockManager;
+        var branch = single ? branches[turn++ % branches.Count] : main;
+        user.DefaultBranchId = branch.Id;
+        user.BranchScope = (byte)(single ? BranchScopeEnum.Selected : BranchScopeEnum.All);
+        if (single)
+        {
+            db.UserBranches.Add(new UserBranch { UserId = user.Id, BranchId = branch.Id, CreatedAt = now });
+        }
+    }
+
+    if (users.Count > 0)
+    {
+        await db.SaveChangesAsync();
+    }
 }
 
 TenantSubscription NewSubscription(Guid tenantId, int planId, int months) => new()
@@ -1797,6 +1876,7 @@ static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Produc
         CatalogSyncedAt = held is null ? null : createdAt.AddHours(-3),
         ReviewReasons = held is null ? null : string.Join("\n", held.Reasons.Where(r => r.Severity == ReviewSeverityEnum.Hold).Select(r => r.Text)),
         TenantId = tenantId,
+        BranchId = creator.DefaultBranchId ?? Guid.Empty,
     };
     db.Orders.Add(order);
 
