@@ -15,7 +15,8 @@ own rules.
 | 2     | Store credit                                 | M    | [Planned] |
 | 3     | Gift cards                                   | L    | [Planned] |
 | 4     | Reports, Daily Close and liability           | M    | [Planned] |
-| 5     | Later: online sale, offline spend, printed batches | L | [Idea]  |
+| 5     | Customer link: redeem a code, check a balance | M  | [Planned] |
+| 6     | Later: online sale, offline spend, printed batches | L | [Idea]  |
 
 Recommended order: 1, 2, 3, 4. Credit first because it is simpler (a named customer, no codes) and proves the tender work;
 gift cards carry the most money risk.
@@ -96,7 +97,7 @@ this, and the customer table stays free of money.
    locks the balance rows in a fixed order (customer credit, then cards by id, to avoid deadlocks), checks each covers its
    line, writes the order, `OrderPayments` and ledger rows, and commits. If a balance is short (another register spent it) the
    whole order is refused, naming the instrument and its new balance; nothing is half written.
-5. A customer-link order cannot spend credit or a card in the first version (the customer would type a code on a public page, which invites guessing). The customer can still use a card: staff add it in the Pay panel when they approve and complete the order at the counter (pickup) or by phone. A later version may let the customer enter the code on the link, with the same lockout and a hold on the balance until the shop approves (needs the Cashless work).
+5. A customer-link order cannot spend credit or a card in the first version in Phases 2 and 3. Staff can add the tender when they approve the order; Phase 5 lets the customer enter a gift card code on the link themselves, with a hold until approval.
 
 ### Phase 0 - Decisions and accountant check [Planned]
 
@@ -182,7 +183,7 @@ DTI/BIR, before launch:**
   goods given at another). "This card works only at the selling branch" is a later option.
 - **Multi-tenancy:** a card is never valid across shops: lookup runs through the tenant filter, so another shop's code answers
   exactly like a wrong code.
-- **Not in this phase:** selling or spending on the customer link (needs Cashless provider payments and fraud handling).
+- **Not in this phase:** selling or spending on the customer link (spending is Phase 5; selling needs the Cashless provider payments).
 - Tests: code randomness and the generic miss answer; only the hash in the database; partial use then remainder; refund returns
   to the same card; two registers redeeming one card at once (one wins, the other is refused); expired card refuses spend but
   accepts refund return; voided card refuses everything; rate limit and lock; cross-tenant lookup fails; Cashier cannot void or
@@ -269,16 +270,27 @@ the sum of rows) and the monthly workbook gets matching sheets.
 3. Phase 2 store credit: medium.
 4. Phase 3 gift cards: large (selling, scanning, fraud limits, reissue).
 5. Phase 4 reports and liability: medium.
-6. Phase 5 on demand.
+6. Phase 5 customer link (after Phase 3 and the link hardening), Phase 6 on demand.
 
 **With the parallel work:** build on top of multiple branches so `BranchId` is stamped from day one (otherwise leave it nullable
 and fill it with a follow-up script), and after Offline Phase 7 if offline credit spending is wanted. SQL script dates must not
 collide with branches, Offline Phase 7 and kitchen. Any thread with schema changes runs `tools\dbsync.bat` on the database it
 uses and says which; the real rescaffold runs on the laptop against `.\SQLEXPRESS`.
 
-### Phase 5 - Later ideas [Idea]
+### Phase 5 - Customer link: redeem a code and check a balance [Planned]
 
-- Gift cards sold and spent on the customer link (needs Cashless Phases 2 and 3), shown as a QR or sent by message.
+Added 18 Nov 2026 at Pogi's request (no customer app; the existing web ordering link).
+
+- **Redeem on the ordering link.** The checkout has "Have a gift card?": the customer types the code. The server checks it with the same generic answer, rate limits (per link, per address and per card) and lockout as the counter. A valid card shows only the last four and the amount that will be used.
+- **Hold, then spend.** The order is saved `PendingApproval` with a **hold** ledger row (`Hold` kind) for the amount, so the card cannot be spent twice meanwhile. Staff approval turns the hold into a `Spend`; rejection, cancellation or an expired approval releases it (`Release`). Holds expire with the order and a nightly job releases strays. The cached balance and the available balance (balance minus holds) are both stored; a second order sees only the available part.
+- **The customer cannot overspend**: the server recomputes the amount and the remainder is paid as the order says (cash or GCash at pickup).
+- **Store credit on the link** is not offered (it needs proof of who the customer is); staff can apply credit at approval.
+- **Check my balance page** (`/shop/:token/gift-card`): the customer types the code and sees the balance, expiry and last uses (date and amount only). Same lockout; nothing shown for a wrong code; no customer data.
+- Tests: hold blocks a second order, release on reject, spend on approve, lockout and generic answers, link of another shop cannot read a card, a revoked link refuses.
+
+### Phase 6 - Later ideas [Idea]
+
+- Gift cards **bought** on the customer link (needs the Cashless provider payments, Phases 2 and 3), shown as a QR or sent by message.
 - Offline credit spending with a cap (above).
 - Pre-printed card batches generated by an Owner as `Inactive`, activated only at the register so a stolen blank is worthless;
   reload (top up an existing card); card-to-card transfer; card only valid at the selling branch.
