@@ -120,7 +120,8 @@ test.describe('review rules for waste @waste', () => {
     const disputed = await pending(api);
     const confirmed = await pending(api);
 
-    expect((await api.waste.review(disputed.waste.id, 'dispute', 'Looks too high')).ok()).toBeTruthy();
+    const dispute = await api.waste.review(disputed.waste.id, 'dispute', 'Looks too high');
+    expect(dispute.ok(), `${dispute.status()} ${await dispute.text()}`).toBeTruthy();
     expect((await api.waste.review(disputed.waste.id, 'confirm', 'Changed my mind')).status()).toBe(400);
 
     expect((await api.waste.review(confirmed.waste.id, 'confirm', 'Seen it')).ok()).toBeTruthy();
