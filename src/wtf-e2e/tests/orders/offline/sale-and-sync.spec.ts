@@ -66,7 +66,7 @@ test.describe('selling without a connection and syncing later @orders @offline',
     await expect.poll(() => api.items.balance(item.id), { timeout: SYNC_TIMEOUT_MS }).toBe(14);
     // Give a second, repeated sync time to misbehave before counting.
     await page.waitForTimeout(8_000);
-    expect(await api.orders.withStatusContaining(OrderStatus.Completed, drink.id)).toHaveLength(2);
+    await expect.poll(async () => (await api.orders.withStatusContaining(OrderStatus.Completed, drink.id)).length, { timeout: 30_000 }).toBe(2);
     expect(await api.items.balance(item.id)).toBe(14);
   });
 

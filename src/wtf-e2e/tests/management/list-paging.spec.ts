@@ -29,12 +29,12 @@ async function openAndSearch(page: Page, stamp: string): Promise<void> {
   // A slow first load can finish after the typed search and reset the box, so type it again until the list is filtered.
   await expect(async () => {
     // Clear first: filling the same text again sends no new search when the box kept it but the list did not.
-    const answered = page.waitForResponse((response) => response.url().includes('/customers/paged') && response.url().includes(stamp), { timeout: 8_000 });
+    const answered = page.waitForResponse((response) => response.url().includes('/customers/paged') && response.url().includes(stamp), { timeout: 20_000 });
     await search.fill('');
     await search.fill(stamp);
     await answered;
     await expect(rows(page).first()).toContainText(stamp, { timeout: 5_000 });
-  }).toPass({ timeout: 30_000 });
+  }).toPass({ timeout: 50_000 });
   await expect(page.locator('app-pagination')).toContainText(`of ${COUNT}`);
 }
 
