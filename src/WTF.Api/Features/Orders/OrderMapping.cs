@@ -102,5 +102,7 @@ internal static class OrderMapping
             order.CustomerAddress,
             reviewDetails,
             order.CatalogSyncedAt,
-            KitchenStatus: order.KitchenStatus);
+            KitchenStatus: order.KitchenStatus,
+            BranchId: order.BranchId,
+            BranchCode: order.Branch?.Code);
 }

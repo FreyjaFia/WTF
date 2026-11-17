@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
 
 namespace WTF.Tests.Infrastructure;
@@ -26,6 +27,17 @@ internal static class TestDb
         var db = new InMemoryWtfDbContext(options);
         if (!db.ProductCategories.Any() && !db.AddOnTypes.Any())
         {
+            db.Branches.Add(new Branch
+            {
+                Id = Guid.NewGuid(),
+                TenantId = TenantDefaults.DefaultTenantId,
+                Name = "Main",
+                Code = "MAI",
+                TimeZone = "Asia/Manila",
+                IsActive = true,
+                IsMain = true,
+                CreatedAt = DateTime.UtcNow
+            });
             db.ProductCategories.AddRange(CatalogSeed.Categories());
             db.ProductSubCategories.AddRange(CatalogSeed.SubCategories());
             db.AddOnTypes.AddRange(CatalogSeed.AddOnTypes());

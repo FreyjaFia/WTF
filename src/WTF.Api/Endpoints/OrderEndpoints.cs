@@ -99,6 +99,8 @@ public static class OrderEndpoints
         orderGroup.MapPost("/",
             async (CreateOrderCommand command, ISender sender, WTFDbContext db, HttpContext httpContext) =>
             {
+                command = command with { BranchId = null };
+
                 // Only the offline routes (sync, batch) may carry the time an order was sold; here it must be about now.
                 var badTime = OfflineSyncWindow.CheckOnlineCreate(httpContext, command.CreatedAt, DateTime.UtcNow);
                 if (badTime is not null)

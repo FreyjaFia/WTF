@@ -21,6 +21,7 @@ public class GetOrdersHandler(WTFDbContext db, ITenantFeatures tenantFeatures, I
     {
         var query = db.Orders
             .Include(o => o.Customer)
+            .Include(o => o.Branch)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))

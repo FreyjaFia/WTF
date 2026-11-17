@@ -73,6 +73,9 @@ public record CreateOrderCommand : IRequest<OrderDto>
     [JsonIgnore]
     public Guid? OrderLinkId { get; init; }
 
+    // Only the offline sync and customer links may name a branch; the order endpoints clear it so a sale lands in the active branch.
+    public Guid? BranchId { get; init; }
+
     [JsonIgnore]
     public FulfillmentTypeEnum? FulfillmentType { get; init; }
 
@@ -260,6 +263,7 @@ public class CreateOrderHandler(
             Tips = request.Tips,
             Source = (byte)request.Source,
             OrderLinkId = request.OrderLinkId,
+            BranchId = request.BranchId ?? Guid.Empty,
             FulfillmentType = request.FulfillmentType.HasValue ? (byte)request.FulfillmentType.Value : null,
             DeliveryAddress = request.DeliveryAddress,
             CustomerAddress = customerAddress,

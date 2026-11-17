@@ -178,7 +178,7 @@ public partial class WTFDbContext
     private Guid? FindMainBranchId()
     {
         var tenantId = _currentTenant.StampTenantId ?? (_currentTenant.FilterEnabled ? null : TenantDefaults.DefaultTenantId);
-        if (tenantId is null || !Database.IsRelational())
+        if (tenantId is null)
         {
             return null;
         }
