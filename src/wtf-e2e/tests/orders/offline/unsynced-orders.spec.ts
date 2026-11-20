@@ -192,7 +192,7 @@ test.describe('Unsynced orders @orders @offline', () => {
 
       const page = await signIn(role);
       await page.goto('/orders/unsynced', { waitUntil: 'commit' });
-      await page.waitForURL((url) => !url.pathname.startsWith('/orders/unsynced'));
+      await page.waitForURL((url) => !url.pathname.startsWith('/orders/unsynced') && !url.pathname.startsWith('/orders/attention/unsynced'));
       await expect(page.getByRole('heading', { name: 'Unsynced Orders', exact: true })).toHaveCount(0);
     }
 
@@ -210,14 +210,17 @@ test.describe('Unsynced orders @orders @offline', () => {
     await expect(viewer.getByTestId('management-card-unsynced-orders')).toHaveCount(0);
   });
 
-  test('the order list tells an Admin how many orders could not be saved', async ({ api, signIn }) => {
+  test('the header tells an Admin how many orders need attention, and the order list has no banner', async ({ api, signIn }) => {
     await failingSale(api);
     const admin = await signIn('admin');
     await admin.goto('/orders/list', { waitUntil: 'commit' });
-    const banner = admin.locator('[data-unsynced-banner]');
-    await expect(banner).toContainText(/Unsynced orders? could not be saved/);
-    await banner.click();
-    await expect(admin).toHaveURL(/\/orders\/unsynced$/);
+    await expect(admin.locator('[data-unsynced-banner]')).toHaveCount(0);
+    const indicator = admin.locator('[data-needs-attention]:visible');
+    await expect(indicator).toBeVisible();
+    await indicator.click();
+    await expect(admin).toHaveURL(/\/orders\/attention\/awaiting$/);
+    await admin.getByTestId('attention-tab-unsynced').click();
+    await expect(admin).toHaveURL(/\/orders\/attention\/unsynced$/);
 
     const cashier = await signIn('cashier');
     await cashier.goto('/orders/list', { waitUntil: 'commit' });

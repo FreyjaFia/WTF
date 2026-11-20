@@ -3,28 +3,22 @@ import { ROUTES } from '@data/routes';
 import { go } from '@utils/navigation';
 
 export class OrderListPage {
-  public readonly awaitingToggle: Locator;
-
-  public constructor(private readonly page: Page) {
-    this.awaitingToggle = page.getByRole('button', { name: /Awaiting approval/ });
-  }
+  public constructor(private readonly page: Page) {}
 
   public async open(): Promise<void> {
     await go(this.page, ROUTES.ordersList);
     await this.page.getByRole('heading', { name: 'Orders', exact: true }).waitFor();
   }
 
-  public async expandAwaiting(): Promise<void> {
-    await this.awaitingToggle.waitFor();
-    if ((await this.awaitingToggle.getAttribute('aria-expanded')) !== 'true') {
-      await this.awaitingToggle.click();
-    }
+  public async openAwaiting(): Promise<void> {
+    await go(this.page, ROUTES.awaitingOrders);
+    await this.page.getByRole('heading', { name: 'Awaiting approval', exact: true }).waitFor();
   }
 
   public awaiting(orderNumber: number): Locator {
     return this.page
-      .getByRole('button', { name: `Open order ${orderNumber}` })
-      .locator('xpath=ancestor::div[contains(@class,"shadow-sm")][1]');
+      .getByTestId('awaiting-row')
+      .filter({ has: this.page.getByRole('button', { name: `Open order ${orderNumber}` }) });
   }
 
   public async accept(orderNumber: number): Promise<void> {

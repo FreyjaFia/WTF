@@ -215,3 +215,19 @@ the API back and check what is held, noted, approved and what the reports, the d
 
 ---
 
+
+## Offline orders and branches, and the Needs attention page (Nov 2026)
+
+- **Each queued order remembers its branch.** The device queue stores the branch open when the sale was made (nothing for a
+  one-branch shop or for All branches). The Pending Offline Orders box on Orders shows the open branch's orders (All branches
+  shows everything). An order with no branch, or whose branch is gone, shows under every branch.
+- **Sync sends that branch, not the open one.** Queued orders are grouped by branch and each group is sent with that branch
+  named (`X-Branch-Id` and `branchId` on the order). A branch that no longer exists is dropped on the device and again on the
+  server, and the sale goes to the open branch instead of failing.
+- **Unsynced orders belong to a branch too.** `tools/sql/20261222_add_unsynced_order_branch.sql` adds `UnsyncedOrders.BranchId`
+  (old rows take the branch named in the saved order, else Main). The list is branch-filtered like orders; retry and "save as
+  note" use the row's branch. Held orders were already branch-scoped because they are orders.
+- **Needs attention page** (`/orders/attention`): a warning icon with a count in the header, next to the bell (shown only when
+  something waits). Tabs: Awaiting approval (customer link orders), Unsynced, Offline review. The Orders page no longer has
+  the three banners; `/orders/held` and `/orders/unsynced` redirect to the new tabs. The counts refresh every minute and when a
+  tab acts.

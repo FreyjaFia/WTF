@@ -17,8 +17,7 @@ test.describe('ordering through a customer link @orders @customer-link', () => {
     const page = await signIn('cashier');
     const list = new OrderListPage(page);
 
-    await list.open();
-    await list.expandAwaiting();
+    await list.openAwaiting();
     await expect(list.awaiting(order.orderNumber)).toBeVisible();
     await list.accept(order.orderNumber);
 
@@ -31,8 +30,7 @@ test.describe('ordering through a customer link @orders @customer-link', () => {
     const page = await signIn('admin');
     const list = new OrderListPage(page);
 
-    await list.open();
-    await list.expandAwaiting();
+    await list.openAwaiting();
     await list.reject(order.orderNumber, 'We are closed today');
 
     await expect.poll(async () => (await api.orders.get(order.id)).status).toBe(OrderStatus.Cancelled);

@@ -31,18 +31,17 @@ async function seededShop(request: Parameters<typeof HeldOrdersShop.open>[0], pl
 }
 
 test.describe('held orders list and bulk approve @orders @offline @heldorders', () => {
-  test('the banner links to the held orders list, which shows age, reasons, value and cashier', async ({ request, platform, newContext }) => {
+  test('the Needs attention page opens the held orders list, which shows age, reasons, value and cashier', async ({ request, platform, newContext }) => {
     const { shop, old, fresh, double } = await seededShop(request, platform);
     const page = await (await newContext()).newPage();
     await new LoginPage(page).signIn(shop.shop.ownerUsername, shop.shop.ownerPassword);
     await page.waitForURL((url) => !url.pathname.startsWith('/login'));
     await page.goto(ROUTES.ordersList);
 
-    const banner = page.locator('[data-held-orders]');
-    await expect(banner).toBeVisible();
-    await expect(banner.getByText('Aged')).toHaveCount(1);
-    await banner.getByTestId('open-held-orders').click();
-    await expect(page).toHaveURL(/\/orders\/held$/);
+    await expect(page.locator('[data-held-orders]')).toHaveCount(0);
+    await page.locator('[data-needs-attention]:visible').click();
+    await page.getByTestId('attention-tab-review').click();
+    await expect(page).toHaveURL(/\/orders\/attention\/review$/);
 
     const held = new HeldOrdersPage(page);
     await expect(held.heading).toBeVisible();
@@ -184,7 +183,7 @@ test.describe('held orders list and bulk approve @orders @offline @heldorders', 
       '1 offline order has waited more than 2 days for review (PHP 100.00)',
     );
     await tile.click();
-    await expect(page).toHaveURL(/\/orders\/held\?agedOnly=true/);
+    await expect(page).toHaveURL(/\/orders\/attention\/review\?agedOnly=true/);
     await expect(new HeldOrdersPage(page).agedTile).toBeVisible();
   });
 

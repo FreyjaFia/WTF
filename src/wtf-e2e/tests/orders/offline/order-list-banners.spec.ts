@@ -31,8 +31,8 @@ async function failingSale(api: Api): Promise<void> {
   await response.json();
 }
 
-test.describe('order list banners and offline pages @orders @offline @layout', () => {
-  test('the unsynced banner is compact and sentence case, and its page uses the standard pagination bar', async ({ api, signIn }) => {
+test.describe('needs attention page and offline pages @orders @offline @layout', () => {
+  test('the order list has no banners, the header indicator opens the unsynced tab, and it uses the standard pagination bar', async ({ api, signIn }) => {
     await failingSale(api);
     const page = await signIn('admin');
     mkdirSync(SHOTS, { recursive: true });
@@ -41,10 +41,10 @@ test.describe('order list banners and offline pages @orders @offline @layout', (
       await test.step(viewport.name, async () => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await page.goto(ROUTES.ordersList);
-        const banner = page.locator('[data-unsynced-banner]');
-        await expect(banner).toBeVisible();
-        await expect(banner).toContainText('Unsynced order');
-        expect((await banner.boundingBox())!.height).toBeLessThan(56);
+        await expect(page.getByRole('heading', { name: 'Orders', exact: true })).toBeVisible();
+        await expect(page.locator('[data-unsynced-banner], [data-held-orders], [data-awaiting-approval]')).toHaveCount(0);
+        const indicator = page.locator('[data-needs-attention]:visible');
+        await expect(indicator).toBeVisible();
         const avatar = page.locator('.navbar .avatar');
         if (await avatar.isVisible()) {
           const box = (await avatar.boundingBox())!;
@@ -52,15 +52,21 @@ test.describe('order list banners and offline pages @orders @offline @layout', (
         }
         await page.screenshot({ path: `${SHOTS}/orders-${viewport.width}.png` });
 
-        await banner.click();
+        await indicator.click();
+        await page.getByTestId('attention-tab-unsynced').click();
         await expect(page.getByTestId('pagination')).toBeVisible();
         expect(overflowProblem(await measureOverflow(page))).toBeNull();
         await page.screenshot({ path: `${SHOTS}/unsynced-${viewport.width}.png` });
+        await page.getByTestId('attention-tab-awaiting').click();
+        await expect(page.getByRole('heading', { name: 'Awaiting approval', exact: true })).toBeVisible();
+        await expect(page.getByTestId('awaiting-row').first().or(page.getByTestId('awaiting-empty'))).toBeVisible();
+        expect(overflowProblem(await measureOverflow(page))).toBeNull();
+        await page.screenshot({ path: `${SHOTS}/awaiting-${viewport.width}.png` });
       });
     }
   });
 
-  test('held orders page has a back arrow and the standard pagination bar', async ({ request, platform, newContext }) => {
+  test('the offline review tab has a back arrow and the standard pagination bar', async ({ request, platform, newContext }) => {
     const shop = await HeldOrdersShop.open(request, platform);
     const latte = await shop.product(120);
     const ana = await shop.cashier('Ana');
@@ -75,11 +81,11 @@ test.describe('order list banners and offline pages @orders @offline @layout', (
       await test.step(viewport.name, async () => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await page.goto(ROUTES.ordersList);
-        const banner = page.locator('[data-held-orders]');
-        await expect(banner).toBeVisible();
+        await expect(page.locator('[data-held-orders]')).toHaveCount(0);
         await page.screenshot({ path: `${SHOTS}/orders-held-${viewport.width}.png` });
 
-        await banner.getByTestId('open-held-orders').click();
+        await page.locator('[data-needs-attention]:visible').click();
+        await page.getByTestId('attention-tab-review').click();
         const held = new HeldOrdersPage(page);
         await expect(held.heading).toBeVisible();
         await expect(page.getByTestId('pagination')).toBeVisible();
