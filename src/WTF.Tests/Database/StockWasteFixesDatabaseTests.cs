@@ -40,7 +40,7 @@ public class StockWasteFixesDatabaseTests
         failures.ShouldBe(4);
 
         await using var check = database.CreateContext();
-        (await check.Items.AsNoTracking().SingleAsync(i => i.Id == itemId)).CurrentQuantity.ShouldBe(1000m);
+        (await check.QuantityOfAsync(itemId)).ShouldBe(1000m);
         (await check.StockMovements.CountAsync(m => m.ItemId == itemId && m.MovementType == StockMovementTypes.WasteReversed))
             .ShouldBe(1);
         var waste = await check.StockWastes.AsNoTracking().SingleAsync(w => w.Id == wasteId);
@@ -105,7 +105,7 @@ public class StockWasteFixesDatabaseTests
 
         await using var check = database.CreateContext();
         (await check.StockWastes.CountAsync(w => w.ItemId == itemId)).ShouldBe(1);
-        (await check.Items.AsNoTracking().SingleAsync(i => i.Id == itemId)).CurrentQuantity.ShouldBe(950m);
+        (await check.QuantityOfAsync(itemId)).ShouldBe(950m);
     }
 
     [SqlFact]
@@ -126,7 +126,7 @@ public class StockWasteFixesDatabaseTests
         (await check.StockWastes.CountAsync(w => w.ItemId == itemId)).ShouldBe(1);
         (await check.StockMovements.CountAsync(m => m.ItemId == itemId && m.MovementType == StockMovementTypes.Waste))
             .ShouldBe(1);
-        (await check.Items.AsNoTracking().SingleAsync(i => i.Id == itemId)).CurrentQuantity.ShouldBe(950m);
+        (await check.QuantityOfAsync(itemId)).ShouldBe(950m);
     }
 
     private static async Task<StockWasteDto?> RecordAsync(

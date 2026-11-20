@@ -142,7 +142,7 @@ public class ItemAlertRecipientsHandlerTests
         var result = (await Set())!;
 
         result.SelectedUserIds.ShouldBeEmpty();
-        (await StockAlertService.ResolveRecipientsAsync(TestDb.Create(_db), _item, CancellationToken.None)).ShouldContain(_stockManager);
+        (await StockAlertService.ResolveRecipientsAsync(TestDb.Create(_db), _item, TestDb.MainBranchId(_db), CancellationToken.None)).ShouldContain(_stockManager);
     }
 
     [Fact]

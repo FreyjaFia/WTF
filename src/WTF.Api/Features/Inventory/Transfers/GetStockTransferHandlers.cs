@@ -19,8 +19,8 @@ public class GetStockTransferHandler(WTFDbContext db) : IRequestHandler<GetStock
 {
     public async Task<StockTransferDto?> Handle(GetStockTransferQuery request, CancellationToken cancellationToken)
     {
-        var summary = await StockTransferQueries.Summaries(db, db.StockTransfers.AsNoTracking().Where(t => t.Id == request.Id))
-            .FirstOrDefaultAsync(cancellationToken);
+        var summary = (await StockTransferQueries.SummariesAsync(db, db.StockTransfers.AsNoTracking().Where(t => t.Id == request.Id), cancellationToken))
+            .FirstOrDefault();
         if (summary is null)
         {
             return null;
@@ -77,28 +77,48 @@ public sealed class GetPagedStockTransfersHandler(WTFDbContext db)
             _ => query.OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
         };
 
-        var items = await StockTransferQueries.Summaries(db, ordered.ApplyPaging(paging)).ToListAsync(cancellationToken);
+        var items = await StockTransferQueries.SummariesAsync(db, ordered.ApplyPaging(paging), cancellationToken);
         return new PagedResultDto<StockTransferSummaryDto>(items, paging.Page, paging.PageSize, totalCount);
     }
 }
 
 internal static class StockTransferQueries
 {
-    // The branch names come through the shop's own branches, not the person's, so a limited person still sees where goods went.
-    public static IQueryable<StockTransferSummaryDto> Summaries(WTFDbContext db, IQueryable<StockTransfer> transfers)
+    // The branch names come from the shop's own branches, not the person's, so a limited person still sees where goods went.
+    public static async Task<List<StockTransferSummaryDto>> SummariesAsync(
+        WTFDbContext db, IQueryable<StockTransfer> transfers, CancellationToken cancellationToken)
     {
-        return transfers.Select(t => new StockTransferSummaryDto(
+        var rows = await transfers
+            .Select(t => new
+            {
+                t.Id,
+                t.FromBranchId,
+                t.ToBranchId,
+                t.Notes,
+                t.CreatedAt,
+                CreatedByName = t.CreatedByNavigation.FirstName + " " + t.CreatedByNavigation.LastName,
+                LineCount = t.StockTransferLines.Count,
+                TotalQuantity = t.StockTransferLines.Sum(l => l.Quantity)
+            })
+            .ToListAsync(cancellationToken);
+
+        var branches = await db.Branches
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+            .AsNoTracking()
+            .ToDictionaryAsync(b => b.Id, b => new { b.Code, b.Name }, cancellationToken);
+
+        return [.. rows.Select(t => new StockTransferSummaryDto(
             t.Id,
             t.FromBranchId,
-            t.FromBranch.Code,
-            t.FromBranch.Name,
+            branches[t.FromBranchId].Code,
+            branches[t.FromBranchId].Name,
             t.ToBranchId,
-            t.ToBranch.Code,
-            t.ToBranch.Name,
+            branches[t.ToBranchId].Code,
+            branches[t.ToBranchId].Name,
             t.Notes,
             t.CreatedAt,
-            t.CreatedByNavigation.FirstName + " " + t.CreatedByNavigation.LastName,
-            t.StockTransferLines.Count,
-            t.StockTransferLines.Sum(l => l.Quantity)));
+            t.CreatedByName,
+            t.LineCount,
+            t.TotalQuantity))];
     }
 }

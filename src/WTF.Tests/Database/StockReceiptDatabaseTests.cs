@@ -74,7 +74,7 @@ public class StockReceiptDatabaseTests
 
         await using var check = database.CreateContext();
         var stored = await check.Items.SingleAsync(i => i.Id == item);
-        stored.CurrentQuantity.ShouldBe(28m);
+        (await check.QuantityOfAsync(item)).ShouldBe(28m);
         stored.CostPrice.ShouldBe(70m);
         var movement = await check.StockMovements.SingleAsync(m => m.ItemId == item);
         movement.MovementType.ShouldBe(StockMovementTypes.AddStock);
@@ -157,7 +157,7 @@ public class StockReceiptDatabaseTests
 
         await using var check = database.CreateContext();
         (await check.StockReceipts.CountAsync()).ShouldBe(1);
-        (await check.Items.SingleAsync(i => i.Id == item)).CurrentQuantity.ShouldBe(12m);
+        (await check.QuantityOfAsync(item)).ShouldBe(12m);
     }
 
     [SqlFact]
@@ -191,7 +191,7 @@ public class StockReceiptDatabaseTests
         await using var check = database.CreateContext();
         (await check.StockReceipts.CountAsync()).ShouldBe(0);
         (await check.StockMovements.CountAsync()).ShouldBe(0);
-        (await check.Items.SingleAsync(i => i.Id == item)).CurrentQuantity.ShouldBe(0m);
+        (await check.QuantityOfAsync(item)).ShouldBe(0m);
     }
 
     [SqlFact]

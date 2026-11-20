@@ -82,7 +82,7 @@ public class PlanGatingDatabaseTests
         await using (var check = database.CreateContext())
         {
             (await check.Orders.CountAsync()).ShouldBe(1);
-            (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(1000m);
+            (await check.QuantityOfOnlyItemAsync()).ShouldBe(1000m);
             (await check.StockMovements.CountAsync()).ShouldBe(0);
         }
 
@@ -94,7 +94,7 @@ public class PlanGatingDatabaseTests
 
         await using var after = database.CreateContext();
         (await after.Orders.CountAsync()).ShouldBe(2);
-        (await after.Items.SingleAsync()).CurrentQuantity.ShouldBe(800m);
+        (await after.QuantityOfOnlyItemAsync()).ShouldBe(800m);
     }
 
     [SqlFact]

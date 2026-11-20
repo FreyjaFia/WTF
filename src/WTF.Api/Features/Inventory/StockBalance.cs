@@ -23,6 +23,11 @@ internal static class StockBalance
         bool allowBelowZero,
         CancellationToken cancellationToken)
     {
+        if (!db.MayWriteToBranch(branchId))
+        {
+            throw new InvalidOperationException("A row of another branch cannot be changed.");
+        }
+
         if (!db.Database.IsRelational())
         {
             return await ApplyTrackedAsync(db, itemId, branchId, delta, allowBelowZero, cancellationToken);
@@ -30,13 +35,13 @@ internal static class StockBalance
 
         await db.Database.ExecuteSqlRawAsync(
             """
-            INSERT INTO dbo.ItemBranchStock (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
+            INSERT INTO dbo.ItemBranchStocks (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
             SELECT i.TenantId, i.Id, @branchId, 0, 0
             FROM dbo.Items i
             WHERE i.Id = @itemId
               AND (@filter = 0 OR i.TenantId = @tenant)
               AND EXISTS (SELECT 1 FROM dbo.Branches b WHERE b.Id = @branchId AND b.TenantId = i.TenantId)
-              AND NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStock s WITH (UPDLOCK, HOLDLOCK) WHERE s.ItemId = i.Id AND s.BranchId = @branchId)
+              AND NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStocks s WITH (UPDLOCK, HOLDLOCK) WHERE s.ItemId = i.Id AND s.BranchId = @branchId)
             """,
             [
                 new SqlParameter("@itemId", itemId),
@@ -53,7 +58,7 @@ internal static class StockBalance
             UPDATE s
             SET CurrentQuantity = s.CurrentQuantity + @delta, UpdatedAt = SYSUTCDATETIME()
             OUTPUT INSERTED.CurrentQuantity AS [Value]
-            FROM dbo.ItemBranchStock s
+            FROM dbo.ItemBranchStocks s
             JOIN dbo.Items i ON i.Id = s.ItemId
             WHERE s.ItemId = @itemId
               AND s.BranchId = @branchId

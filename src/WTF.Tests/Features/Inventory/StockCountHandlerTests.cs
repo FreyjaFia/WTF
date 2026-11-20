@@ -132,8 +132,8 @@ public class StockCountHandlerTests
         movement.QuantityDelta.ShouldBe(-3m);
         movement.ReferenceType.ShouldBe("StockCount");
         movement.ReferenceId.ShouldBe(count.Summary.Id);
-        (await db.Items.SingleAsync(i => i.Id == milk.Id)).CurrentQuantity.ShouldBe(7m);
-        (await db.Items.SingleAsync(i => i.Id == beans.Id)).CurrentQuantity.ShouldBe(5m);
+        (await db.QuantityOfAsync(milk.Id)).ShouldBe(7m);
+        (await db.QuantityOfAsync(beans.Id)).ShouldBe(5m);
         posted.Lines.Single(l => l.ItemId == milk.Id).AdjustmentPosted.ShouldBeTrue();
         posted.Lines.Single(l => l.ItemId == beans.Id).AdjustmentPosted.ShouldBeFalse();
     }
@@ -148,14 +148,14 @@ public class StockCountHandlerTests
 
         await using (var db = TestDb.Create(_db))
         {
-            (await db.Items.SingleAsync()).CurrentQuantity = 6m;
+            (await db.ItemBranchStocks.SingleAsync()).CurrentQuantity = 6m;
             await db.SaveChangesAsync();
         }
 
         await Post().Handle(new PostStockCountCommand(count.Summary.Id), CancellationToken.None);
 
         await using var check = TestDb.Create(_db);
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(4m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(4m);
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class StockCountHandlerTests
 
         await using var db = TestDb.Create(_db);
         (await db.StockMovements.CountAsync()).ShouldBe(1);
-        (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(7m);
+        (await db.QuantityOfOnlyItemAsync()).ShouldBe(7m);
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class StockCountHandlerTests
 
         await using var check = TestDb.Create(_db);
         (await check.StockMovements.CountAsync()).ShouldBe(0);
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(10m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(10m);
     }
 
     [Fact]
@@ -221,7 +221,7 @@ public class StockCountHandlerTests
         await Should.ThrowAsync<InvalidOperationException>(
             () => Post().Handle(new PostStockCountCommand(count.Summary.Id), CancellationToken.None));
         await using var db = TestDb.Create(_db);
-        (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(10m);
+        (await db.QuantityOfOnlyItemAsync()).ShouldBe(10m);
     }
 
     [Fact]

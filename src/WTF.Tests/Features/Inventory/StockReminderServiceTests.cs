@@ -74,11 +74,11 @@ public class StockReminderServiceTests
         await using (var db = TestDb.Create(_db))
         {
             var item = await db.Items.SingleAsync(i => i.Id == (itemId ?? _milk));
-            item.CurrentQuantity = quantity;
+            (await db.ItemBranchStocks.SingleAsync(s => s.ItemId == item.Id)).CurrentQuantity = quantity;
             await db.SaveChangesAsync();
         }
 
-        await new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push), TestFakes.Features).EvaluateAsync([itemId ?? _milk], CancellationToken.None);
+        await new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push), TestFakes.Features).EvaluateAsync([itemId ?? _milk], TestDb.MainBranchId(_db), CancellationToken.None);
     }
 
     private async Task Backdate(int days = 1)
@@ -261,7 +261,7 @@ public class StockReminderServiceTests
             "400 ml left. The warning level is 500 ml. Day 2.",
             $"/inventory/items/details/{_milk}",
             "StockAlert",
-            _milk,
+            StockAlertKey.For(_milk, TestDb.MainBranchId(_db)),
             Arg.Any<CancellationToken>());
     }
 
@@ -324,7 +324,7 @@ public class StockReminderServiceTests
     {
         await using (var db = TestDb.Create(_db))
         {
-            var item = await db.Items.SingleAsync();
+            var item = await db.ItemBranchStocks.SingleAsync();
             item.CurrentQuantity = 400m;
             item.LastAlertStatus = 1;
             await db.SaveChangesAsync();

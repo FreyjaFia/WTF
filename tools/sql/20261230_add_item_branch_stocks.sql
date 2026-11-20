@@ -16,9 +16,9 @@ GO
 -- Items.CurrentQuantity and Items.LastAlertStatus stay in the table as the last pre-branch values (a way back, never read).
 -- Safe to run twice.
 
-IF OBJECT_ID(N'dbo.ItemBranchStock', N'U') IS NULL
+IF OBJECT_ID(N'dbo.ItemBranchStocks', N'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.ItemBranchStock
+    CREATE TABLE dbo.ItemBranchStocks
     (
         Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_ItemBranchStock_Id DEFAULT (NEWID()),
         TenantId UNIQUEIDENTIFIER NOT NULL,
@@ -34,24 +34,24 @@ BEGIN
         CONSTRAINT UQ_ItemBranchStock_ItemBranch UNIQUE (ItemId, BranchId)
     );
 
-    CREATE INDEX IX_ItemBranchStock_BranchId ON dbo.ItemBranchStock (BranchId);
+    CREATE INDEX IX_ItemBranchStock_BranchId ON dbo.ItemBranchStocks (BranchId);
 END
 GO
 
 -- Main branch rows carry the existing quantity.
-INSERT INTO dbo.ItemBranchStock (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
+INSERT INTO dbo.ItemBranchStocks (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
 SELECT i.TenantId, i.Id, b.Id, i.CurrentQuantity, i.LastAlertStatus
 FROM dbo.Items i
 JOIN dbo.Branches b ON b.TenantId = i.TenantId AND b.IsMain = 1
-WHERE NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStock s WHERE s.ItemId = i.Id AND s.BranchId = b.Id);
+WHERE NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStocks s WHERE s.ItemId = i.Id AND s.BranchId = b.Id);
 GO
 
 -- Every other branch starts at zero.
-INSERT INTO dbo.ItemBranchStock (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
+INSERT INTO dbo.ItemBranchStocks (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
 SELECT i.TenantId, i.Id, b.Id, 0, 0
 FROM dbo.Items i
 JOIN dbo.Branches b ON b.TenantId = i.TenantId AND b.IsMain = 0
-WHERE NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStock s WHERE s.ItemId = i.Id AND s.BranchId = b.Id);
+WHERE NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStocks s WHERE s.ItemId = i.Id AND s.BranchId = b.Id);
 GO
 
 IF OBJECT_ID(N'dbo.StockTransfers', N'U') IS NULL

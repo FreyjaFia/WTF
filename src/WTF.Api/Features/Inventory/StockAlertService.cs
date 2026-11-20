@@ -101,10 +101,10 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
 
         var rows = mustBeHigher
             ? await db.Database.ExecuteSqlInterpolatedAsync(
-                $"UPDATE dbo.ItemBranchStock SET LastAlertStatus = {newStatus} WHERE Id = {stock.Id} AND LastAlertStatus < {newStatus} AND ({db.TenantFilterEnabled} = 0 OR TenantId = {db.StampTenantId})",
+                $"UPDATE dbo.ItemBranchStocks SET LastAlertStatus = {newStatus} WHERE Id = {stock.Id} AND LastAlertStatus < {newStatus} AND ({db.TenantFilterEnabled} = 0 OR TenantId = {db.StampTenantId})",
                 cancellationToken)
             : await db.Database.ExecuteSqlInterpolatedAsync(
-                $"UPDATE dbo.ItemBranchStock SET LastAlertStatus = {newStatus} WHERE Id = {stock.Id} AND LastAlertStatus <> {newStatus} AND ({db.TenantFilterEnabled} = 0 OR TenantId = {db.StampTenantId})",
+                $"UPDATE dbo.ItemBranchStocks SET LastAlertStatus = {newStatus} WHERE Id = {stock.Id} AND LastAlertStatus <> {newStatus} AND ({db.TenantFilterEnabled} = 0 OR TenantId = {db.StampTenantId})",
                 cancellationToken);
 
         return rows > 0;

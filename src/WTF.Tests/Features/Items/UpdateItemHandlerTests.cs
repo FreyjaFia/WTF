@@ -48,7 +48,7 @@ public class UpdateItemHandlerTests
         saved.UnitName.ShouldBe("gram");
         saved.IsActive.ShouldBeFalse();
         saved.WarningQuantity.ShouldBe(3m);
-        saved.CurrentQuantity.ShouldBe(7m); // update never touches stock
+        (await db.QuantityOfAsync(saved.Id)).ShouldBe(7m); // update never touches stock
         saved.UpdatedBy.ShouldBe(_userId);
         saved.UpdatedAt.ShouldNotBeNull();
         await _audit.Received(1).LogAsync(AuditAction.ItemUpdated, AuditEntityType.Item, item.Id.ToString(),
@@ -161,7 +161,7 @@ public class UpdateItemHandlerTests
         var item = await ItemSeed.Item(_db, _userId, qty: 1);
         await using (var seed = TestDb.Create(_db))
         {
-            (await seed.Items.SingleAsync()).LastAlertStatus = 3;
+            (await seed.ItemBranchStocks.SingleAsync()).LastAlertStatus = 3;
             await seed.SaveChangesAsync();
         }
 
@@ -171,7 +171,7 @@ public class UpdateItemHandlerTests
         await using var db = TestDb.Create(_db);
         var saved = await db.Items.SingleAsync();
         saved.IsActive.ShouldBeFalse();
-        saved.LastAlertStatus.ShouldBe((byte)0);
+        (await db.ItemBranchStocks.SingleAsync()).LastAlertStatus.ShouldBe((byte)0);
         await _audit.Received(1).LogAsync(AuditAction.ItemDeleted, AuditEntityType.Item, item.Id.ToString(),
             Arg.Any<object?>(), Arg.Any<object?>(), _userId, Arg.Any<CancellationToken>());
     }

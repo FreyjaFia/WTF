@@ -27,7 +27,6 @@ public class ItemMappingTests
             UnitName = "ml",
             StockUnitName = "box",
             UnitsPerStockUnit = 12,
-            CurrentQuantity = 5.5m,
             CostPrice = 10m,
             WarningQuantity = 3,
             CriticalQuantity = 1,
@@ -35,6 +34,14 @@ public class ItemMappingTests
             CreatedAt = new DateTime(2025, 1, 1),
             CreatedBy = Guid.NewGuid()
         };
+        item.ItemBranchStocks.Add(new ItemBranchStock
+        {
+            Id = Guid.NewGuid(),
+            ItemId = item.Id,
+            BranchId = Guid.NewGuid(),
+            CurrentQuantity = 5.5m,
+            Branch = new Branch { Id = Guid.NewGuid(), Name = "Main", Code = "MAI", IsMain = true }
+        });
 
         var dto = ItemMapping.ToDto(item);
 

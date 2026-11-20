@@ -101,7 +101,7 @@ public class OrderStockDatabaseTests
             row.Severity.ShouldBe((byte)ReviewSeverityEnum.Note);
             row.ExpectedValue.ShouldBe("300");
             row.QuotedValue.ShouldBe("400");
-            (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(-100m);
+            (await db.QuantityOfOnlyItemAsync()).ShouldBe(-100m);
 
             var getSender = Substitute.For<MediatR.ISender>();
             getSender.Send(Arg.Any<MediatR.IRequest<OrderDto?>>(), Arg.Any<CancellationToken>())
@@ -113,7 +113,7 @@ public class OrderStockDatabaseTests
         }
 
         await using var check = database.CreateContext();
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(-500m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(-500m);
         var waste = await check.StockMovements.SingleAsync(m => m.ReferenceId == held);
         waste.MovementType.ShouldBe("Waste");
         waste.QuantityDelta.ShouldBe(-400m);
@@ -135,7 +135,7 @@ public class OrderStockDatabaseTests
         }
 
         await using var check = database.CreateContext();
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(9400m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(9400m);
         var movement = await check.StockMovements.SingleAsync();
         movement.MovementType.ShouldBe("Sale");
         movement.ProductId.ShouldBe(latte.Id);
@@ -165,8 +165,8 @@ public class OrderStockDatabaseTests
         await using var check = database.CreateContext();
         (await check.Orders.CountAsync()).ShouldBe(0);
         (await check.StockMovements.CountAsync()).ShouldBe(0);
-        (await check.Items.SingleAsync(i => i.Name == "Milk")).CurrentQuantity.ShouldBe(1000m);
-        (await check.Items.SingleAsync(i => i.Name == "Cup")).CurrentQuantity.ShouldBe(1m);
+        (await check.QuantityOfAsync("Milk")).ShouldBe(1000m);
+        (await check.QuantityOfAsync("Cup")).ShouldBe(1m);
     }
 
     [SqlFact]
@@ -185,7 +185,7 @@ public class OrderStockDatabaseTests
         }
 
         await using var check = database.CreateContext();
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(-2m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(-2m);
     }
 
     [SqlFact]
@@ -214,7 +214,7 @@ public class OrderStockDatabaseTests
 
         results.Count(sold => sold).ShouldBe(6);
         await using var check = database.CreateContext();
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(0m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(0m);
         (await check.StockMovements.CountAsync()).ShouldBe(6);
         (await check.Orders.CountAsync()).ShouldBe(6);
     }
@@ -245,6 +245,6 @@ public class OrderStockDatabaseTests
 
         // 1000 - 5 x 100 + 5 x 50
         await using var check = database.CreateContext();
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(750m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(750m);
     }
 }

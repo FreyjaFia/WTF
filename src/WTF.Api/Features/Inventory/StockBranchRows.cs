@@ -17,8 +17,15 @@ internal static class StockBranchRows
         if (!db.Database.IsRelational())
         {
             var branchIds = await db.Branches.IgnoreQueryFilters([WTFDbContext.BranchFilterName]).Select(b => b.Id).ToListAsync(cancellationToken);
+            var existing = await db.ItemBranchStocks.IgnoreQueryFilters([WTFDbContext.BranchFilterName]).Where(s => s.ItemId == itemId).ToListAsync(cancellationToken);
             foreach (var branchId in branchIds)
             {
+                if (existing.FirstOrDefault(s => s.BranchId == branchId) is { } row)
+                {
+                    row.CurrentQuantity = branchId == startingBranchId ? startingQuantity : row.CurrentQuantity;
+                    continue;
+                }
+
                 db.ItemBranchStocks.Add(new ItemBranchStock
                 {
                     Id = Guid.NewGuid(),
@@ -35,13 +42,13 @@ internal static class StockBranchRows
 
         await db.Database.ExecuteSqlRawAsync(
             """
-            INSERT INTO dbo.ItemBranchStock (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
+            INSERT INTO dbo.ItemBranchStocks (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
             SELECT i.TenantId, i.Id, b.Id, CASE WHEN b.Id = @startBranch THEN @quantity ELSE 0 END, 0
             FROM dbo.Items i
             JOIN dbo.Branches b ON b.TenantId = i.TenantId
             WHERE i.Id = @itemId
               AND (@filter = 0 OR i.TenantId = @tenant)
-              AND NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStock s WHERE s.ItemId = i.Id AND s.BranchId = b.Id)
+              AND NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStocks s WHERE s.ItemId = i.Id AND s.BranchId = b.Id)
             """,
             [
                 new SqlParameter("@itemId", itemId),
@@ -70,13 +77,13 @@ internal static class StockBranchRows
 
         await db.Database.ExecuteSqlRawAsync(
             """
-            INSERT INTO dbo.ItemBranchStock (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
+            INSERT INTO dbo.ItemBranchStocks (TenantId, ItemId, BranchId, CurrentQuantity, LastAlertStatus)
             SELECT i.TenantId, i.Id, b.Id, 0, 0
             FROM dbo.Branches b
             JOIN dbo.Items i ON i.TenantId = b.TenantId
             WHERE b.Id = @branchId
               AND (@filter = 0 OR b.TenantId = @tenant)
-              AND NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStock s WHERE s.ItemId = i.Id AND s.BranchId = b.Id)
+              AND NOT EXISTS (SELECT 1 FROM dbo.ItemBranchStocks s WHERE s.ItemId = i.Id AND s.BranchId = b.Id)
             """,
             [
                 new SqlParameter("@branchId", branchId),

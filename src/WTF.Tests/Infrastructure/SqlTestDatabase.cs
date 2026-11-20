@@ -237,6 +237,18 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
         {
         }
 
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            LegacyStockSeeding.AddMainBranchRows(this);
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            LegacyStockSeeding.AddMainBranchRows(this);
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             // Intentionally empty: the provider and connection are already configured through the options.

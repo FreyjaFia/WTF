@@ -57,6 +57,7 @@ public class RecordWasteHandlerTests
         waste.Status.ShouldBe(StockWasteStatuses.Recorded);
         await _alerts.Received(1).EvaluateAsync(
             Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(itemId)),
+            Arg.Any<Guid>(),
             Arg.Any<CancellationToken>());
         await _audit.Received(1).LogAsync(
             AuditAction.StockWasted,

@@ -68,11 +68,11 @@ public class StockAlertServiceTests
         await using (var db = TestDb.Create(_db))
         {
             var item = await db.Items.SingleAsync(i => i.Id == (itemId ?? _milk));
-            item.CurrentQuantity = quantity;
+            (await db.ItemBranchStocks.SingleAsync(s => s.ItemId == item.Id)).CurrentQuantity = quantity;
             await db.SaveChangesAsync();
         }
 
-        await Service().EvaluateAsync([itemId ?? _milk], CancellationToken.None);
+        await Service().EvaluateAsync([itemId ?? _milk], TestDb.MainBranchId(_db), CancellationToken.None);
     }
 
     private async Task<List<Notification>> Notifications()
@@ -100,7 +100,7 @@ public class StockAlertServiceTests
             "400 ml left. The warning level is 500 ml.",
             $"/inventory/items/details/{_milk}",
             "StockAlert",
-            _milk,
+            StockAlertKey.For(_milk, TestDb.MainBranchId(_db)),
             Arg.Any<CancellationToken>());
     }
 

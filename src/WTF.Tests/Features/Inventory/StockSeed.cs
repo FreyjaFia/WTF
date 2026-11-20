@@ -69,7 +69,7 @@ internal static class StockSeed
     public static decimal Balance(string dbName, Guid itemId)
     {
         using var db = TestDb.Create(dbName);
-        return db.Items.Single(i => i.Id == itemId).CurrentQuantity;
+        return db.ItemBranchStocks.Where(s => s.ItemId == itemId).Sum(s => s.CurrentQuantity);
     }
 
     public static List<StockMovement> Movements(string dbName, Guid itemId)

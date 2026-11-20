@@ -50,6 +50,14 @@ public partial class WTFDbContext
 
     public Guid? ActiveBranchId => _currentBranch.ActiveBranchId;
 
+    // False when the person is limited to some branches and this one is not among them (a transfer opens one exception).
+    public bool MayWriteToBranch(Guid branchId)
+    {
+        return !_currentBranch.WriteCheckEnabled
+            || _currentBranch.AllowedBranchIds.Contains(branchId)
+            || _extraWritableBranches.Contains(branchId);
+    }
+
     // A person limited to some branches may still send goods to another branch: that one write (the incoming movement and the
     // balance) is allowed after the code has checked the branch belongs to the shop and is open. Nothing else opens up.
     public void AllowWritesTo(Guid branchId)

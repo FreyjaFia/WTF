@@ -37,15 +37,16 @@ public class StockAlertDatabaseTests
         await Task.WhenAll(Enumerable.Range(0, 10).Select(async _ =>
         {
             await using var db = database.CreateContext();
-            await StockBalance.ApplyAsync(db, itemId, -100m, true, CancellationToken.None);
-            await new StockAlertService(db, TestFakes.Notifications(db), TestFakes.Features).EvaluateAsync([itemId], CancellationToken.None);
+            var branchId = await db.Branches.Select(b => b.Id).FirstAsync();
+            await StockBalance.ApplyAsync(db, itemId, branchId, -100m, true, CancellationToken.None);
+            await new StockAlertService(db, TestFakes.Notifications(db), TestFakes.Features).EvaluateAsync([itemId], branchId, CancellationToken.None);
         }));
 
         await using var check = database.CreateContext();
         var rows = await check.Notifications.Where(n => n.UserId == admin.Id).ToListAsync();
         rows.Select(n => n.Data).Distinct().Count().ShouldBe(rows.Count);
         rows.Count.ShouldBeGreaterThan(0);
-        (await check.Items.SingleAsync()).LastAlertStatus.ShouldBe((byte)3);
+        (await check.ItemBranchStocks.SingleAsync()).LastAlertStatus.ShouldBe((byte)3);
     }
 
     [SqlFact]
@@ -72,14 +73,14 @@ public class StockAlertDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            var change = await StockBalance.ApplyAsync(db, itemId, -0.001m, false, CancellationToken.None);
+            var change = await StockBalance.ApplyAsync(db, itemId, await db.Branches.Select(b => b.Id).FirstAsync(), -0.001m, false, CancellationToken.None);
             change.ShouldNotBeNull();
             change.Value.Before.ShouldBe(5m);
             change.Value.After.ShouldBe(4.999m);
         }
 
         await using var check = database.CreateContext();
-        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(4.999m);
+        (await check.QuantityOfOnlyItemAsync()).ShouldBe(4.999m);
     }
 
     [SqlFact]
@@ -109,7 +110,7 @@ public class StockAlertDatabaseTests
                 UserId = admin.Id,
                 Kind = "StockAlert",
                 Severity = 1,
-                SubjectId = itemId,
+                SubjectId = StockAlertKey.For(itemId, db.Branches.Select(b => b.Id).First()),
                 Data = "{\"status\":1,\"quantity\":400}",
                 Title = "Low stock: Milk",
                 Body = "400 ml left.",
@@ -157,6 +158,6 @@ public class StockAlertDatabaseTests
         }
 
         await using var check = database.CreateContext();
-        (await check.Items.SingleAsync()).LastAlertStatus.ShouldBe((byte)0);
+        (await check.ItemBranchStocks.SingleAsync()).LastAlertStatus.ShouldBe((byte)0);
     }
 }

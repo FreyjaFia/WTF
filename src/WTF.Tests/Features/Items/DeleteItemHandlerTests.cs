@@ -41,7 +41,7 @@ public class DeleteItemHandlerTests
 
         ok.ShouldBeFalse();
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
-        await _alerts.DidNotReceiveWithAnyArgs().EvaluateAsync(default!, default);
+        await _alerts.DidNotReceiveWithAnyArgs().EvaluateEverywhereAsync(default!, default);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class DeleteItemHandlerTests
         await using var db = TestDb.Create(_db);
         (await db.Items.SingleAsync()).IsActive.ShouldBeTrue();
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
-        await _alerts.DidNotReceiveWithAnyArgs().EvaluateAsync(default!, default);
+        await _alerts.DidNotReceiveWithAnyArgs().EvaluateEverywhereAsync(default!, default);
     }
 
     [Fact]
@@ -108,15 +108,15 @@ public class DeleteItemHandlerTests
         var item = await ItemSeed.Item(_db, _userId, qty: 3);
         await using (var db = TestDb.Create(_db))
         {
-            (await db.Items.SingleAsync()).LastAlertStatus = 2;
+            (await db.ItemBranchStocks.SingleAsync()).LastAlertStatus = 2;
             await db.SaveChangesAsync();
         }
 
         await Handler().Handle(new DeleteItemCommand(item.Id), CancellationToken.None);
 
         await using var check = TestDb.Create(_db);
-        (await check.Items.SingleAsync()).LastAlertStatus.ShouldBe((byte)0);
-        await _alerts.Received(1).EvaluateAsync(
+        (await check.ItemBranchStocks.SingleAsync()).LastAlertStatus.ShouldBe((byte)0);
+        await _alerts.Received(1).EvaluateEverywhereAsync(
             Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == item.Id), Arg.Any<CancellationToken>());
     }
 

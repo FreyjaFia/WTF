@@ -40,7 +40,7 @@ public class AdjustItemStockHandlerTests
 
         ex.Message.ShouldContain("Restore it");
         await using var db = TestDb.Create(_db);
-        (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(10m);
+        (await db.QuantityOfOnlyItemAsync()).ShouldBe(10m);
         (await db.StockMovements.CountAsync()).ShouldBe(0);
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
     }

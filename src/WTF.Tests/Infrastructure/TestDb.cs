@@ -48,6 +48,12 @@ internal static class TestDb
         return db;
     }
 
+    public static Guid MainBranchId(string dbName)
+    {
+        using var db = Create(dbName);
+        return db.Branches.Single(b => b.IsMain).Id;
+    }
+
     public static void SeedSystemRoles(string dbName)
     {
         using var db = Create(dbName);
@@ -93,9 +99,90 @@ internal static class TestDb
         {
         }
 
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            LegacyStockSeeding.AddMainBranchRows(this);
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            LegacyStockSeeding.AddMainBranchRows(this);
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             // Intentionally empty: the provider is already configured through the options.
+        }
+    }
+}
+
+internal static class StockQuantityExtensions
+{
+    public static async Task<decimal> QuantityOfAsync(this WTFDbContext db, Guid itemId)
+    {
+        return await db.ItemBranchStocks.AsNoTracking().Where(s => s.ItemId == itemId).SumAsync(s => s.CurrentQuantity);
+    }
+
+    public static async Task<decimal> QuantityOfAsync(this WTFDbContext db, string itemName)
+    {
+        return await db.ItemBranchStocks.AsNoTracking().Where(s => s.Item.Name == itemName).SumAsync(s => s.CurrentQuantity);
+    }
+
+    public static async Task<decimal> QuantityOfOnlyItemAsync(this WTFDbContext db)
+    {
+        return await db.ItemBranchStocks.AsNoTracking().SumAsync(s => s.CurrentQuantity);
+    }
+}
+
+// Tests state an item's stock the old way (Item.CurrentQuantity = 12). Stock lives in one row per item and branch now, so
+// a new item gets its row in its shop's Main branch when it is saved.
+internal static class LegacyStockSeeding
+{
+    public static void AddMainBranchRows(WTFDbContext db)
+    {
+        var added = db.ChangeTracker.Entries<Item>().Where(e => e.State == EntityState.Added).Select(e => e.Entity).ToList();
+        if (added.Count == 0)
+        {
+            return;
+        }
+
+        var mains = db.Branches.IgnoreQueryFilters().Where(b => b.IsMain).Select(b => new { b.Id, b.TenantId }).ToList();
+        foreach (var item in added)
+        {
+            var tenantId = item.TenantId != Guid.Empty ? item.TenantId : db.StampTenantId ?? TenantDefaults.DefaultTenantId;
+            var main = mains.FirstOrDefault(m => m.TenantId == tenantId);
+            if (main is null)
+            {
+                continue;
+            }
+
+            if (item.Id == Guid.Empty)
+            {
+                item.Id = Guid.NewGuid();
+            }
+
+            if (item.CurrentQuantity == 0m && item.LastAlertStatus == 0)
+            {
+                continue;
+            }
+
+            if (item.ItemBranchStocks.Any(s => s.BranchId == main.Id))
+            {
+                continue;
+            }
+
+            db.ItemBranchStocks.Add(new ItemBranchStock
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                ItemId = item.Id,
+                BranchId = main.Id,
+                CurrentQuantity = item.CurrentQuantity,
+                LastAlertStatus = item.LastAlertStatus,
+                UpdatedAt = DateTime.UtcNow
+            });
         }
     }
 }

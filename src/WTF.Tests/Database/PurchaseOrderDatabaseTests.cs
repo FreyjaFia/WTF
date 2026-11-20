@@ -167,7 +167,7 @@ public class PurchaseOrderDatabaseTests
         stored.Status.ShouldBe(PurchaseOrderStatuses.Received);
         stored.ClosedAt.ShouldNotBeNull();
         stored.PurchaseOrderLines.ShouldAllBe(l => l.PacksReceived == l.PacksOrdered);
-        (await check.Items.SingleAsync(i => i.Id == milk)).CurrentQuantity.ShouldBe(48m);
+        (await check.QuantityOfAsync(milk)).ShouldBe(48m);
     }
 
     [SqlFact]

@@ -34,7 +34,7 @@ public class AddItemStockHandlerTests
 
         ex.Message.ShouldContain("Restore it");
         await using var db = TestDb.Create(_db);
-        (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(10m);
+        (await db.QuantityOfOnlyItemAsync()).ShouldBe(10m);
         (await db.StockMovements.CountAsync()).ShouldBe(0);
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
     }
@@ -50,7 +50,7 @@ public class AddItemStockHandlerTests
 
         dto!.CurrentQuantity.ShouldBe(12.5m);
         await using var db = TestDb.Create(_db);
-        (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(12.5m);
+        (await db.QuantityOfOnlyItemAsync()).ShouldBe(12.5m);
         var m = await db.StockMovements.SingleAsync();
         m.MovementType.ShouldBe("AddStock");
         m.QuantityDelta.ShouldBe(2.5m);
