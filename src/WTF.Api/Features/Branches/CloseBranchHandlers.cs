@@ -221,6 +221,9 @@ internal static class BranchClosing
         var openPurchaseOrders = await db.PurchaseOrders.IgnoreQueryFilters([WTFDbContext.BranchFilterName])
             .CountAsync(p => p.BranchId == id && (p.Status == PurchaseOrderStatuses.Sent || p.Status == PurchaseOrderStatuses.PartlyReceived), cancellationToken);
 
+        var itemsWithStock = await db.ItemBranchStocks.IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+            .CountAsync(s => s.BranchId == id && s.CurrentQuantity > 0m && s.Item.IsActive, cancellationToken);
+
         var staff = await db.UserBranches.AsNoTracking()
             .Where(u => u.BranchId == id && u.User.IsActive)
             .Select(u => new { u.UserId, u.User.FirstName, u.User.LastName, u.User.Username, u.User.BranchScope })
@@ -269,6 +272,11 @@ internal static class BranchClosing
             blockers.Add($"{openPurchaseOrders} purchase {(openPurchaseOrders == 1 ? "order is" : "orders are")} still open at {branch.Name}. Receive or cancel {(openPurchaseOrders == 1 ? "it" : "them")} first.");
         }
 
-        return new BranchCloseCheckDto(branch.Id, branch.IsMain, activeCount <= 1, open, held, openPurchaseOrders, staff.Count, stranded, blockers.Count == 0, blockers);
+        if (itemsWithStock > 0)
+        {
+            blockers.Add($"{itemsWithStock} {(itemsWithStock == 1 ? "item still holds" : "items still hold")} stock at {branch.Name}. Send it to another branch with a transfer, or write it off as waste, first.");
+        }
+
+        return new BranchCloseCheckDto(branch.Id, branch.IsMain, activeCount <= 1, open, held, openPurchaseOrders, staff.Count, stranded, blockers.Count == 0, blockers, itemsWithStock);
     }
 }

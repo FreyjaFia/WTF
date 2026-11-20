@@ -76,9 +76,12 @@ public class AdjustItemStockHandler(
             throw new InvalidOperationException("This item is inactive. Restore it before adjusting its stock.");
         }
 
+        var branchId = await StockBalance.ResolveBranchAsync(db, cancellationToken);
+        var balance = await StockBalance.QuantityAsync(db, item.Id, branchId, cancellationToken);
+
         // The difference is applied on top of the balance at the moment of saving, so sales completed while the form was open stay.
         var delta = request.QuantityChange
-            ?? StockRules.AdjustmentDelta(request.ExpectedQuantity ?? item.CurrentQuantity, request.CountedQuantity!.Value);
+            ?? StockRules.AdjustmentDelta(request.ExpectedQuantity ?? balance, request.CountedQuantity!.Value);
         if (delta == 0m)
         {
             throw new InvalidOperationException("The count matches the balance, so there is nothing to adjust.");
@@ -90,12 +93,13 @@ public class AdjustItemStockHandler(
             ? await db.Database.BeginTransactionAsync(cancellationToken)
             : null;
 
-        var applied = await StockBalance.ApplyAsync(db, item.Id, delta, false, cancellationToken)
+        var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, delta, false, cancellationToken)
             ?? throw new InvalidOperationException("This item does not allow a negative balance, so the adjustment would take it below zero.");
 
         var movement = new StockMovement
         {
             ItemId = item.Id,
+            BranchId = branchId,
             MovementType = StockMovementTypes.Adjustment,
             QuantityDelta = delta,
             QuantityBefore = applied.Before,
@@ -108,7 +112,7 @@ public class AdjustItemStockHandler(
 
         db.StockMovements.Add(movement);
         await db.SaveChangesAsync(cancellationToken);
-        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        await stockAlerts.EvaluateAsync([item.Id], branchId, cancellationToken);
 
         if (transaction is not null)
         {
@@ -119,7 +123,7 @@ public class AdjustItemStockHandler(
             AuditAction.ItemStockAdjusted,
             AuditEntityType.StockMovement,
             movement.Id.ToString(),
-            newValues: new { item.Id, item.Name, delta, applied.Before, applied.After, reason, notes },
+            newValues: new { item.Id, item.Name, branchId, delta, applied.Before, applied.After, reason, notes },
             userId: userId,
             cancellationToken: cancellationToken);
 

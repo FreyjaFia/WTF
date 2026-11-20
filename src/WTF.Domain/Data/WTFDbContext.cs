@@ -156,6 +156,12 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<UserBranch> UserBranches { get; set; }
 
+    public virtual DbSet<ItemBranchStock> ItemBranchStocks { get; set; }
+
+    public virtual DbSet<StockTransfer> StockTransfers { get; set; }
+
+    public virtual DbSet<StockTransferLine> StockTransferLines { get; set; }
+
     public virtual DbSet<UserImage> UserImages { get; set; }
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
@@ -274,6 +280,87 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserBranches_Users");
+        });
+
+        modelBuilder.Entity<ItemBranchStock>(entity =>
+        {
+            entity.HasIndex(e => new { e.ItemId, e.BranchId }, "UQ_ItemBranchStock_ItemBranch").IsUnique();
+
+            entity.HasIndex(e => e.BranchId, "IX_ItemBranchStock_BranchId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemBranchStock_Id");
+            entity.Property(e => e.CurrentQuantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ItemBranchStock_UpdatedAt");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.ItemBranchStocks)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemBranchStock_Branches");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.ItemBranchStocks)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemBranchStock_Items");
+
+            entity.HasOne(d => d.Tenant).WithMany()
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemBranchStock_Tenants");
+        });
+
+        modelBuilder.Entity<StockTransfer>(entity =>
+        {
+            entity.HasIndex(e => new { e.FromBranchId, e.CreatedAt }, "IX_StockTransfers_FromBranch").IsDescending(false, true);
+
+            entity.HasIndex(e => new { e.ToBranchId, e.CreatedAt }, "IX_StockTransfers_ToBranch").IsDescending(false, true);
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockTransfers_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_StockTransfers_CreatedAt");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockTransfers_CreatedBy");
+
+            entity.HasOne(d => d.FromBranch).WithMany()
+                .HasForeignKey(d => d.FromBranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockTransfers_FromBranch");
+
+            entity.HasOne(d => d.ToBranch).WithMany()
+                .HasForeignKey(d => d.ToBranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockTransfers_ToBranch");
+
+            entity.HasOne(d => d.Tenant).WithMany()
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockTransfers_Tenants");
+        });
+
+        modelBuilder.Entity<StockTransferLine>(entity =>
+        {
+            entity.HasIndex(e => e.TransferId, "IX_StockTransferLines_TransferId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockTransferLines_Id");
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.UnitCost).HasColumnType("decimal(18, 6)");
+
+            entity.HasOne(d => d.Item).WithMany()
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockTransferLines_Items");
+
+            entity.HasOne(d => d.Tenant).WithMany()
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockTransferLines_Tenants");
+
+            entity.HasOne(d => d.Transfer).WithMany(p => p.StockTransferLines)
+                .HasForeignKey(d => d.TransferId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockTransferLines_Transfers");
         });
 
         modelBuilder.Entity<Conversation>(entity =>

@@ -148,8 +148,10 @@ public class RecordStockReceiptHandler(
             ? await db.Database.BeginTransactionAsync(cancellationToken)
             : null;
 
+        var branchId = order?.BranchId ?? await StockBalance.ResolveBranchAsync(db, cancellationToken);
         var receipt = new StockReceipt
         {
+            BranchId = branchId,
             SupplierId = supplier.Id,
             ReceivedOn = request.ReceivedOn,
             PurchaseOrderId = order?.Id,
@@ -174,7 +176,7 @@ public class RecordStockReceiptHandler(
             var quantity = PurchasingRules.UnitsFromPacks(line.Packs, line.UnitsPerPack);
             var unitCost = PurchasingRules.UnitCost(line.PackPrice, line.UnitsPerPack);
 
-            var applied = await StockBalance.ApplyAsync(db, item.Id, quantity, true, cancellationToken)
+            var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, quantity, true, cancellationToken)
                 ?? throw new InvalidOperationException($"{item.Name} was not found.");
 
             item.UpdatedAt = now;
@@ -194,12 +196,13 @@ public class RecordStockReceiptHandler(
                 }
 
                 item.CostPrice = unitCost;
-                item.AverageCost = CostRules.WeightedAverage(applied.Before, item.AverageCost, quantity, unitCost.Value);
+                item.AverageCost = CostRules.WeightedAverage(await StockBalance.ShopQuantityAsync(db, item.Id, cancellationToken) - quantity, item.AverageCost, quantity, unitCost.Value);
             }
 
             var movement = new StockMovement
             {
                 ItemId = item.Id,
+                BranchId = branchId,
                 MovementType = StockMovementTypes.AddStock,
                 QuantityDelta = quantity,
                 QuantityBefore = applied.Before,
@@ -246,7 +249,7 @@ public class RecordStockReceiptHandler(
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        await stockAlerts.EvaluateAsync(itemIds, cancellationToken);
+        await stockAlerts.EvaluateAsync(itemIds, branchId, cancellationToken);
 
         if (transaction is not null)
         {

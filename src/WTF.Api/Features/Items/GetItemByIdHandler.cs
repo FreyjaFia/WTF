@@ -14,6 +14,8 @@ public class GetItemByIdHandler(WTFDbContext db) : IRequestHandler<GetItemByIdQu
     {
         var item = await db.Items
             .AsNoTracking()
+            .Include(i => i.ItemBranchStocks)
+                .ThenInclude(s => s.Branch)
             .Include(i => i.ItemPriceHistories)
                 .ThenInclude(h => h.UpdatedByNavigation)
             .Include(i => i.ProductItemLinkItems)

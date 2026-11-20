@@ -26,7 +26,8 @@ public record BranchCloseCheckDto(
     int StaffAssigned,
     List<BranchStaffDto> StaffWithNoOtherBranch,
     bool CanClose,
-    List<string> Blockers);
+    List<string> Blockers,
+    int ItemsWithStock = 0);
 
 public record BranchStaffDto(Guid UserId, string Name, string Username);
 

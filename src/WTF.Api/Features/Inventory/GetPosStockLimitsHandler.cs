@@ -26,7 +26,7 @@ public class GetPosStockLimitsHandler(WTFDbContext db, ITenantFeatures tenantFea
             .AsNoTracking()
             .Where(item => item.IsActive && !item.AllowNegativeStock)
             .OrderBy(item => item.Name)
-            .Select(item => new { item.Id, item.Name, item.UnitName, item.CurrentQuantity })
+            .Select(item => new { item.Id, item.Name, item.UnitName, CurrentQuantity = item.ItemBranchStocks.Sum(s => s.CurrentQuantity) })
             .ToListAsync(cancellationToken);
 
         var itemIds = items.Select(item => item.Id).ToList();

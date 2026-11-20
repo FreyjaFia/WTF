@@ -7,7 +7,8 @@ namespace WTF.Api.Features.Inventory;
 
 public record StockMovementLookups(
     IReadOnlyDictionary<Guid, int> OrderNumbers,
-    IReadOnlyDictionary<Guid, string> ProductNames)
+    IReadOnlyDictionary<Guid, string> ProductNames,
+    IReadOnlyDictionary<Guid, string>? BranchCodes = null)
 {
     public static StockMovementLookups Empty { get; } = new(new Dictionary<Guid, int>(), new Dictionary<Guid, string>());
 }
@@ -42,7 +43,12 @@ internal static class StockMovementMapping
                 .Where(p => productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
-        return new StockMovementLookups(orderNumbers, productNames);
+        var branchCodes = await db.Branches
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+            .AsNoTracking()
+            .ToDictionaryAsync(b => b.Id, b => b.Code, cancellationToken);
+
+        return new StockMovementLookups(orderNumbers, productNames, branchCodes);
     }
 
     public static StockMovementDto ToDto(StockMovement movement, StockMovementLookups lookups)
@@ -69,6 +75,8 @@ internal static class StockMovementMapping
                 && movement.ReferenceId.HasValue
                 && lookups.OrderNumbers.TryGetValue(movement.ReferenceId.Value, out var orderNumber)
                     ? orderNumber
-                    : null);
+                    : null,
+            movement.BranchId,
+            lookups.BranchCodes is not null && lookups.BranchCodes.TryGetValue(movement.BranchId, out var branchCode) ? branchCode : null);
     }
 }

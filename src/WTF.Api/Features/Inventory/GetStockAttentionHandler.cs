@@ -14,19 +14,22 @@ public class GetStockAttentionHandler(WTFDbContext db) : IRequestHandler<GetStoc
 {
     public async Task<StockAttentionDto> Handle(GetStockAttentionQuery request, CancellationToken cancellationToken)
     {
-        var items = await db.Items
+        // One row per item and branch the person may see: Makati can be out of milk while BGC is fine.
+        var items = await db.ItemBranchStocks
             .AsNoTracking()
-            .Where(i => i.IsActive)
-            .Select(i => new
+            .Where(s => s.Item.IsActive)
+            .Select(s => new
             {
-                i.Id,
-                i.Name,
-                i.UnitName,
-                i.CurrentQuantity,
-                i.WarningQuantity,
-                i.CriticalQuantity,
-                i.AllowNegativeStock,
-                Links = i.ProductItemLinkItems.Where(l => l.IsActive && l.Product.IsActive).Select(l => new { l.QuantityPerSale, l.AllowancePercent }).ToList()
+                s.Item.Id,
+                s.Item.Name,
+                s.Item.UnitName,
+                s.CurrentQuantity,
+                s.Item.WarningQuantity,
+                s.Item.CriticalQuantity,
+                s.Item.AllowNegativeStock,
+                s.BranchId,
+                BranchName = s.Branch.Name,
+                Links = s.Item.ProductItemLinkItems.Where(l => l.IsActive && l.Product.IsActive).Select(l => new { l.QuantityPerSale, l.AllowancePercent }).ToList()
             })
             .ToListAsync(cancellationToken);
 
@@ -50,7 +53,9 @@ public class GetStockAttentionHandler(WTFDbContext db) : IRequestHandler<GetStoc
                 x.Status.ToString(),
                 x.Item.AllowNegativeStock,
                 x.Item.Links.Count,
-                x.Item.Links.Count == 0 ? 0 : x.Item.Links.Min(l => StockRules.SalesCovered(x.Item.CurrentQuantity, CostRules.EffectiveQuantity(l.QuantityPerSale, l.AllowancePercent)))))
+                x.Item.Links.Count == 0 ? 0 : x.Item.Links.Min(l => StockRules.SalesCovered(x.Item.CurrentQuantity, CostRules.EffectiveQuantity(l.QuantityPerSale, l.AllowancePercent))),
+                x.Item.BranchId,
+                x.Item.BranchName))
             .ToList();
 
         return new StockAttentionDto(

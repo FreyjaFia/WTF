@@ -45,10 +45,13 @@ public class SaveStockCountLinesHandler(
         }
 
         var entryIds = entries.Select(e => e.ItemId).ToList();
-        var balances = await db.Items
+        var countBranchId = count.BranchId;
+        var balances = (await db.ItemBranchStocks
             .AsNoTracking()
-            .Where(i => entryIds.Contains(i.Id))
-            .ToDictionaryAsync(i => i.Id, i => i.CurrentQuantity, cancellationToken);
+            .Where(s => s.BranchId == countBranchId && entryIds.Contains(s.ItemId))
+            .Select(s => new { s.ItemId, s.CurrentQuantity })
+            .ToListAsync(cancellationToken))
+            .ToDictionary(s => s.ItemId, s => s.CurrentQuantity);
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var now = DateTime.UtcNow;
@@ -67,7 +70,7 @@ public class SaveStockCountLinesHandler(
             // What the system showed at the moment of counting: posting later applies counted minus this, so sales made in
             // between are not undone.
             line.CountedQuantity = entry.CountedQuantity;
-            line.ExpectedQuantity = balances[entry.ItemId];
+            line.ExpectedQuantity = balances.GetValueOrDefault(entry.ItemId);
             line.CountedAt = now;
             line.CountedBy = userId;
         }

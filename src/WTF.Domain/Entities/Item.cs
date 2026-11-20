@@ -53,6 +53,8 @@ public partial class Item
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
+    public virtual ICollection<ItemBranchStock> ItemBranchStocks { get; set; } = new List<ItemBranchStock>();
+
     public virtual ICollection<ItemAlertRecipient> ItemAlertRecipients { get; set; } = new List<ItemAlertRecipient>();
 
     public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();

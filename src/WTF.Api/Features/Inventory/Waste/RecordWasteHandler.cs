@@ -116,13 +116,11 @@ public class RecordWasteHandler(
             ? await db.Database.BeginTransactionAsync(cancellationToken)
             : null;
 
-        var result = await StockBalance.ApplyAsync(db, item.Id, -quantity, item.AllowNegativeStock, cancellationToken);
+        var branchId = await StockBalance.ResolveBranchAsync(db, cancellationToken);
+        var result = await StockBalance.ApplyAsync(db, item.Id, branchId, -quantity, item.AllowNegativeStock, cancellationToken);
         if (result is null)
         {
-            var balance = await db.Items.AsNoTracking()
-                .Where(i => i.Id == item.Id)
-                .Select(i => i.CurrentQuantity)
-                .FirstAsync(cancellationToken);
+            var balance = await StockBalance.QuantityAsync(db, item.Id, branchId, cancellationToken);
             var shortfall = WasteRules.Shortfall(balance, quantity);
             throw new InvalidOperationException(
                 $"Not enough {item.Name}: short by {StockWasteMapping.FormatQuantity(shortfall, item.UnitName)}. This item cannot go below zero, so the waste was not recorded.");
@@ -134,6 +132,7 @@ public class RecordWasteHandler(
         {
             Id = Guid.NewGuid(),
             ItemId = item.Id,
+            BranchId = branchId,
             MovementType = StockMovementTypes.Waste,
             QuantityDelta = -quantity,
             QuantityBefore = applied.Before,
@@ -150,6 +149,7 @@ public class RecordWasteHandler(
         {
             Id = wasteId,
             ItemId = item.Id,
+            BranchId = branchId,
             StockMovementId = movement.Id,
             Quantity = quantity,
             WasteReasonId = reason.Id,
@@ -182,7 +182,7 @@ public class RecordWasteHandler(
 
             return existing;
         }
-        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        await stockAlerts.EvaluateAsync([item.Id], branchId, cancellationToken);
 
         if (transaction is not null)
         {

@@ -29,6 +29,7 @@ public static class EndpointRegistration
             .MapExpenses()
             .MapBranches()
             .MapStockCounts()
+            .MapStockTransfers()
             .MapSuppliers()
             .MapStockReceipts()
             .MapReordering()

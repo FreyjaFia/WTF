@@ -96,5 +96,6 @@ public enum AuditAction
     BranchClosed,
     BranchReopened,
     BranchMainChanged,
-    BranchScopeChanged
+    BranchScopeChanged,
+    StockTransferred
 }

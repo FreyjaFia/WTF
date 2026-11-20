@@ -91,7 +91,7 @@ public class UpdateItemHandler(
             item.IsActive
         };
 
-        if (!request.AllowNegativeStock && item.CurrentQuantity < 0)
+        if (!request.AllowNegativeStock && await db.ItemBranchStocks.IgnoreQueryFilters([WTFDbContext.BranchFilterName]).AnyAsync(s => s.ItemId == item.Id && s.CurrentQuantity < 0, cancellationToken))
         {
             throw new InvalidOperationException(
                 "This item is below zero. Count it and correct the stock before refusing sales that would take it below zero.");
@@ -149,7 +149,7 @@ public class UpdateItemHandler(
         item.IsActive = request.IsActive;
         if (deactivating)
         {
-            ItemDeactivation.ForgetAlertState(item);
+            await ItemDeactivation.ForgetAlertStateAsync(db, item.Id, cancellationToken);
         }
 
         item.UpdatedAt = DateTime.UtcNow;
@@ -158,7 +158,7 @@ public class UpdateItemHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         // New warning or critical levels can put the item into an alert right away.
-        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        await stockAlerts.EvaluateEverywhereAsync([item.Id], cancellationToken);
 
         if (transaction is not null)
         {

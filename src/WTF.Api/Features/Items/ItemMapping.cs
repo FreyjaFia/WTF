@@ -17,7 +17,7 @@ internal static class ItemMapping
             item.UnitName,
             item.StockUnitName,
             item.UnitsPerStockUnit,
-            item.CurrentQuantity,
+            item.QuantityOnHand,
             item.CostPrice,
             item.WarningQuantity,
             item.CriticalQuantity,
@@ -60,6 +60,15 @@ internal static class ItemMapping
                 .ToList(),
             item.AverageCost,
             item.YieldPercent,
-            CostRules.UsableCost(CostRules.MovementCost(item.AverageCost, item.CostPrice), item.YieldPercent));
+            CostRules.UsableCost(CostRules.MovementCost(item.AverageCost, item.CostPrice), item.YieldPercent),
+            [.. item.ItemBranchStocks
+                .OrderByDescending(s => s.Branch.IsMain)
+                .ThenBy(s => s.Branch.Name)
+                .Select(s => new ItemBranchStockDto(
+                    s.BranchId,
+                    s.Branch.Code,
+                    s.Branch.Name,
+                    s.CurrentQuantity,
+                    StockRules.StatusFor(s.CurrentQuantity, item.WarningQuantity, item.CriticalQuantity).ToString().ToLowerInvariant()))]);
     }
 }

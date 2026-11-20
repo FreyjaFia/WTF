@@ -47,6 +47,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             return StockDeductionResult.None;
         }
 
+        var branchId = await LoadBranchIdAsync(orderId, cancellationToken);
         var (required, skipped) = await LoadRequiredAsync(orderId, cancellationToken);
         var taken = await LoadTakenAsync(orderId, cancellationToken);
 
@@ -58,7 +59,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             .ToHashSet();
         var changes = StockRules.Reconcile(required, taken.Except(kept).ToList());
 
-        if (changes.Count == 0 || (options.IsCorrection && taken.Count == 0 && await IsBeforeStockTrackingAsync(orderId, cancellationToken)))
+        if (changes.Count == 0 || (options.IsCorrection && taken.Count == 0 && await IsBeforeStockTrackingAsync(orderId, branchId, cancellationToken)))
         {
             return new StockDeductionResult(skipped);
         }
@@ -75,8 +76,8 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         {
             var item = items[itemChanges.Key];
             var net = itemChanges.Sum(c => c.Quantity);
-            var applied = await StockBalance.ApplyAsync(db, item.Id, net, !options.BlockWhenShort, cancellationToken)
-                ?? throw new InvalidOperationException(await ShortMessageAsync(item, -net, cancellationToken));
+            var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, net, !options.BlockWhenShort, cancellationToken)
+                ?? throw new InvalidOperationException(await ShortMessageAsync(item, branchId, -net, cancellationToken));
 
             if (noteShortfalls && net < 0m && applied.Before < -net)
             {
@@ -90,6 +91,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                 db.StockMovements.Add(new StockMovement
                 {
                     ItemId = item.Id,
+                    BranchId = branchId,
                     ProductId = change.ProductId,
                     OrderItemId = change.OrderLineId,
                     MovementType = change.Quantity < 0 ? StockMovementTypes.Sale : StockMovementTypes.SaleVoid,
@@ -118,7 +120,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        await stockAlerts.EvaluateAsync(changes.Select(c => c.ItemId), cancellationToken);
+        await stockAlerts.EvaluateAsync(changes.Select(c => c.ItemId), branchId, cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.OrderStockDeducted,
@@ -138,6 +140,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             return;
         }
 
+        var branchId = await LoadBranchIdAsync(orderId, cancellationToken);
         var (required, _) = await LoadRequiredAsync(orderId, cancellationToken);
         var taken = await LoadTakenAsync(orderId, cancellationToken);
         var changes = StockRules.Reconcile(required, taken);
@@ -155,7 +158,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         {
             var item = items[itemChanges.Key];
             var net = itemChanges.Sum(c => c.Quantity);
-            var applied = await StockBalance.ApplyAsync(db, item.Id, net, true, cancellationToken)
+            var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, net, true, cancellationToken)
                 ?? throw new InvalidOperationException($"The item {item.Name} was not found.");
 
             var running = applied.Before;
@@ -165,6 +168,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                 db.StockMovements.Add(new StockMovement
                 {
                     ItemId = item.Id,
+                    BranchId = branchId,
                     ProductId = change.ProductId,
                     OrderItemId = change.OrderLineId,
                     MovementType = StockMovementTypes.Waste,
@@ -184,7 +188,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        await stockAlerts.EvaluateAsync(changes.Select(c => c.ItemId), cancellationToken);
+        await stockAlerts.EvaluateAsync(changes.Select(c => c.ItemId), branchId, cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.OrderStockWasted,
@@ -203,6 +207,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             return;
         }
 
+        var branchId = await LoadBranchIdAsync(orderId, cancellationToken);
         var taken = await LoadTakenAsync(orderId, cancellationToken);
         if (taken.Count == 0)
         {
@@ -235,7 +240,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             }
 
             var net = rows.Sum(row => row.Change.Quantity);
-            var applied = await StockBalance.ApplyAsync(db, item.Id, net, true, cancellationToken)
+            var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, net, true, cancellationToken)
                 ?? throw new InvalidOperationException($"The item {item.Name} was not found.");
 
             var running = applied.Before;
@@ -245,6 +250,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                 db.StockMovements.Add(new StockMovement
                 {
                     ItemId = item.Id,
+                    BranchId = branchId,
                     ProductId = change.ProductId,
                     OrderItemId = change.OrderLineId,
                     MovementType = type,
@@ -264,7 +270,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        await stockAlerts.EvaluateAsync(taken.Select(t => t.ItemId), cancellationToken);
+        await stockAlerts.EvaluateAsync(taken.Select(t => t.ItemId), branchId, cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.OrderStockRestored,
@@ -352,7 +358,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
     }
 
     // An order made before stock tracking started has no movements, so correcting it must not deduct it for the first time.
-    private async Task<bool> IsBeforeStockTrackingAsync(Guid orderId, CancellationToken cancellationToken)
+    private async Task<bool> IsBeforeStockTrackingAsync(Guid orderId, Guid branchId, CancellationToken cancellationToken)
     {
         var createdAt = await db.Orders
             .AsNoTracking()
@@ -362,7 +368,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
 
         var firstSale = await db.StockMovements
             .AsNoTracking()
-            .Where(m => m.MovementType == StockMovementTypes.Sale)
+            .Where(m => m.MovementType == StockMovementTypes.Sale && m.BranchId == branchId)
             .OrderBy(m => m.CreatedAt)
             .Select(m => (DateTime?)m.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
@@ -399,13 +405,19 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         return weights;
     }
 
-    private async Task<string> ShortMessageAsync(Item item, decimal needed, CancellationToken cancellationToken)
+    // The order decides where its stock comes from and goes back to, whoever (or whichever branch screen) touches it later.
+    private async Task<Guid> LoadBranchIdAsync(Guid orderId, CancellationToken cancellationToken)
     {
-        var balance = await db.Items
+        return await db.Orders
             .AsNoTracking()
-            .Where(i => i.Id == item.Id)
-            .Select(i => i.CurrentQuantity)
+            .Where(o => o.Id == orderId)
+            .Select(o => o.BranchId)
             .FirstAsync(cancellationToken);
+    }
+
+    private async Task<string> ShortMessageAsync(Item item, Guid branchId, decimal needed, CancellationToken cancellationToken)
+    {
+        var balance = await StockBalance.QuantityAsync(db, item.Id, branchId, cancellationToken);
         var shortBy = StockRules.Shortfall(balance, needed);
 
         return $"Not enough {item.Name}: this order needs {Format(needed)} {InventoryUnitLabels.Abbreviate(item.UnitName)}, "

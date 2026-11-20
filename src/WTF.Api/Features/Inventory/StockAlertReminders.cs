@@ -69,23 +69,25 @@ public sealed class StockReminderService(
         var localNow = TimeZoneInfo.ConvertTime(nowUtc, timeZone);
         var dayStartUtc = new DateTimeOffset(localNow.Year, localNow.Month, localNow.Day, 0, 0, 0, localNow.Offset).UtcDateTime;
 
-        var items = await db.Items
+        var rows = await db.ItemBranchStocks
             .AsNoTracking()
-            .Where(i => i.IsActive && i.LastAlertStatus > 0)
+            .Where(s => s.LastAlertStatus > 0 && s.Item.IsActive)
+            .Select(s => new { s.Item, s.BranchId, s.CurrentQuantity })
             .ToListAsync(cancellationToken);
 
         var lowItems = 0;
         var reminders = 0;
-        foreach (var item in items)
+        foreach (var row in rows)
         {
-            var status = StockRules.StatusFor(item.CurrentQuantity, item.WarningQuantity, item.CriticalQuantity);
+            var status = StockRules.StatusFor(row.CurrentQuantity, row.Item.WarningQuantity, row.Item.CriticalQuantity);
             if (status == StockStatus.Ok)
             {
                 continue;
             }
 
             lowItems++;
-            reminders += await RemindAsync(item, status, dayStartUtc, settings.DryRun, nowUtc.UtcDateTime, cancellationToken);
+            var branchLabel = await StockBranchLabel.ForAsync(db, row.BranchId, cancellationToken);
+            reminders += await RemindAsync(row.Item, row.CurrentQuantity, row.BranchId, branchLabel, status, dayStartUtc, settings.DryRun, nowUtc.UtcDateTime, cancellationToken);
         }
 
         logger.LogInformation(
@@ -115,16 +117,17 @@ public sealed class StockReminderService(
         }
     }
 
-    private async Task<int> RemindAsync(Item item, StockStatus status, DateTime dayStartUtc, bool dryRun, DateTime now, CancellationToken cancellationToken)
+    private async Task<int> RemindAsync(Item item, decimal quantity, Guid branchId, string? branchLabel, StockStatus status, DateTime dayStartUtc, bool dryRun, DateTime now, CancellationToken cancellationToken)
     {
-        var recipients = await StockAlertService.ResolveRecipientsAsync(db, item.Id, cancellationToken);
+        var recipients = await StockAlertService.ResolveRecipientsAsync(db, item.Id, branchId, cancellationToken);
         var announceByText = new Dictionary<(string Title, string Body), List<Guid>>();
         var sent = 0;
+        var subjectId = StockAlertKey.For(item.Id, branchId);
 
         foreach (var userId in recipients)
         {
             var latest = await db.Notifications
-                .Where(n => n.Kind == NotificationKinds.StockAlert && n.SubjectId == item.Id && n.UserId == userId)
+                .Where(n => n.Kind == NotificationKinds.StockAlert && n.SubjectId == subjectId && n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -141,12 +144,12 @@ public sealed class StockReminderService(
             }
 
             var (title, body) = latest is null
-                ? StockAlertMessages.For(item, status)
-                : StockAlertMessages.Reminder(item, status, latest.ReminderCount + 2);
+                ? StockAlertMessages.For(item, quantity, status, branchLabel)
+                : StockAlertMessages.Reminder(item, quantity, status, latest.ReminderCount + 2, branchLabel);
 
             if (latest is null)
             {
-                var message = StockAlertMessages.Message(item, status, title, body);
+                var message = StockAlertMessages.Message(item, quantity, branchId, status, title, body);
                 db.Notifications.Add(new Notification
                 {
                     UserId = userId,
@@ -155,14 +158,14 @@ public sealed class StockReminderService(
                     Title = title,
                     Body = body,
                     Path = message.Path,
-                    SubjectId = item.Id,
+                    SubjectId = subjectId,
                     Data = message.Data,
                     CreatedAt = now,
                     LastRemindedAt = now
                 });
                 await db.SaveChangesAsync(cancellationToken);
             }
-            else if (!await LiftAsync(latest, StockAlertMessages.Message(item, status, title, body), dayStartUtc, now, cancellationToken))
+            else if (!await LiftAsync(latest, StockAlertMessages.Message(item, quantity, branchId, status, title, body), dayStartUtc, now, cancellationToken))
             {
                 continue;
             }
@@ -180,7 +183,7 @@ public sealed class StockReminderService(
         foreach (var ((title, body), users) in announceByText)
         {
             // Tells the open screens and the devices; a failed push never stops the other reminders.
-            await notifications.AnnounceAsync(users, StockAlertMessages.Message(item, status, title, body), cancellationToken);
+            await notifications.AnnounceAsync(users, StockAlertMessages.Message(item, quantity, branchId, status, title, body), cancellationToken);
         }
 
         return sent;

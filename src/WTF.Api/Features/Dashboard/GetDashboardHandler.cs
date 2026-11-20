@@ -141,10 +141,10 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var stockStatuses = new List<StockStatus>();
         if (stockOn)
         {
-            var stock = await db.Items
+            var stock = await db.ItemBranchStocks
                 .AsNoTracking()
-                .Where(i => i.IsActive)
-                .Select(i => new { i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity })
+                .Where(s => s.Item.IsActive)
+                .Select(s => new { s.CurrentQuantity, s.Item.WarningQuantity, s.Item.CriticalQuantity })
                 .ToListAsync(cancellationToken);
             stockStatuses = [.. stock.Select(i => StockRules.StatusFor(i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity))];
         }

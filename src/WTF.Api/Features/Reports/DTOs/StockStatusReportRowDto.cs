@@ -9,5 +9,6 @@ public sealed record StockStatusReportRowDto(
     decimal? CriticalQuantity,
     string Status,
     decimal? CostPrice,
-    decimal StockValue
+    decimal StockValue,
+    string? BranchName = null
 );

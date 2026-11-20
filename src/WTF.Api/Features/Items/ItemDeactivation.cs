@@ -30,8 +30,23 @@ internal static class ItemDeactivation
     }
 
     // A deleted item is out of the alerts for good: forget its alert level so a restore while still low alerts again.
-    public static void ForgetAlertState(Item item)
+    public static async Task ForgetAlertStateAsync(WTFDbContext db, Guid itemId, CancellationToken cancellationToken)
     {
-        item.LastAlertStatus = 0;
+        var rows = db.ItemBranchStocks
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+            .Where(s => s.ItemId == itemId && s.LastAlertStatus != 0);
+
+        if (db.Database.IsRelational())
+        {
+            await rows.ExecuteUpdateAsync(setters => setters.SetProperty(s => s.LastAlertStatus, (byte)0), cancellationToken);
+            return;
+        }
+
+        foreach (var row in await rows.ToListAsync(cancellationToken))
+        {
+            row.LastAlertStatus = 0;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

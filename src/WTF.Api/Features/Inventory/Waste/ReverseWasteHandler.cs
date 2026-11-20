@@ -54,6 +54,7 @@ public class ReverseWasteHandler(
             throw new InvalidOperationException("This item is inactive. Restore it before reversing its waste.");
         }
 
+        var branchId = waste.BranchId;
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var now = DateTime.UtcNow;
         var previousStatus = waste.Status;
@@ -83,13 +84,14 @@ public class ReverseWasteHandler(
             db.Entry(waste).State = EntityState.Detached;
         }
 
-        var applied = await StockBalance.ApplyAsync(db, item.Id, waste.Quantity, true, cancellationToken)
+        var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, waste.Quantity, true, cancellationToken)
             ?? throw new InvalidOperationException("The stock balance could not be updated.");
 
         var movement = new StockMovement
         {
             Id = Guid.NewGuid(),
             ItemId = item.Id,
+            BranchId = branchId,
             MovementType = StockMovementTypes.WasteReversed,
             QuantityDelta = waste.Quantity,
             QuantityBefore = applied.Before,
@@ -121,7 +123,7 @@ public class ReverseWasteHandler(
         }
 
         await WasteReviewNotifications.ResolveAsync(db, notifications, waste.Id, now, cancellationToken);
-        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        await stockAlerts.EvaluateAsync([item.Id], branchId, cancellationToken);
 
         if (transaction is not null)
         {

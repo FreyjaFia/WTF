@@ -23,6 +23,7 @@ public partial class WTFDbContext
 
     private readonly ICurrentTenant _currentTenant = NoTenant.Instance;
     private readonly ICurrentBranch _currentBranch = NoBranch.Instance;
+    private readonly HashSet<Guid> _extraWritableBranches = [];
 
     public WTFDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant currentTenant)
         : base(options)
@@ -48,6 +49,13 @@ public partial class WTFDbContext
     public IReadOnlyCollection<Guid> VisibleBranchIds => _currentBranch.VisibleBranchIds;
 
     public Guid? ActiveBranchId => _currentBranch.ActiveBranchId;
+
+    // A person limited to some branches may still send goods to another branch: that one write (the incoming movement and the
+    // balance) is allowed after the code has checked the branch belongs to the shop and is open. Nothing else opens up.
+    public void AllowWritesTo(Guid branchId)
+    {
+        _extraWritableBranches.Add(branchId);
+    }
 
     // Public links, logins and background jobs learn their tenant from data, not from a token.
     public void UseTenant(Guid tenantId)
@@ -98,6 +106,13 @@ public partial class WTFDbContext
         modelBuilder.Entity<StockCountLine>().HasQueryFilter(BranchFilterName, l => !BranchFilterEnabled || VisibleBranchIds.Contains(l.Count.BranchId));
         modelBuilder.Entity<StockReceiptLine>().HasQueryFilter(BranchFilterName, l => !BranchFilterEnabled || VisibleBranchIds.Contains(l.Receipt.BranchId));
         modelBuilder.Entity<PurchaseOrderLine>().HasQueryFilter(BranchFilterName, l => !BranchFilterEnabled || VisibleBranchIds.Contains(l.PurchaseOrder.BranchId));
+
+        // Stock is per branch (ItemBranchStock). The old shop-wide columns stay in the table as the last values before branches.
+        modelBuilder.Entity<Item>().Ignore(i => i.CurrentQuantity);
+        modelBuilder.Entity<Item>().Ignore(i => i.LastAlertStatus);
+
+        modelBuilder.Entity<StockTransfer>().HasQueryFilter(BranchFilterName, t => !BranchFilterEnabled || VisibleBranchIds.Contains(t.FromBranchId) || VisibleBranchIds.Contains(t.ToBranchId));
+        modelBuilder.Entity<StockTransferLine>().HasQueryFilter(BranchFilterName, l => !BranchFilterEnabled || VisibleBranchIds.Contains(l.Transfer.FromBranchId) || VisibleBranchIds.Contains(l.Transfer.ToBranchId));
 
         modelBuilder.Entity<UserRole>().HasQueryFilter(r => !TenantFilterEnabled || r.TenantId == null || r.TenantId == CurrentTenantId);
         modelBuilder.Entity<RolePermission>().HasQueryFilter(p => !TenantFilterEnabled || p.Role.TenantId == null || p.Role.TenantId == CurrentTenantId);
@@ -151,7 +166,7 @@ public partial class WTFDbContext
                         }
                     }
 
-                    if (filterEnabled && !allowed.Contains(entry.Entity.BranchId))
+                    if (filterEnabled && !allowed.Contains(entry.Entity.BranchId) && !_extraWritableBranches.Contains(entry.Entity.BranchId))
                     {
                         throw new InvalidOperationException("A row cannot be saved for a branch the user may not use.");
                     }

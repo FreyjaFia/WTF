@@ -57,5 +57,7 @@ public partial class Branch
 
     public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
 
+    public virtual ICollection<ItemBranchStock> ItemBranchStocks { get; set; } = new List<ItemBranchStock>();
+
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

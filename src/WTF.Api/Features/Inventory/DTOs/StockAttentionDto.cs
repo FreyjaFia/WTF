@@ -10,7 +10,9 @@ public record StockAttentionItemDto(
     string Status,
     bool AllowNegativeStock,
     int ProductCount,
-    int SalesCovered);
+    int SalesCovered,
+    Guid? BranchId = null,
+    string? BranchName = null);
 
 public record StockAttentionDto(
     List<StockAttentionItemDto> Items,

@@ -241,3 +241,15 @@ public partial class Branch : ITenantOwned
 public partial class UserBranch : ITenantOwned
 {
 }
+
+public partial class ItemBranchStock : ITenantOwned
+{
+}
+
+public partial class StockTransfer : ITenantOwned
+{
+}
+
+public partial class StockTransferLine : ITenantOwned
+{
+}

@@ -74,12 +74,13 @@ public class PostStockCountHandler(
                 continue;
             }
 
-            var applied = await StockBalance.ApplyAsync(db, item.Id, delta, true, cancellationToken)
+            var applied = await StockBalance.ApplyAsync(db, item.Id, count.BranchId, delta, true, cancellationToken)
                 ?? throw new InvalidOperationException($"{item.Name} could not be updated.");
 
             var movement = new StockMovement
             {
                 ItemId = item.Id,
+                BranchId = count.BranchId,
                 MovementType = StockMovementTypes.Count,
                 QuantityDelta = delta,
                 QuantityBefore = applied.Before,
@@ -104,7 +105,7 @@ public class PostStockCountHandler(
 
         if (changed.Count > 0)
         {
-            await stockAlerts.EvaluateAsync(changed, cancellationToken);
+            await stockAlerts.EvaluateAsync(changed, count.BranchId, cancellationToken);
         }
 
         if (transaction is not null)

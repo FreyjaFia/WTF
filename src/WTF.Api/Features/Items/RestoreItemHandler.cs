@@ -40,7 +40,7 @@ public class RestoreItemHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         // An item restored while low is told to the people who look after it, like any other drop to that level.
-        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        await stockAlerts.EvaluateEverywhereAsync([item.Id], cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.ItemRestored,

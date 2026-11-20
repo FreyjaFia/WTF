@@ -25,5 +25,6 @@ public enum AuditEntityType
     Report,
     OfflineSyncPolicy,
     UnsyncedOrder,
-    Branch
+    Branch,
+    StockTransfer
 }

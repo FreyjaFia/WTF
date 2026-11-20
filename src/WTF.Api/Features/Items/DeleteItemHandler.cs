@@ -39,14 +39,14 @@ public class DeleteItemHandler(
         };
 
         item.IsActive = false;
-        ItemDeactivation.ForgetAlertState(item);
+        await ItemDeactivation.ForgetAlertStateAsync(db, item.Id, cancellationToken);
         item.UpdatedAt = DateTime.UtcNow;
         item.UpdatedBy = userId;
 
         await db.SaveChangesAsync(cancellationToken);
 
         // The stock screens drop the item at once instead of waiting for the next refresh.
-        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        await stockAlerts.EvaluateEverywhereAsync([item.Id], cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.ItemDeleted,

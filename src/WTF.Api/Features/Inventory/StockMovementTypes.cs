@@ -9,9 +9,12 @@ public static class StockMovementTypes
     public const string Adjustment = "Adjustment";
     public const string WasteReversed = "WasteReversed";
     public const string Count = "Count";
+    public const string TransferOut = "TransferOut";
+    public const string TransferIn = "TransferIn";
 
     public const string OrderReference = "Order";
     public const string StockWasteReference = "StockWaste";
     public const string StockCountReference = "StockCount";
     public const string StockReceiptReference = "StockReceipt";
+    public const string StockTransferReference = "StockTransfer";
 }

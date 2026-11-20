@@ -19,15 +19,27 @@ public class GetReorderListHandler(WTFDbContext db) : IRequestHandler<GetReorder
 {
     private const string NoSupplierName = "No supplier set";
 
+    private static decimal? ParFor(decimal? parLevel, int branchCount) => parLevel * Math.Max(1, branchCount);
+
     public async Task<ReorderListDto> Handle(GetReorderListQuery request, CancellationToken cancellationToken)
     {
         var days = Math.Clamp(request.UsageDays, 7, 90);
         var items = await db.Items
             .AsNoTracking()
             .Where(i => i.IsActive)
-            .Select(i => new { i.Id, i.Name, i.UnitName, i.CurrentQuantity, i.ParLevel })
+            .Select(i => new
+            {
+                i.Id,
+                i.Name,
+                i.UnitName,
+                CurrentQuantity = i.ItemBranchStocks.Sum(s => s.CurrentQuantity),
+                BranchCount = i.ItemBranchStocks.Count(),
+                i.ParLevel
+            })
             .ToListAsync(cancellationToken);
 
+        // The par level is what each branch should hold: working in one branch it is compared with that branch, in "All
+        // branches" with the sum of the branches the person may see.
         var withPar = items.Where(i => i.ParLevel.HasValue).ToList();
         var ids = withPar.Select(i => i.Id).ToList();
         var since = DateTime.UtcNow.AddDays(-days);
@@ -61,13 +73,13 @@ public class GetReorderListHandler(WTFDbContext db) : IRequestHandler<GetReorder
         foreach (var item in withPar)
         {
             var order = onOrder.GetValueOrDefault(item.Id);
-            if (!ReorderRules.IsBelowPar(item.ParLevel, item.CurrentQuantity, order))
+            if (!ReorderRules.IsBelowPar(ParFor(item.ParLevel, item.BranchCount), item.CurrentQuantity, order))
             {
                 continue;
             }
 
             preferred.TryGetValue(item.Id, out var link);
-            var suggestion = ReorderRules.Suggest(item.ParLevel, item.CurrentQuantity, order, link?.UnitsPerPack);
+            var suggestion = ReorderRules.Suggest(ParFor(item.ParLevel, item.BranchCount), item.CurrentQuantity, order, link?.UnitsPerPack);
             if (suggestion is null)
             {
                 continue;
@@ -79,7 +91,7 @@ public class GetReorderListHandler(WTFDbContext db) : IRequestHandler<GetReorder
                 : null;
 
             lines.Add((link?.SupplierId, link?.SupplierName ?? NoSupplierName, link?.LeadTimeDays, new ReorderLineDto(
-                item.Id, item.Name, item.UnitName, item.CurrentQuantity, item.ParLevel!.Value, order,
+                item.Id, item.Name, item.UnitName, item.CurrentQuantity, ParFor(item.ParLevel, item.BranchCount)!.Value, order,
                 ReorderRules.DaysOfCover(item.CurrentQuantity, average), suggestion.Units, suggestion.Packs, link?.PackName,
                 link?.UnitsPerPack, link?.PackPrice, estimate)));
         }
@@ -109,7 +121,7 @@ public class GetParLevelsHandler(WTFDbContext db) : IRequestHandler<GetParLevels
             .AsNoTracking()
             .Where(i => i.IsActive)
             .OrderBy(i => i.Name)
-            .Select(i => new ParLevelRowDto(i.Id, i.Name, i.UnitName, i.CurrentQuantity, i.ParLevel))
+            .Select(i => new ParLevelRowDto(i.Id, i.Name, i.UnitName, i.ItemBranchStocks.Sum(s => s.CurrentQuantity), i.ParLevel))
             .ToListAsync(cancellationToken);
 }
 
@@ -150,7 +162,8 @@ public class SetParLevelHandler(
                 cancellationToken: cancellationToken);
         }
 
-        return new ParLevelRowDto(item.Id, item.Name, item.UnitName, item.CurrentQuantity, item.ParLevel);
+        var onHand = await db.ItemBranchStocks.AsNoTracking().Where(s => s.ItemId == item.Id).SumAsync(s => s.CurrentQuantity, cancellationToken);
+        return new ParLevelRowDto(item.Id, item.Name, item.UnitName, onHand, item.ParLevel);
     }
 }
 

@@ -338,6 +338,7 @@ internal static class ReportTables
         "Stock Status",
         [
             new("itemName", "Item", r => r.ItemName, r => r.ItemName, false, 2.6f),
+            new("branchName", "Branch", r => r.BranchName ?? "-", r => r.BranchName ?? string.Empty, false, 1.4f),
             new("status", "Status", r => r.Status, r => r.Status, false, 1.2f),
             new("currentQuantity", "On Hand", r => $"{r.CurrentQuantity.ToString("N2", CultureInfo.InvariantCulture)} {r.UnitName}", r => r.CurrentQuantity, true, 1.4f),
             new("warningQuantity", "Warning At", r => r.WarningQuantity.HasValue ? r.WarningQuantity.Value.ToString("N2", CultureInfo.InvariantCulture) : "-", r => r.WarningQuantity, true, 1f),

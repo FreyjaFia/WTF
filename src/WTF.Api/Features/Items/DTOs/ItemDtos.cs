@@ -24,7 +24,10 @@ public record ItemDto(
     List<StockMovementDto> RecentMovements,
     decimal? AverageCost = null,
     decimal YieldPercent = 100m,
-    decimal? UsableCost = null);
+    decimal? UsableCost = null,
+    List<ItemBranchStockDto>? BranchStocks = null);
+
+public record ItemBranchStockDto(Guid BranchId, string BranchCode, string BranchName, decimal Quantity, string Status);
 
 public record StockMovementDto(
     Guid Id,
@@ -42,6 +45,8 @@ public record StockMovementDto(
     string CreatedByName,
     Guid? ProductId = null,
     string? ProductName = null,
-    int? OrderNumber = null);
+    int? OrderNumber = null,
+    Guid? BranchId = null,
+    string? BranchCode = null);
 
 public record PagedStockMovementsDto(List<StockMovementDto> Items, int TotalCount, int Page = 1, int PageSize = 25);

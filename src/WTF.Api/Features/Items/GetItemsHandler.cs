@@ -36,6 +36,8 @@ public class GetItemsHandler(WTFDbContext db) : IRequestHandler<GetItemsQuery, L
         }
 
         var items = await query
+            .Include(i => i.ItemBranchStocks)
+                .ThenInclude(s => s.Branch)
             .Include(i => i.ProductItemLinkItems)
                 .ThenInclude(l => l.Product)
             .Include(i => i.ProductItemLinkItems)

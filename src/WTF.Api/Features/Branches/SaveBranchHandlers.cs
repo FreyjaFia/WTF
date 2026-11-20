@@ -4,6 +4,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Branches.DTOs;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -55,6 +56,7 @@ public class CreateBranchHandler(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await StockBranchRows.AddBranchAsync(db, branch.Id, cancellationToken);
         cache.Forget();
 
         await auditService.LogAsync(

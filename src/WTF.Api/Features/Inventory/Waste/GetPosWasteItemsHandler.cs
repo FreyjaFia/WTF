@@ -20,7 +20,7 @@ public class GetPosWasteItemsHandler(WTFDbContext db) : IRequestHandler<GetPosWa
                 i.UnitName,
                 i.StockUnitName,
                 i.UnitsPerStockUnit,
-                i.CurrentQuantity,
+                i.ItemBranchStocks.Sum(s => s.CurrentQuantity),
                 i.AllowNegativeStock,
                 i.WasteApprovalLimit))
             .ToListAsync(cancellationToken);

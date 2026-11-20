@@ -49,6 +49,8 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
 
         var items = await ApplySort(query, request)
             .ApplyPaging(paging)
+            .Include(i => i.ItemBranchStocks)
+                .ThenInclude(s => s.Branch)
             .Include(i => i.ProductItemLinkItems)
                 .ThenInclude(l => l.Product)
             .Include(i => i.ProductItemLinkItems)
@@ -60,11 +62,11 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
     }
 
     private static readonly System.Linq.Expressions.Expression<Func<Item, bool>> IsCritical =
-        i => i.CriticalQuantity != null && i.CurrentQuantity <= i.CriticalQuantity;
+        i => i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity);
 
     private static readonly System.Linq.Expressions.Expression<Func<Item, bool>> IsWarning =
-        i => !(i.CriticalQuantity != null && i.CurrentQuantity <= i.CriticalQuantity)
-            && i.WarningQuantity != null && i.CurrentQuantity <= i.WarningQuantity;
+        i => !(i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
+            && i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity);
 
     private static IQueryable<Item> ApplySearch(IQueryable<Item> query, string? searchTerm)
     {
@@ -101,13 +103,13 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
         var critical = chosen.Contains(Critical);
 
         return query.Where(i =>
-            (critical && i.CriticalQuantity != null && i.CurrentQuantity <= i.CriticalQuantity)
+            (critical && i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
             || (warning
-                && !(i.CriticalQuantity != null && i.CurrentQuantity <= i.CriticalQuantity)
-                && i.WarningQuantity != null && i.CurrentQuantity <= i.WarningQuantity)
+                && !(i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
+                && i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity))
             || (ok
-                && !(i.CriticalQuantity != null && i.CurrentQuantity <= i.CriticalQuantity)
-                && !(i.WarningQuantity != null && i.CurrentQuantity <= i.WarningQuantity)));
+                && !(i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
+                && !(i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity))));
     }
 
     private static IQueryable<Item> ApplySort(IQueryable<Item> query, GetPagedItemsQuery request)
@@ -117,8 +119,8 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
 
         return (column, descending) switch
         {
-            ("stock", false) => query.OrderBy(i => i.CurrentQuantity).ThenBy(i => i.Id),
-            ("stock", true) => query.OrderByDescending(i => i.CurrentQuantity).ThenByDescending(i => i.Id),
+            ("stock", false) => query.OrderBy(i => i.ItemBranchStocks.Sum(s => s.CurrentQuantity)).ThenBy(i => i.Id),
+            ("stock", true) => query.OrderByDescending(i => i.ItemBranchStocks.Sum(s => s.CurrentQuantity)).ThenByDescending(i => i.Id),
             ("cost", false) => query.OrderBy(i => i.CostPrice ?? -1m).ThenBy(i => i.Id),
             ("cost", true) => query.OrderByDescending(i => i.CostPrice ?? -1m).ThenByDescending(i => i.Id),
             ("status", false) => query.OrderBy(StatusRank).ThenBy(i => i.Name).ThenBy(i => i.Id),
@@ -130,7 +132,7 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
 
     // Critical first, then warning, then ok, as the status column has always sorted.
     private static readonly System.Linq.Expressions.Expression<Func<Item, int>> StatusRank =
-        i => i.CriticalQuantity != null && i.CurrentQuantity <= i.CriticalQuantity ? 0
-            : i.WarningQuantity != null && i.CurrentQuantity <= i.WarningQuantity ? 1
+        i => i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity) ? 0
+            : i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity) ? 1
             : 2;
 }

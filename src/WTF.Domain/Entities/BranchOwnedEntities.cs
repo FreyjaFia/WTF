@@ -45,3 +45,7 @@ public partial class StockWaste : IBranchOwned
 public partial class UnsyncedOrder : IBranchOwned
 {
 }
+
+public partial class ItemBranchStock : IBranchOwned
+{
+}

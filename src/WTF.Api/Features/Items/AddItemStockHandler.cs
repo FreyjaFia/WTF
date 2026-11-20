@@ -71,19 +71,22 @@ public class AddItemStockHandler(
         }
 
         // The balance changes in one statement, so a sale completed at the same moment is never overwritten.
-        var applied = await StockBalance.ApplyAsync(db, item.Id, request.Quantity, true, cancellationToken)
+        var branchId = await StockBalance.ResolveBranchAsync(db, cancellationToken);
+        var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, request.Quantity, true, cancellationToken)
             ?? throw new InvalidOperationException("The item was not found.");
         var before = applied.Before;
         var after = applied.After;
 
         if (request.UnitCost.HasValue)
         {
-            item.AverageCost = CostRules.WeightedAverage(before, item.AverageCost, request.Quantity, request.UnitCost.Value);
+            var shopBefore = await StockBalance.ShopQuantityAsync(db, item.Id, cancellationToken) - request.Quantity;
+            item.AverageCost = CostRules.WeightedAverage(shopBefore, item.AverageCost, request.Quantity, request.UnitCost.Value);
         }
 
         var movement = new StockMovement
         {
             ItemId = item.Id,
+            BranchId = branchId,
             MovementType = StockMovementTypes.AddStock,
             QuantityDelta = request.Quantity,
             QuantityBefore = before,
@@ -96,7 +99,7 @@ public class AddItemStockHandler(
 
         db.StockMovements.Add(movement);
         await db.SaveChangesAsync(cancellationToken);
-        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        await stockAlerts.EvaluateAsync([item.Id], branchId, cancellationToken);
 
         if (transaction is not null)
         {
@@ -111,6 +114,7 @@ public class AddItemStockHandler(
             {
                 item.Id,
                 item.Name,
+                branchId,
                 request.Quantity,
                 before,
                 after,

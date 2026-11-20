@@ -84,7 +84,6 @@ public class CreateItemHandler(
             UnitName = ItemValidation.NormalizeUnit(request.UnitName),
             StockUnitName = ItemValidation.NormalizeOptionalUnit(request.StockUnitName),
             UnitsPerStockUnit = request.UnitsPerStockUnit,
-            CurrentQuantity = request.StartingQuantity,
             CostPrice = costPrice,
             AverageCost = costPrice,
             YieldPercent = request.KeepCosts ? 100m : request.YieldPercent ?? 100m,
@@ -100,11 +99,15 @@ public class CreateItemHandler(
         db.Items.Add(item);
         await db.SaveChangesAsync(cancellationToken);
 
+        var branchId = await StockBalance.ResolveBranchAsync(db, cancellationToken);
+        await StockBranchRows.AddItemAsync(db, item.Id, branchId, request.StartingQuantity, cancellationToken);
+
         if (request.StartingQuantity > 0)
         {
             db.StockMovements.Add(new StockMovement
             {
                 ItemId = item.Id,
+                BranchId = branchId,
                 MovementType = "AddStock",
                 QuantityDelta = request.StartingQuantity,
                 QuantityBefore = 0,
@@ -124,7 +127,7 @@ public class CreateItemHandler(
         // a level is told.
         if (request.StartingQuantity > 0)
         {
-            await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+            await stockAlerts.EvaluateAsync([item.Id], branchId, cancellationToken);
         }
 
         await auditService.LogAsync(
@@ -139,7 +142,8 @@ public class CreateItemHandler(
                 item.UnitName,
                 item.StockUnitName,
                 item.UnitsPerStockUnit,
-                item.CurrentQuantity,
+                StartingQuantity = request.StartingQuantity,
+                branchId,
                 item.CostPrice,
                 item.WarningQuantity,
                 item.CriticalQuantity,
