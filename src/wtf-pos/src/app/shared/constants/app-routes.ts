@@ -34,6 +34,7 @@ export const AppRoutes = {
   InventoryWasteRecord: '/inventory/waste/record',
   InventoryWasteRecordItem: (itemId: string) => `/inventory/waste/record/${itemId}`,
   InventoryCounts: '/inventory/counts',
+  InventoryTransfers: '/inventory/transfers',
   InventoryCountById: (countId: string) => `/inventory/counts/${countId}`,
   InventoryPurchaseOrders: '/inventory/purchase-orders',
   InventorySuggestedOrders: '/inventory/purchase-orders/suggestions',

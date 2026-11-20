@@ -78,7 +78,7 @@
     }
 
     <ul class="space-y-2.5">
-      @for (item of visibleItems(); track item.id) {
+      @for (item of visibleItems(); track item.id + (item.branchId ?? "")) {
         <li>
           <div
             class="flex overflow-hidden rounded-xl shadow"
@@ -95,6 +95,9 @@
                   (click)="openItem(item)"
                 >
                   <span class="block truncate font-semibold text-gray-900">{{ item.name }}</span>
+                  @if (item.branchName) {
+                    <span class="block text-xs font-medium text-brand-ink" data-testid="attention-branch">{{ item.branchName }}</span>
+                  }
                   <span class="block text-xs text-gray-500">{{ coverText(item) }}</span>
                 </button>
                 <span

@@ -239,6 +239,7 @@ export interface StockStatusReportRowDto {
   status: string;
   costPrice?: number | null;
   stockValue: number;
+  branchName?: string | null;
 }
 
 export interface GrossProfitReportRowDto {

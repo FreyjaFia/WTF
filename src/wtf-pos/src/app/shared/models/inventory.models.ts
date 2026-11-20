@@ -25,6 +25,15 @@ export interface ItemDto {
   priceHistory: ItemPriceHistoryDto[];
   productLinks: ProductItemLinkDto[];
   recentMovements: StockMovementDto[];
+  branchStocks?: ItemBranchStockDto[] | null;
+}
+
+export interface ItemBranchStockDto {
+  branchId: string;
+  branchCode: string;
+  branchName: string;
+  quantity: number;
+  status: string;
 }
 
 export interface ItemPriceHistoryDto extends PriceHistoryEntryDto {
@@ -98,6 +107,8 @@ export interface StockMovementDto {
   productId?: string | null;
   productName?: string | null;
   orderNumber?: number | null;
+  branchId?: string | null;
+  branchCode?: string | null;
 }
 
 export interface PagedStockMovementsDto {
@@ -220,6 +231,8 @@ export interface StockAttentionItemDto {
   allowNegativeStock: boolean;
   productCount: number;
   salesCovered: number;
+  branchId?: string | null;
+  branchName?: string | null;
 }
 
 export interface StockAttentionDto {

@@ -44,6 +44,7 @@ export * from './role.service';
 export * from './offline-sync-policy.service';
 export * from './user.service';
 export * from './stock-count.service';
+export * from './stock-transfer.service';
 export * from './stock-waste.service';
 export * from './purchase-order.service';
 export * from './reorder.service';

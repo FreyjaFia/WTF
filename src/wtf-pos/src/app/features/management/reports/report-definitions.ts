@@ -1046,6 +1046,7 @@ const stockStatus: ReportDefinition = {
   icon: 'icon-inventory',
   columns: [
     { key: 'itemName', header: 'Item', format: 'text' },
+    { key: 'branchName', header: 'Branch', format: 'text', lowPriority: true },
     { key: 'status', header: 'Status', format: 'text' },
     {
       key: 'currentQuantity',

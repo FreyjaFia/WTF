@@ -117,6 +117,20 @@
                 }
               </div>
 
+              @if (item()!.branchStocks?.length) {
+                <div class="mt-6 border-t border-gray-100 pt-5" data-testid="branch-stocks">
+                  <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">By branch</p>
+                  <ul class="space-y-2">
+                    @for (row of item()!.branchStocks!; track row.branchId) {
+                      <li class="flex items-center justify-between gap-3 text-sm" data-testid="branch-stock-row">
+                        <span class="min-w-0 truncate text-gray-700">{{ row.branchName }}</span>
+                        <span class="shrink-0 font-semibold text-gray-900" [class.text-red-600]="row.status === 'critical' || row.status === 'out'" [class.text-amber-600]="row.status === 'warning'">{{ row.quantity | number: '1.0-3' }}</span>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+
               <div class="mt-6 border-t border-gray-100 pt-5">
                 <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   Stock Level

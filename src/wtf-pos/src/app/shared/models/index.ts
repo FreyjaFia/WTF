@@ -21,6 +21,7 @@ export * from './schema-script-history.models';
 export * from './role.models';
 export * from './user.models';
 export * from './stock-count.models';
+export * from './stock-transfer.models';
 export * from './purchase-order.models';
 export * from './reorder.models';
 export * from './stock-receipt.models';

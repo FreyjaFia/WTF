@@ -16,6 +16,7 @@ import { IngredientEditorComponent } from '@features/inventory/ingredient-editor
 import { IngredientsComponent } from '@features/inventory/ingredients/ingredients';
 import { StockInComponent } from '@features/inventory/stock-in/stock-in';
 import { StockCountSheetComponent } from '@features/inventory/counts/stock-count-sheet';
+import { StockTransfersComponent } from '@features/inventory/transfers/stock-transfers';
 import { StockCountsComponent } from '@features/inventory/counts/stock-counts';
 import { PurchaseOrdersComponent } from '@features/inventory/purchase-orders/purchase-orders';
 import { SuggestedOrdersComponent } from '@features/inventory/purchase-orders/suggested-orders/suggested-orders';
@@ -249,6 +250,12 @@ export const routes: Routes = [
           {
             path: 'attention',
             component: StockAttentionComponent,
+            canActivate: [roleGuard],
+            data: { permission: Permissions.StockRead },
+          },
+          {
+            path: 'transfers',
+            component: StockTransfersComponent,
             canActivate: [roleGuard],
             data: { permission: Permissions.StockRead },
           },
