@@ -369,3 +369,18 @@ body {
     padding-bottom: 0;
   }
 }
+
+/* Six dock items share a 375px phone; tighter labels and padding keep each one readable. */
+@media (max-width: 639px) {
+  .dock > * {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-inline: 0.125rem;
+  }
+
+  .dock .dock-label {
+    font-size: 0.625rem;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+}

@@ -11,7 +11,7 @@ import { UnsyncedOrderStatusEnum } from '@shared/models';
   template: `
     @if (count() > 0) {
       <a
-        class="mb-4 flex shrink-0 items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-left"
+        class="mb-2 flex shrink-0 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-left"
         data-unsynced-banner
         [routerLink]="unsyncedRoute"
       >
@@ -21,7 +21,7 @@ import { UnsyncedOrderStatusEnum } from '@shared/models';
           {{ count() }}
         </div>
         <span class="text-sm font-semibold text-red-800">
-          {{ count() === 1 ? 'unsynced order' : 'unsynced orders' }} could not be saved
+          {{ count() === 1 ? 'Unsynced order' : 'Unsynced orders' }} could not be saved
         </span>
         <app-icon name="icon-chevron-down" [class]="'ml-auto h-4 w-4 -rotate-90 text-red-800'" [fill]="'currentColor'" />
       </a>

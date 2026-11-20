@@ -1,14 +1,14 @@
 <div class="navbar shrink-0 border-b border-gray-200 bg-surface px-3 shadow-md sm:px-6">
   <div class="flex-1">
-    <a class="flex items-center gap-2 text-2xl font-bold tracking-tight">
-      <span class="text-neutral">{{ brand.displayName() }}</span>
-      <span class="flex flex-col leading-tight">
+    <a class="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-tight">
+      <span class="truncate text-neutral">{{ brand.displayName() }}</span>
+      <span class="hidden flex-col leading-tight sm:flex">
         <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
         <span class="text-[10px] font-semibold tracking-wide text-gray-400">v{{ appVersion }}</span>
       </span>
     </a>
   </div>
-  <div class="flex items-center gap-2 sm:gap-4">
+  <div class="flex shrink-0 items-center gap-1 sm:gap-4">
     <app-branch-switcher />
     <app-theme-switcher [compact]="true" placement="bottom-end" />
 
@@ -19,7 +19,7 @@
       <div
         tabindex="0"
         role="button"
-        class="avatar cursor-pointer rounded-full p-0.5 ring-2 ring-transparent transition-all hover:ring-brand/30 active:scale-95"
+        class="avatar shrink-0 cursor-pointer rounded-full p-0.5 ring-2 ring-transparent transition-all hover:ring-brand/30 active:scale-95"
       >
         <div class="w-10 rounded-full">
           @if (imageUrl) {
@@ -44,6 +44,7 @@
           <div class="mt-0.5 text-[10px] text-gray-400">
             {{ now() | date: 'EEE, MMM d, y • h:mm:ss a' }}
           </div>
+          <div class="mt-0.5 text-[10px] font-semibold text-gray-400 sm:hidden" data-testid="menu-version">v{{ appVersion }}</div>
         </div>
         <div class="p-1.5">
           <a

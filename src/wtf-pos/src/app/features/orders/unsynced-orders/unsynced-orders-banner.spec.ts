@@ -32,7 +32,7 @@ describe('UnsyncedOrdersBanner', () => {
 
     const banner = el.querySelector('[data-unsynced-banner]');
     expect(banner?.textContent).toContain('3');
-    expect(banner?.textContent).toContain('unsynced orders');
+    expect(banner?.textContent).toContain('Unsynced orders');
     expect(banner?.getAttribute('href')).toBe('/orders/unsynced');
     expect(getUnsyncedOrders).toHaveBeenCalledWith({ status: 1, page: 1, pageSize: 1 });
   });
@@ -40,7 +40,7 @@ describe('UnsyncedOrdersBanner', () => {
   it('says order in the singular', () => {
     const { el } = render({ total: 1 });
 
-    expect(el.querySelector('[data-unsynced-banner]')?.textContent).toContain('unsynced order could');
+    expect(el.querySelector('[data-unsynced-banner]')?.textContent).toContain('Unsynced order could');
   });
 
   it('shows nothing when there are none', () => {

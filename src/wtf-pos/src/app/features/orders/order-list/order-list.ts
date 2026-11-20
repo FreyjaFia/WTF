@@ -131,7 +131,7 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly awaitingOrders = signal<OrderDto[]>([]);
   /** Offline orders held for an Admin (prices or menu changed before they synced). Oldest first. */
   protected readonly heldOrders = signal<OrderDto[]>([]);
-  protected readonly isHeldExpanded = signal(true);
+  protected readonly isHeldExpanded = signal(false);
   protected readonly orderToRejectHeld = signal<OrderDto | null>(null);
   protected readonly canReviewHeld = computed(() => this.authService.canOverrideOrders());
   /** The order whose chat is open in the side panel. */
