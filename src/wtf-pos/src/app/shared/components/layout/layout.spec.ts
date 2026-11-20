@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { NeedsAttentionService } from '@core/services/needs-attention.service';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
@@ -62,6 +63,7 @@ describe('LayoutComponent', () => {
     const auth = { ...fakes.auth, isLoggedIn$: new BehaviorSubject(true) };
     TestBed.configureTestingModule({
       providers: [
+        { provide: NeedsAttentionService, useValue: { total: () => 0, awaiting: () => 0, held: () => 0, unsynced: () => 0, start: () => undefined, stop: () => undefined, refresh: () => undefined } },
         provideRouter([{ path: '', component: RoutedPageComponent }]),
         { provide: AuthService, useValue: auth },
         { provide: ConversationInboxService, useValue: fakes.inbox },

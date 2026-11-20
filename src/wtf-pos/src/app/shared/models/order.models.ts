@@ -197,6 +197,8 @@ export interface OrderHistoryDto {
 
 export interface CreateOrderCommand {
   customerId?: string | null;
+  /** Offline sync only: the branch the sale was made in. The order endpoint ignores it. */
+  branchId?: string | null;
   /** Offline orders only: the queue number plus the device, so a sync that is sent twice saves the order once. */
   offlineLocalId?: string | null;
   items: OrderItemRequestDto[];

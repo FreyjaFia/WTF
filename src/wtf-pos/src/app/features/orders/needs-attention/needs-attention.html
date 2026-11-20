@@ -1,0 +1,37 @@
+<div class="flex shrink-0 items-center gap-2 pt-4 pb-3 md:pt-0 sm:pb-4">
+  <button
+    type="button"
+    class="app-btn app-btn-ghost shrink-0 p-2"
+    aria-label="Back to orders"
+    data-testid="back-to-orders"
+    (click)="backToOrders()"
+  >
+    <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+  </button>
+
+  <nav
+    class="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1"
+    aria-label="Needs attention"
+    data-testid="attention-tabs"
+  >
+    @for (tab of tabs(); track tab.id) {
+      <a
+        class="flex items-center justify-center gap-1.5 sm:shrink-0 rounded-md px-2 py-1.5 max-sm:flex-1 text-sm font-semibold sm:px-3 whitespace-nowrap text-gray-600 transition-colors duration-200 ease-out hover:text-gray-900"
+        [routerLink]="tab.route"
+        routerLinkActive="bg-surface text-gray-900 shadow-sm"
+        [attr.data-testid]="'attention-tab-' + tab.id"
+      >
+        <span class="sm:hidden">{{ tab.shortLabel }}</span>
+        <span class="hidden sm:inline">{{ tab.label }}</span>
+        @if (tab.count > 0) {
+          <span
+            class="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] leading-none font-bold text-white"
+            >{{ tab.count }}</span
+          >
+        }
+      </a>
+    }
+  </nav>
+</div>
+
+<router-outlet />

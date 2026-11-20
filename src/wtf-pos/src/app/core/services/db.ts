@@ -49,6 +49,8 @@ export interface PendingOrder {
   localId: string;
   // The shop the sale was made for: a queued order is only ever sent with that shop's login. None means the first shop.
   tenantId?: string;
+  // The branch the sale was made in. Empty means the order is not tied to one (a shop with one branch, or sold under All branches).
+  branchId?: string | null;
   command: CreateOrderCommand;
   cartSnapshot: CartItemDto[];
   // The snapshot holds list prices (the editor applies promotions again when it reopens the cart), so the total with

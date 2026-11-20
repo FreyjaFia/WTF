@@ -6,6 +6,7 @@ import { appVersion } from '@environments/version';
 import { BranchSwitcherComponent } from '@shared/components/branch-switcher/branch-switcher';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { NeedsAttentionButtonComponent } from '@shared/components/needs-attention-button/needs-attention-button';
 import { NotificationBellComponent } from '@shared/components/notification-bell/notification-bell';
 import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
 import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
@@ -18,6 +19,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     AvatarComponent,
     BranchSwitcherComponent,
     IconComponent,
+    NeedsAttentionButtonComponent,
     NotificationBellComponent,
     StaffEnvelopeComponent,
     ThemeSwitcherComponent,

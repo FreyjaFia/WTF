@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, ConnectivityService, OrderService } from '@core/services';
+import { BranchService } from '@core/services/branch.service';
 import { CartItemDto, CreateOrderCommand } from '@shared/models';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -108,6 +109,9 @@ describe('OfflineOrderService', () => {
   let online: ReturnType<typeof signal<boolean>>;
   let createBatch: ReturnType<typeof vi.fn>;
   let alerts: { success: ReturnType<typeof vi.fn>; warning: ReturnType<typeof vi.fn> };
+  let activeBranch: ReturnType<typeof signal<string | null>>;
+  let branchList: ReturnType<typeof signal<{ id: string }[]>>;
+  let multiBranch: ReturnType<typeof signal<boolean>>;
 
   async function create(seed: Partial<PendingOrder>[] = []): Promise<OfflineOrderService> {
     for (const row of seed) {
@@ -145,8 +149,20 @@ describe('OfflineOrderService', () => {
       (batch: { offlineLocalId?: string }[]) => of(saved(batch)) as Observable<unknown>,
     );
     alerts = { success: vi.fn(), warning: vi.fn() };
+    activeBranch = signal<string | null>(null);
+    branchList = signal<{ id: string }[]>([]);
+    multiBranch = signal(false);
+    const branchStub = {
+      activeId: activeBranch,
+      branches: branchList,
+      isMultiBranch: multiBranch,
+      isAllSelected: () => activeBranch() === 'all',
+      mine: () => (branchList().length > 0 ? {} : null),
+      recover: () => of(activeBranch()),
+    };
     TestBed.configureTestingModule({
       providers: [
+        { provide: BranchService, useValue: branchStub },
         { provide: ConnectivityService, useValue: { isOnline: online } },
         { provide: OrderService, useValue: { syncOfflineOrders: createBatch } },
         { provide: AlertService, useValue: alerts },
@@ -246,6 +262,77 @@ describe('OfflineOrderService', () => {
       const service = await create();
 
       expect(await service.queue(command(), cart, null)).toMatch(idPattern(1));
+    });
+  });
+
+  describe('the branch a sale was made in', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    it('records the open branch on the queued order, and nothing for a one-branch shop or All branches', async () => {
+      const service = await create();
+
+      await service.queue(command('single'), cart, null);
+      multiBranch.set(true);
+      activeBranch.set('bbbb');
+      await service.queue(command('bgc'), cart, null);
+      activeBranch.set('all');
+      await service.queue(command('all'), cart, null);
+
+      expect(table.rows.map((r) => r.branchId ?? null)).toEqual([null, 'bbbb', null]);
+    });
+
+    it('shows only the open branch queue, everything under All branches, and branchless orders everywhere', async () => {
+      multiBranch.set(true);
+      branchList.set([{ id: 'aaaa' }, { id: 'bbbb' }]);
+      activeBranch.set('aaaa');
+      const service = await create([
+        { localId: 'mkt', branchId: 'aaaa' },
+        { localId: 'bgc', branchId: 'bbbb' },
+        { localId: 'old' },
+        { localId: 'gone', branchId: 'dddd' },
+      ]);
+
+      expect(service.visiblePendingOrders().map((o) => o.localId)).toEqual(['mkt', 'old', 'gone']);
+
+      activeBranch.set('all');
+      expect(service.visiblePendingOrders()).toHaveLength(4);
+    });
+
+    it('syncs each branch in its own request, with that branch named, whatever branch is open', async () => {
+      multiBranch.set(true);
+      branchList.set([{ id: 'aaaa' }, { id: 'bbbb' }]);
+      activeBranch.set('aaaa');
+      const service = await create([
+        { localId: 'mkt', branchId: 'aaaa', command: command('m') },
+        { localId: 'bgc', branchId: 'bbbb', command: command('b') },
+      ]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(createBatch).toHaveBeenCalledTimes(2);
+      const calls = createBatch.mock.calls.map((c) => ({
+        notes: (c[0] as { note: string; branchId?: string }[]).map((o) => `${o.note}:${o.branchId}`),
+        branch: c[1],
+      }));
+      expect(calls).toEqual([
+        { notes: ['m:aaaa'], branch: 'aaaa' },
+        { notes: ['b:bbbb'], branch: 'bbbb' },
+      ]);
+    });
+
+    it('sends an order whose branch no longer exists to the open branch instead of failing it', async () => {
+      multiBranch.set(true);
+      branchList.set([{ id: 'aaaa' }]);
+      activeBranch.set('aaaa');
+      const service = await create([{ localId: 'gone', branchId: 'dddd', command: command('g') }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(createBatch).toHaveBeenCalledTimes(1);
+      expect(createBatch.mock.calls[0][1]).toBeNull();
+      expect((createBatch.mock.calls[0][0] as { branchId?: string | null }[])[0].branchId).toBeNull();
     });
   });
 

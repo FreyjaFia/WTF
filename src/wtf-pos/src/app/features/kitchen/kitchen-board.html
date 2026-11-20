@@ -146,7 +146,7 @@
       @if (servedOrders().length === 0) {
         <p class="py-10 text-center text-sm text-gray-500" data-testid="kitchen-served-empty">Nothing served yet today.</p>
       } @else {
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="kitchen-served-list">
+        <div class="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="kitchen-served-list">
           @for (order of servedOrders(); track order.id) {
             <ng-container [ngTemplateOutlet]="card" [ngTemplateOutletContext]="{ order: order }" />
           }
@@ -199,7 +199,7 @@
               </button>
             }
           </div>
-          <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div class="mt-3 grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
             @for (order of staleOrders(); track order.id) {
               <ng-container [ngTemplateOutlet]="card" [ngTemplateOutletContext]="{ order: order }" />
             }
@@ -226,7 +226,7 @@
         }
       </div>
 
-      <div class="grid gap-4 md:grid-cols-3">
+      <div class="grid items-start gap-4 md:grid-cols-3">
         @for (column of columns; track column.state) {
           <section
             class="min-w-0 flex-col gap-3"

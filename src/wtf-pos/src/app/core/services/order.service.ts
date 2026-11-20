@@ -234,9 +234,13 @@ export class OrderService {
   }
 
   /** Sends orders sold offline. Each gets its own result, so one bad order does not stop the others. */
-  public syncOfflineOrders(commands: CreateOrderCommand[]): Observable<OfflineSyncResultDto[]> {
+  public syncOfflineOrders(
+    commands: CreateOrderCommand[],
+    branchId: string | null = null,
+  ): Observable<OfflineSyncResultDto[]> {
+    const headers = branchId ? { 'X-Branch-Id': branchId } : undefined;
     return this.http
-      .post<OfflineSyncResultDto[]>(`${this.baseUrl}/sync`, { orders: commands })
+      .post<OfflineSyncResultDto[]>(`${this.baseUrl}/sync`, { orders: commands }, { headers })
       .pipe(
         catchError((error: HttpErrorResponse) => {
           console.error('Error syncing offline orders:', error);

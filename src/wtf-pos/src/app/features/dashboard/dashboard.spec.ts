@@ -622,7 +622,7 @@ describe('Dashboard', () => {
       expect(tile.textContent).toContain('Held for review');
       expect(tile.textContent).toContain('3 offline, PHP 450.50');
       expect(tile.textContent).toContain('waited more than 2 days for review');
-      expect(tile.getAttribute('href')).toContain('/orders/held');
+      expect(tile.getAttribute('href')).toContain('/orders/attention/review');
       expect(tile.getAttribute('href')).toContain('agedOnly=true');
     });
 

@@ -31,9 +31,7 @@ import {
 import {
   BadgeComponent,
   IconComponent,
-  OrderChatDrawerComponent,
   PullToRefreshComponent,
-  RejectOrderDialogComponent,
   SearchInputComponent,
   SideDrawerComponent,
   type FilterOption,
@@ -41,12 +39,10 @@ import {
 import { AppRoutes } from '@shared/constants/app-routes';
 import type { CartItemDto } from '@shared/models';
 import {
-  FulfillmentTypeEnum,
   OrderDto,
   KitchenStateEnum,
   OrderSourceEnum,
   OrderStatusEnum,
-  PaymentMethodEnum,
 } from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
 import {
@@ -59,7 +55,6 @@ import { ListScrollService, type ListScrollPosition } from '@core/services/list-
 import { ScrollLoaderComponent } from '@shared/components/scroll-loader/scroll-loader';
 import { orderAddressOf } from '@shared/utils/order-address';
 import type { PendingOrder, SyncOutcome, SyncResultEntry } from '@core/services/db';
-import { UnsyncedOrdersBanner } from '@features/orders/unsynced-orders/unsynced-orders-banner';
 
 const PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -95,12 +90,9 @@ interface OrderGroup {
     IconComponent,
     SideDrawerComponent,
     BadgeComponent,
-    OrderChatDrawerComponent,
     PullToRefreshComponent,
-    RejectOrderDialogComponent,
     SearchInputComponent,
     ScrollLoaderComponent,
-    UnsyncedOrdersBanner,
   ],
   templateUrl: './order-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -127,20 +119,7 @@ export class OrderList implements OnInit, OnDestroy {
   });
 
   protected readonly orders = signal<OrderDto[]>([]);
-  /** Orders customers placed through their link, waiting for staff to accept or reject them. Oldest first. */
-  protected readonly awaitingOrders = signal<OrderDto[]>([]);
-  /** Offline orders held for an Admin (prices or menu changed before they synced). Oldest first. */
-  protected readonly heldOrders = signal<OrderDto[]>([]);
-  protected readonly isHeldExpanded = signal(false);
-  protected readonly orderToRejectHeld = signal<OrderDto | null>(null);
-  protected readonly canReviewHeld = computed(() => this.authService.canOverrideOrders());
-  /** The order whose chat is open in the side panel. */
-  protected readonly chatOrder = signal<OrderDto | null>(null);
-  /** The waiting order an accept or reject request is running for. */
-  protected readonly decidingOrderId = signal<string | null>(null);
-  protected readonly orderToReject = signal<OrderDto | null>(null);
   protected readonly canCreateOrders = computed(() => this.authService.canWriteOrders());
-  protected readonly canDecideOrders = computed(() => this.authService.canWriteOrders());
   protected readonly ordersCache = signal<OrderDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isLoadingMore = signal(false);
@@ -152,13 +131,12 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly currentPage = signal(1);
   protected readonly pageSize = signal(20);
   protected readonly totalCount = signal(0);
-  protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
+  protected readonly pendingOrders = this.offlineOrderService.visiblePendingOrders;
   protected readonly syncResults = this.offlineOrderService.syncResults;
   protected readonly isSyncResultsExpanded = signal(true);
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
-  protected readonly isAwaitingExpanded = signal(false);
   protected readonly isPendingExpanded = signal(false);
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
@@ -228,17 +206,8 @@ export class OrderList implements OnInit, OnDestroy {
     );
   }
 
-  protected canChat(): boolean {
-    return this.authService.canReadChat();
-  }
 
-  protected openChat(order: OrderDto): void {
-    this.chatOrder.set(order);
-  }
 
-  protected closeChat(): void {
-    this.chatOrder.set(null);
-  }
 
   protected readonly groupedOrders = computed<OrderGroup[]>(() => {
     const items = this.orders();
@@ -300,7 +269,6 @@ export class OrderList implements OnInit, OnDestroy {
     const selected = this.selectedDateRanges()[0];
     return selected ? [selected] : [];
   });
-  protected readonly PaymentMethodEnum = PaymentMethodEnum;
   protected readonly hasMoreOrders = computed(
     () => !this.endReachedSignal() && this.ordersCache().length < this.totalCount(),
   );
@@ -348,8 +316,6 @@ export class OrderList implements OnInit, OnDestroy {
     this.loadMoreFailed.set(false);
     this.endReachedSignal.set(false);
     this.lastQueryKey = this.queryKey();
-    this.loadAwaitingOrders();
-    this.loadHeldOrders();
 
     const pageSize = restore ? Math.min(restore.pages * PAGE_SIZE, MAX_PAGE_SIZE) : PAGE_SIZE;
     this.loadRequest = this.orderService.getOrdersPaged(this.listQuery(1, pageSize)).subscribe({
@@ -858,20 +824,14 @@ export class OrderList implements OnInit, OnDestroy {
 
     this.orderService.getOrder(orderId).subscribe({
       next: (order) => {
-        // A held offline order belongs in the review banner, never in the normal list.
-        if (order.status === OrderStatusEnum.PendingReview) {
-          this.upsertHeld(order);
+        // Held and waiting orders are handled on the Needs attention page, never in this list.
+        if (
+          order.status === OrderStatusEnum.PendingReview ||
+          order.status === OrderStatusEnum.PendingApproval
+        ) {
           return;
         }
 
-        // An order waiting for approval belongs in the banner, never in the normal list.
-        if (order.status === OrderStatusEnum.PendingApproval) {
-          this.upsertAwaiting(order);
-          return;
-        }
-
-        this.removeAwaiting(order.id);
-        this.removeHeld(order.id);
         this.mergeIntoList(order);
       },
       error: () => {
@@ -928,202 +888,26 @@ export class OrderList implements OnInit, OnDestroy {
 
   // --- orders waiting for approval ---
 
-  protected loadAwaitingOrders(): void {
-    if (!this.connectivity.isOnline()) {
-      return;
-    }
 
-    this.orderService.getAwaitingOrders().subscribe({
-      next: (orders) => this.awaitingOrders.set(this.oldestFirst(orders)),
-      error: () => {
-        // The banner is a background extra; the main list reports its own errors.
-      },
-    });
-  }
 
-  private oldestFirst(orders: OrderDto[]): OrderDto[] {
-    return [...orders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  }
 
-  private upsertAwaiting(order: OrderDto): void {
-    const rest = this.awaitingOrders().filter((o) => o.id !== order.id);
-    this.awaitingOrders.set(this.oldestFirst([...rest, order]));
-  }
 
-  private removeAwaiting(orderId: string): void {
-    if (this.awaitingOrders().some((o) => o.id === orderId)) {
-      this.awaitingOrders.set(this.awaitingOrders().filter((o) => o.id !== orderId));
-    }
-  }
 
-  protected approveAwaiting(order: OrderDto): void {
-    if (this.decidingOrderId() || !this.canDecideOrders()) {
-      return;
-    }
 
-    this.decidingOrderId.set(order.id);
-    this.orderService.approveOrder(order.id).subscribe({
-      next: (updated) => {
-        this.decidingOrderId.set(null);
-        this.removeAwaiting(order.id);
-        this.mergeIntoList(updated);
-        this.alertService.success(`Order #${order.orderNumber} accepted.`);
-      },
-      error: (err) => {
-        this.decidingOrderId.set(null);
-        this.alertService.error(err.message);
-        // Someone else may already have answered it: show what is really waiting now.
-        this.loadAwaitingOrders();
-      },
-    });
-  }
 
-  protected askRejectAwaiting(order: OrderDto): void {
-    if (this.decidingOrderId() || !this.canDecideOrders()) {
-      return;
-    }
-
-    this.orderToReject.set(order);
-  }
-
-  protected cancelRejectAwaiting(): void {
-    if (this.decidingOrderId()) {
-      return;
-    }
-
-    this.orderToReject.set(null);
-  }
-
-  protected confirmRejectAwaiting(reason: string): void {
-    const order = this.orderToReject();
-    if (!order || this.decidingOrderId() || !this.canDecideOrders()) {
-      return;
-    }
-
-    this.decidingOrderId.set(order.id);
-    this.orderService.rejectOrder(order.id, reason).subscribe({
-      next: (updated) => {
-        this.decidingOrderId.set(null);
-        this.orderToReject.set(null);
-        this.removeAwaiting(order.id);
-        this.mergeIntoList(updated);
-        this.alertService.success(`Order #${order.orderNumber} rejected.`);
-      },
-      error: (err) => {
-        this.decidingOrderId.set(null);
-        this.orderToReject.set(null);
-        this.alertService.error(err.message);
-        this.loadAwaitingOrders();
-      },
-    });
-  }
 
   // --- offline orders held for review ---
 
-  protected loadHeldOrders(): void {
-    if (!this.connectivity.isOnline() || !this.canReviewHeld()) {
-      return;
-    }
 
-    this.orderService.getHeldOrders().subscribe({
-      next: (orders) => this.heldOrders.set(this.oldestFirst(orders)),
-      error: () => {
-        // The banner is a background extra; the main list reports its own errors.
-      },
-    });
-  }
 
-  private upsertHeld(order: OrderDto): void {
-    if (!this.canReviewHeld()) {
-      return;
-    }
 
-    const rest = this.heldOrders().filter((o) => o.id !== order.id);
-    this.heldOrders.set(this.oldestFirst([...rest, order]));
-  }
 
-  private removeHeld(orderId: string): void {
-    if (this.heldOrders().some((o) => o.id === orderId)) {
-      this.heldOrders.set(this.heldOrders().filter((o) => o.id !== orderId));
-    }
-  }
 
-  protected reasonsOf(order: OrderDto): string[] {
-    return (order.reviewReasons ?? '').split('\n').filter((reason) => reason.trim().length > 0);
-  }
 
-  protected approveHeld(order: OrderDto): void {
-    if (this.decidingOrderId() || !this.canReviewHeld()) {
-      return;
-    }
 
-    this.decidingOrderId.set(order.id);
-    this.orderService.approveHeldOrder(order.id).subscribe({
-      next: (updated) => {
-        this.decidingOrderId.set(null);
-        this.removeHeld(order.id);
-        this.mergeIntoList(updated);
-        this.alertService.success(`Order #${order.orderNumber} approved.`);
-      },
-      error: (err) => {
-        this.decidingOrderId.set(null);
-        this.alertService.error(err.message);
-        this.loadHeldOrders();
-      },
-    });
-  }
 
-  protected askRejectHeld(order: OrderDto): void {
-    if (this.decidingOrderId() || !this.canReviewHeld()) {
-      return;
-    }
 
-    this.orderToRejectHeld.set(order);
-  }
 
-  protected cancelRejectHeld(): void {
-    if (this.decidingOrderId()) {
-      return;
-    }
-
-    this.orderToRejectHeld.set(null);
-  }
-
-  protected confirmRejectHeld(reason: string): void {
-    const order = this.orderToRejectHeld();
-    if (!order || this.decidingOrderId() || !this.canReviewHeld()) {
-      return;
-    }
-
-    this.decidingOrderId.set(order.id);
-    this.orderService.rejectHeldOrder(order.id, reason).subscribe({
-      next: (updated) => {
-        this.decidingOrderId.set(null);
-        this.orderToRejectHeld.set(null);
-        this.removeHeld(order.id);
-        this.mergeIntoList(updated);
-        this.alertService.success(`Order #${order.orderNumber} rejected.`);
-      },
-      error: (err) => {
-        this.decidingOrderId.set(null);
-        this.orderToRejectHeld.set(null);
-        this.alertService.error(err.message);
-        this.loadHeldOrders();
-      },
-    });
-  }
-
-  protected openHeldOrders(): void {
-    this.router.navigateByUrl(AppRoutes.OrdersHeld);
-  }
-
-  protected openAwaitingOrder(order: OrderDto): void {
-    this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
-  }
-
-  protected isDelivery(order: OrderDto): boolean {
-    return order.fulfillmentType === FulfillmentTypeEnum.Delivery;
-  }
 
   private matchesSearchTerm(order: OrderDto): boolean {
     const term = (this.filterForm.controls.searchTerm.value ?? '').trim().toLowerCase();

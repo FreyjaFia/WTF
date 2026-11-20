@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { NeedsAttentionService } from '@core/services/needs-attention.service';
 import { NavigationEnd, Router, provideRouter } from '@angular/router';
 import {
   AuthLoadingService,
@@ -29,6 +30,7 @@ describe('HeaderComponent', () => {
     const fakes = createShellFakes(me);
     TestBed.configureTestingModule({
       providers: [
+        { provide: NeedsAttentionService, useValue: { total: () => 0, awaiting: () => 0, held: () => 0, unsynced: () => 0, start: () => undefined, stop: () => undefined, refresh: () => undefined } },
         provideRouter([]),
         { provide: AuthService, useValue: fakes.auth },
         { provide: ConversationInboxService, useValue: fakes.inbox },

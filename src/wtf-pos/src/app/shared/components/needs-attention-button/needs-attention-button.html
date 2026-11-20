@@ -1,0 +1,15 @@
+@if (total() > 0) {
+  <a
+    class="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-amber-600 transition-colors hover:bg-amber-50 active:scale-95"
+    [routerLink]="route"
+    [attr.aria-label]="label()"
+    data-needs-attention
+  >
+    <app-icon name="icon-warning" [class]="'h-5 w-5'" [fill]="'currentColor'" />
+    <span
+      class="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] leading-none font-bold text-white ring-2 ring-white"
+      data-needs-attention-badge
+      >{{ badge() }}</span
+    >
+  </a>
+}

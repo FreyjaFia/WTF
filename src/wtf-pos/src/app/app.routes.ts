@@ -60,7 +60,9 @@ import { SyncPolicyPageComponent } from '@features/management/sync-policy/sync-p
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotInPlanComponent } from '@features/not-in-plan/not-in-plan';
 import { NotificationsComponent } from '@features/notifications/notifications';
+import { AwaitingApproval } from '@features/orders/awaiting-approval/awaiting-approval';
 import { HeldOrders } from '@features/orders/held-orders/held-orders';
+import { NeedsAttention } from '@features/orders/needs-attention/needs-attention';
 import { KitchenBoardComponent } from '@features/kitchen/kitchen-board';
 import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
@@ -147,11 +149,34 @@ export const routes: Routes = [
             canDeactivate: [unsavedChangesGuard],
             data: { permission: Permissions.OrdersWrite },
           },
+          { path: 'held', redirectTo: 'attention/review', pathMatch: 'full' },
+          { path: 'unsynced', redirectTo: 'attention/unsynced', pathMatch: 'full' },
           {
-            path: 'held',
-            component: HeldOrders,
+            path: 'attention',
+            component: NeedsAttention,
             canActivate: [roleGuard],
-            data: { permission: Permissions.OrdersOverride },
+            data: { permission: Permissions.OrdersWrite },
+            children: [
+              { path: '', redirectTo: 'awaiting', pathMatch: 'full' },
+              {
+                path: 'awaiting',
+                component: AwaitingApproval,
+                canActivate: [roleGuard],
+                data: { permission: Permissions.OrdersWrite },
+              },
+              {
+                path: 'unsynced',
+                component: UnsyncedOrders,
+                canActivate: [roleGuard],
+                data: { permission: Permissions.OrdersOverride },
+              },
+              {
+                path: 'review',
+                component: HeldOrders,
+                canActivate: [roleGuard],
+                data: { permission: Permissions.OrdersOverride },
+              },
+            ],
           },
           {
             path: 'details/:id',
@@ -164,12 +189,6 @@ export const routes: Routes = [
             component: OrderList,
             canActivate: [roleGuard],
             data: { permission: Permissions.OrdersRead },
-          },
-          {
-            path: 'unsynced',
-            component: UnsyncedOrders,
-            canActivate: [roleGuard],
-            data: { permission: Permissions.OrdersOverride },
           },
         ],
       },

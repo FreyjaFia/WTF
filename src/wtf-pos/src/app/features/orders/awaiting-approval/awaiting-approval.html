@@ -1,0 +1,168 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Awaiting approval</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">
+          Orders customers placed through their link. Accept or reject each one.
+        </p>
+      </div>
+      @if (!isAndroidPlatform) {
+        <button
+          type="button"
+          class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+          [class.opacity-70]="isRefreshing()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh awaiting orders"
+          (click)="refresh()"
+        >
+          <app-icon
+            name="icon-refresh"
+            [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+            [fill]="'currentColor'"
+          />
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      <div class="pb-4" data-awaiting-approval>
+        @if (connectionFailed()) {
+          <app-connection-error />
+        } @else if (orders().length === 0) {
+          <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="awaiting-empty">
+            <div class="mb-3 flex justify-center">
+              <app-icon name="icon-check" [class]="'h-12 w-12 opacity-60'" />
+            </div>
+            <p class="text-lg font-semibold text-gray-700">Nothing is waiting</p>
+            <p class="text-sm text-gray-500">Customer orders that need your answer show up here.</p>
+          </div>
+        }
+
+        <ul class="space-y-2">
+          @for (waiting of pager.rows(); track waiting.id) {
+            <li class="rounded-lg bg-surface px-3 py-3 shadow-sm" data-testid="awaiting-row">
+              <div
+                class="flex cursor-pointer flex-col gap-1 rounded-md transition-colors hover:bg-gray-50"
+                role="button"
+                tabindex="0"
+                [attr.aria-label]="'Open order ' + waiting.orderNumber"
+                (click)="openOrder(waiting)"
+                (keydown.enter)="openOrder(waiting)"
+              >
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-gray-900">#{{ waiting.orderNumber }}</span>
+                    <span class="text-sm text-gray-700">{{ waiting.customerName || 'Customer' }}</span>
+                    <app-badge variant="amber">{{ isDelivery(waiting) ? 'Delivery' : 'Pickup' }}</app-badge>
+                  </div>
+                  <span class="text-base font-semibold whitespace-nowrap text-gray-950 lg:text-lg">
+                    <span class="text-sm opacity-70 lg:text-base"
+                      ><app-icon
+                        name="icon-peso"
+                        [class]="'inline h-3 w-3 align-[-0.125em]'"
+                        [fill]="'currentColor'" /></span
+                    >{{ waiting.totalAmount | number: '1.2-2' }}
+                  </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                  <span>{{ waiting.createdAt | date: 'd MMM, h:mm a' }}</span>
+                  <span>&middot; {{ getItemsText(waiting) }}</span>
+                  @if (waiting.branchCode) {
+                    <span>&middot; {{ waiting.branchCode }}</span>
+                  }
+                  @if (waiting.paymentMethod === PaymentMethodEnum.Cash) {
+                    <span>&middot; Cash</span>
+                  } @else if (waiting.paymentMethod === PaymentMethodEnum.GCash) {
+                    <span>&middot; GCash</span>
+                  }
+                </div>
+                @if (isDelivery(waiting) && waiting.deliveryAddress) {
+                  <p class="text-xs wrap-break-word text-gray-500">{{ waiting.deliveryAddress }}</p>
+                }
+                @if (waiting.specialInstructions) {
+                  <p class="truncate text-xs text-gray-400 italic">{{ waiting.specialInstructions }}</p>
+                }
+              </div>
+
+              <div class="mt-3 flex items-center justify-between gap-2">
+                @if (canChat()) {
+                  <button
+                    type="button"
+                    class="app-btn app-btn-secondary app-btn-sm gap-2"
+                    data-chat-button
+                    [attr.aria-label]="'Chat about order ' + waiting.orderNumber"
+                    (click)="openChat(waiting)"
+                  >
+                    <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+                    Chat
+                  </button>
+                }
+
+                @if (canDecideOrders()) {
+                  <div class="ml-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="app-btn app-btn-outline-danger app-btn-sm"
+                      [disabled]="decidingOrderId() !== null"
+                      (click)="askReject(waiting)"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      class="app-btn app-btn-primary app-btn-sm"
+                      [disabled]="decidingOrderId() !== null"
+                      (click)="approve(waiting)"
+                    >
+                      @if (decidingOrderId() === waiting.id && !orderToReject()) {
+                        <span class="loading loading-spinner loading-xs"></span>
+                        Accepting...
+                      } @else {
+                        Accept
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+
+        <app-pagination
+          label="Awaiting approval pages"
+          [page]="pager.page()"
+          [pageSize]="pager.pageSize()"
+          [totalCount]="pager.totalCount()"
+          (pageChange)="pager.goTo($event)"
+          (pageSizeChange)="pager.setPageSize($event)"
+        />
+      </div>
+    </app-pull-to-refresh>
+  }
+</div>
+
+<app-order-chat-drawer
+  [isOpen]="chatOrder() !== null"
+  [orderId]="chatOrder()?.id ?? null"
+  [orderNumber]="chatOrder()?.orderNumber ?? null"
+  [customerName]="chatOrder()?.customerName || 'Customer'"
+  (closed)="closeChat()"
+/>
+
+@if (orderToReject(); as target) {
+  <app-reject-order-dialog
+    [orderNumber]="target.orderNumber"
+    [isBusy]="decidingOrderId() !== null"
+    (confirmed)="confirmReject($event)"
+    (cancelled)="cancelReject()"
+  />
+}

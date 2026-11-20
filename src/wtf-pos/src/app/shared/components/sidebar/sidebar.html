@@ -10,7 +10,11 @@
       [class.flex-col]="isCollapsed()"
       [class.justify-between]="!isCollapsed()"
     >
-      <div class="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-widest">
+      <div
+        class="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-widest"
+        [class.flex-1]="!isCollapsed()"
+        [class.overflow-hidden]="!isCollapsed()"
+      >
         <span class="text-neutral">{{ brand.displayName() }}</span>
         @if (!isCollapsed()) {
           <span class="flex min-w-0 flex-col leading-tight">
@@ -25,12 +29,13 @@
         }
       </div>
       <app-staff-envelope class="flex-none" align="start" />
+      <app-needs-attention-button class="flex-none" />
       <app-notification-bell class="flex-none" align="start" />
     </div>
   </div>
 
   @if (branchService.isMultiBranch()) {
-    <div class="border-b border-gray-200 px-3 py-2" [class.flex]="isCollapsed()" [class.justify-center]="isCollapsed()">
+    <div class="relative z-50 border-b border-gray-200 px-3 py-2" [class.flex]="isCollapsed()" [class.justify-center]="isCollapsed()">
       <app-branch-switcher align="start" [compact]="isCollapsed()" />
     </div>
   }

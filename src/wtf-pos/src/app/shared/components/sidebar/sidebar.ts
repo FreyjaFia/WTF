@@ -17,6 +17,7 @@ import { BranchSwitcherComponent } from '@shared/components/branch-switcher/bran
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { NeedsAttentionButtonComponent } from '@shared/components/needs-attention-button/needs-attention-button';
 import { NotificationBellComponent } from '@shared/components/notification-bell/notification-bell';
 import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
 import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
@@ -34,6 +35,7 @@ import { filter, map } from 'rxjs';
     BranchSwitcherComponent,
     IconComponent,
     ConfirmDialogComponent,
+    NeedsAttentionButtonComponent,
     NotificationBellComponent,
     StaffEnvelopeComponent,
     ThemeSwitcherComponent,

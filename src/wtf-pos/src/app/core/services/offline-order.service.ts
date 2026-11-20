@@ -1,5 +1,6 @@
-import { effect, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { AlertService, ConnectivityService, OrderService } from '@core/services';
+import { BranchService } from '@core/services/branch.service';
 import {
   CartItemDto,
   CreateOrderCommand,
@@ -32,9 +33,24 @@ export class OfflineOrderService {
   private readonly connectivity = inject(ConnectivityService);
   private readonly orderService = inject(OrderService);
   private readonly alertService = inject(AlertService);
+  private readonly branchService = inject(BranchService);
 
   private readonly _pendingOrders = signal<PendingOrder[]>([]);
   public readonly pendingOrders = this._pendingOrders.asReadonly();
+
+  // What the selected branch shows: its own queued orders. All branches shows everything. An order with no branch, or one
+  // whose branch is gone, shows everywhere, because it will be saved in whichever branch is open when it syncs.
+  public readonly visiblePendingOrders = computed(() => {
+    const orders = this._pendingOrders();
+    const active = this.branchService.activeId();
+    const known = new Set(this.branchService.branches().map((branch) => branch.id));
+
+    if (!this.branchService.isMultiBranch() || !active || this.branchService.isAllSelected()) {
+      return orders;
+    }
+
+    return orders.filter((order) => !order.branchId || !known.has(order.branchId) || order.branchId === active);
+  });
 
   private readonly _syncResults = signal<SyncResultEntry[]>([]);
   public readonly syncResults = this._syncResults.asReadonly();
@@ -111,6 +127,7 @@ export class OfflineOrderService {
     const pendingOrder: PendingOrder = {
       localId,
       tenantId: currentTenantId(),
+      branchId: this.activeBranchForSale(),
       command: stamped.command,
       cartSnapshot,
       previewTotal,
@@ -215,7 +232,10 @@ export class OfflineOrderService {
       const orders = (
         await db.pendingOrders.where('status').anyOf(['pending', 'failed']).sortBy('createdAt')
       ).filter((order) => tenantOfQueuedOrder(order) === tenantId);
-      const batches = this.chunkOrders(orders, OfflineOrderService.SYNC_BATCH_SIZE);
+      await this.resolveStaleBranches(orders);
+      const batches = this.groupByBranch(orders).flatMap((group) =>
+        this.chunkOrders(group, OfflineOrderService.SYNC_BATCH_SIZE),
+      );
 
       let successCount = 0;
       let failCount = 0;
@@ -268,7 +288,10 @@ export class OfflineOrderService {
       const results = await this.retryWithBackoff(() =>
         firstValueFrom(
           this.orderService
-            .syncOfflineOrders(batch.map((order) => this.buildBatchCommand(order)))
+            .syncOfflineOrders(
+              batch.map((order) => this.buildBatchCommand(order)),
+              batch[0]?.branchId ?? null,
+            )
             .pipe(timeout(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS)),
         ),
       );
@@ -631,9 +654,59 @@ export class OfflineOrderService {
   private buildBatchCommand(order: PendingOrder): CreateOrderCommand {
     return {
       ...order.command,
+      branchId: order.branchId ?? null,
       offlineLocalId: this.serverKey(order),
       createdAt: new Date(order.createdAt).toISOString(),
     };
+  }
+
+  private activeBranchForSale(): string | null {
+    const active = this.branchService.activeId();
+
+    if (!this.branchService.isMultiBranch() || !active || this.branchService.isAllSelected()) {
+      return null;
+    }
+
+    return active;
+  }
+
+  // A queued order whose branch no longer exists (or is no longer allowed) is saved in the branch that is open instead of
+  // failing for good.
+  private async resolveStaleBranches(orders: PendingOrder[]): Promise<void> {
+    if (!orders.some((order) => order.branchId)) {
+      return;
+    }
+
+    if (this.branchService.mine() === null) {
+      try {
+        await firstValueFrom(this.branchService.recover());
+      } catch {
+        return;
+      }
+    }
+
+    const known = new Set(this.branchService.branches().map((branch) => branch.id));
+    if (known.size === 0) {
+      return;
+    }
+
+    for (const order of orders) {
+      if (order.branchId && !known.has(order.branchId)) {
+        order.branchId = null;
+        await (db.pendingOrders as import('dexie').Table).update(order.id!, { branchId: null });
+      }
+    }
+  }
+
+  private groupByBranch(orders: PendingOrder[]): PendingOrder[][] {
+    const groups = new Map<string, PendingOrder[]>();
+
+    for (const order of orders) {
+      const key = order.branchId ?? '';
+      groups.set(key, [...(groups.get(key) ?? []), order]);
+    }
+
+    return [...groups.values()];
   }
 
   private chunkOrders(orders: PendingOrder[], size: number): PendingOrder[][] {

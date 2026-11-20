@@ -1,22 +1,11 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
     <div class="flex items-start justify-between gap-3">
-      <div class="flex min-w-0 items-start gap-3">
-        <button
-          type="button"
-          class="app-btn app-btn-ghost mt-0.5 shrink-0 p-2"
-          aria-label="Back to orders"
-          data-testid="back-to-orders"
-          (click)="backToOrders()"
-        >
-          <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
-        </button>
       <div class="flex min-w-0 flex-col gap-1">
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Held orders</h1>
         <p class="text-xs text-gray-500 sm:text-sm">
           Offline sales waiting for an Admin. They count as sales once approved.
         </p>
-      </div>
       </div>
     </div>
 
