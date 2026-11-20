@@ -412,6 +412,7 @@ public class BranchStockDatabaseTests
             await db.Database.ExecuteSqlRawAsync("DROP TABLE dbo.StockTransferLines; DROP TABLE dbo.StockTransfers; DROP TABLE dbo.ItemBranchStocks;");
             await db.Database.ExecuteSqlRawAsync("ALTER TABLE dbo.Items ADD CurrentQuantity DECIMAL(18, 3) NOT NULL DEFAULT 0, LastAlertStatus TINYINT NOT NULL DEFAULT 0;");
             await db.Database.ExecuteSqlRawAsync("UPDATE dbo.Items SET CurrentQuantity = 750.5, LastAlertStatus = 1;");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE dbo.StockMovements ADD CONSTRAINT CK_StockMovements_MovementType CHECK (MovementType IN (N'AddStock', N'Sale', N'SaleVoid', N'Waste', N'WasteReversed', N'Adjustment', N'Count', N'SaleDeduction', N'ManualAdjustment', N'Correction', N'Spoilage'));");
         }
 
         await RunScriptAsync(shop.Database, "20261230_add_item_branch_stocks.sql");
@@ -423,6 +424,13 @@ public class BranchStockDatabaseTests
         (await check.ItemBranchStocks.CountAsync()).ShouldBe(2);
         (await check.ItemBranchStocks.SingleAsync(s => s.BranchId == shop.Makati)).LastAlertStatus.ShouldBe((byte)1);
         (await check.Database.SqlQueryRaw<decimal>("SELECT CurrentQuantity AS [Value] FROM dbo.Items").SingleAsync()).ShouldBe(750.5m);
+
+        // The movement types check now allows both sides of a transfer (the staging seed hit the old list).
+        var itemId = await check.Database.SqlQueryRaw<Guid>("SELECT Id AS [Value] FROM dbo.Items").SingleAsync();
+        await check.Database.ExecuteSqlRawAsync(
+            "INSERT INTO dbo.StockMovements (Id, TenantId, BranchId, ItemId, MovementType, QuantityDelta, QuantityBefore, QuantityAfter, CreatedAt, CreatedBy) " +
+            "SELECT NEWID(), TenantId, {0}, Id, N'TransferOut', -1, 750.5, 749.5, SYSUTCDATETIME(), (SELECT TOP 1 Id FROM dbo.Users) FROM dbo.Items WHERE Id = {1}",
+            shop.Makati, itemId);
     }
 
     private static async Task<Guid> AddManagerAsync(WTFDbContext db, string username, Guid branchId)
