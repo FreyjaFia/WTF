@@ -417,6 +417,8 @@ public class BranchStockDatabaseTests
 
         await RunScriptAsync(shop.Database, "20261230_add_item_branch_stocks.sql");
         await RunScriptAsync(shop.Database, "20261230_add_item_branch_stocks.sql");
+        await RunScriptAsync(shop.Database, "20261231_allow_transfer_movements.sql");
+        await RunScriptAsync(shop.Database, "20261231_allow_transfer_movements.sql");
 
         (await QuantityAsync(shop, shop.Makati)).ShouldBe(750.5m);
         (await QuantityAsync(shop, shop.Cebu)).ShouldBe(0m);
