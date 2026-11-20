@@ -13,7 +13,7 @@ import {
   UserBranchAccessDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { catchError, map, tap } from 'rxjs/operators';
 import { extractHttpErrorMessage } from './http-error-message';
 
 const STORAGE_KEY = 'wtf_active_branch';
@@ -45,6 +45,13 @@ export class BranchService {
       next: (mine) => this.apply(mine),
       error: () => undefined,
     });
+  }
+
+  public recover(): Observable<string | null> {
+    return this.http.get<MyBranchesDto>(`${this.baseUrl}/mine`).pipe(
+      tap((mine) => this.apply(mine)),
+      map(() => this._activeId()),
+    );
   }
 
   public select(id: string): void {

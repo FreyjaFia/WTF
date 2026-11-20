@@ -106,6 +106,24 @@ public class BranchScopeMiddlewareTests
     }
 
     [Fact]
+    public async Task StaleBranchHeader_IsIgnoredWhenAskingWhichBranchesAreAllowed()
+    {
+        var run = await SendAsync("GET", "/api/branches/mine", BranchScopeEnum.All, [Makati], Guid.NewGuid().ToString());
+
+        run.Reached.ShouldBeTrue();
+        run.Status.ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task StaleBranchHeader_IsStillRefusedOnOtherRequests()
+    {
+        var run = await SendAsync("GET", "/api/orders", BranchScopeEnum.All, [Makati], Guid.NewGuid().ToString());
+
+        run.Reached.ShouldBeFalse();
+        run.Status.ShouldBe(403);
+    }
+
+    [Fact]
     public async Task AllBranches_IsForReadingOnly()
     {
         var read = await SendAsync("GET", "/api/orders", BranchScopeEnum.All, [], "all");

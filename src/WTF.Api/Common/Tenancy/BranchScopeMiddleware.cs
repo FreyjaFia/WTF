@@ -67,8 +67,10 @@ public sealed class BranchScopeMiddleware(RequestDelegate next)
             return;
         }
 
+        var ignoreHeader = context.Request.Path.Equals("/api/branches/mine", StringComparison.OrdinalIgnoreCase);
+
         Guid? active;
-        if (Guid.TryParse(header, out var requested))
+        if (Guid.TryParse(header, out var requested) && !ignoreHeader)
         {
             var match = allowed.FirstOrDefault(b => b.Id == requested);
             if (match is null || (!match.IsActive && !isRead))

@@ -42,4 +42,39 @@ describe('branchInterceptor', () => {
     http.get('/api/orders').subscribe();
     expect(controller.expectOne('/api/orders').request.headers.get('X-Branch-Id')).toBe('all');
   });
+  it('does not send the saved branch when asking which branches are allowed', () => {
+    branches.select('stale');
+    http.get('/api/branches/mine').subscribe();
+    expect(controller.expectOne((r) => r.url.endsWith('/api/branches/mine')).request.headers.has('X-Branch-Id')).toBe(false);
+  });
+
+  it('repairs a stale saved branch and retries once with the allowed one', () => {
+    branches.select('stale');
+    let body: unknown = null;
+    http.get('/api/orders').subscribe((r) => (body = r));
+
+    controller
+      .expectOne('/api/orders')
+      .flush({ message: 'You cannot use that branch.' }, { status: 403, statusText: 'Forbidden' });
+    controller.expectOne((r) => r.url.endsWith('/api/branches/mine')).flush({
+      branches: [{ id: 'b-main', name: 'Main', isActive: true, isMain: true }],
+      defaultBranchId: 'b-main',
+      canSeeAll: false,
+      isMultiBranch: false,
+    });
+
+    const retry = controller.expectOne('/api/orders');
+    expect(retry.request.headers.get('X-Branch-Id')).toBe('b-main');
+    retry.flush({ ok: true });
+    expect(body).toEqual({ ok: true });
+    expect(branches.activeId()).toBe('b-main');
+  });
+
+  it('passes other 403 errors through untouched', () => {
+    branches.select('b-1');
+    let status = 0;
+    http.get('/api/orders').subscribe({ error: (e) => (status = e.status) });
+    controller.expectOne('/api/orders').flush({ message: 'Nope' }, { status: 403, statusText: 'Forbidden' });
+    expect(status).toBe(403);
+  });
 });
