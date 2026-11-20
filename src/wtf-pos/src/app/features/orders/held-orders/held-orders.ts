@@ -15,6 +15,8 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { ClientPager } from '@shared/utils/client-pager';
 import { sumAmounts } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -46,6 +48,7 @@ interface BulkRequest {
     DecimalPipe,
     FilterButtonComponent,
     IconComponent,
+    PaginationComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -138,6 +141,11 @@ export class HeldOrders implements OnInit, OnDestroy {
 
     return orders.sort((a, b) => compare(a, b) * direction);
   });
+  protected readonly pager = new ClientPager(
+    this.sortedOrders,
+    'orders:held',
+    computed(() => `${this.search()}|${this.sortColumn()}|${this.sortDirection()}|${this.activeFilterCount()}`),
+  );
   protected readonly selectableOrders = computed(() =>
     this.visibleOrders().filter((order) => !this.isBulkSkipped(order)),
   );

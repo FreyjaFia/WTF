@@ -24,6 +24,8 @@ import {
   UnsyncedOrderResolutionEnum,
   UnsyncedOrderStatusEnum,
 } from '@shared/models';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@shared/calculations/pagination';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { debounceTime, distinctUntilChanged, Observable } from 'rxjs';
 
@@ -41,8 +43,6 @@ interface UnsyncedListState {
 }
 
 export const MAX_DISCARD_REASON_LENGTH = 500;
-const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
-const DEFAULT_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-unsynced-orders',
@@ -54,6 +54,7 @@ const DEFAULT_PAGE_SIZE = 10;
     DecimalPipe,
     FilterButtonComponent,
     IconComponent,
+    PaginationComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -80,18 +81,11 @@ export class UnsyncedOrders implements OnInit {
   protected readonly sortColumn = signal<SortColumn>('date');
   protected readonly sortDirection = signal<SortDirection>('desc');
 
-  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly page = signal(1);
   protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
   protected readonly totalCount = signal(0);
   protected readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.totalCount() / this.pageSize())),
-  );
-  protected readonly firstRow = computed(() =>
-    this.totalCount() === 0 ? 0 : (this.page() - 1) * this.pageSize() + 1,
-  );
-  protected readonly lastRow = computed(() =>
-    Math.min(this.page() * this.pageSize(), this.totalCount()),
   );
 
   protected readonly statusFilter = signal<StatusFilter>('open');
@@ -174,8 +168,7 @@ export class UnsyncedOrders implements OnInit {
     this.loadOrders();
   }
 
-  protected onPageSizeChange(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
+  protected changePageSize(value: number): void {
     if (!PAGE_SIZE_OPTIONS.some((option) => option === value) || value === this.pageSize()) {
       return;
     }
