@@ -215,7 +215,7 @@ test.describe('Unsynced orders @orders @offline', () => {
     const admin = await signIn('admin');
     await admin.goto('/orders/list', { waitUntil: 'commit' });
     const banner = admin.locator('[data-unsynced-banner]');
-    await expect(banner).toContainText(/unsynced orders? could not be saved/);
+    await expect(banner).toContainText(/Unsynced orders? could not be saved/);
     await banner.click();
     await expect(admin).toHaveURL(/\/orders\/unsynced$/);
 

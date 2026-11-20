@@ -639,6 +639,7 @@ async Task SeedMainShopAsync()
                 Held: new("OFF-0398", 20m, [new("PromotionEnded", ReviewSeverityEnum.Hold, "Latte Happy Price had ended when this sale synced", 0, "140.00", "120.00")])),
             new("held offline sale, senior ID missing", null, OrderStatusEnum.PendingReview, PaymentMethodEnum.Cash, null, -9, [new("Iced Americano", 1, ["Medium"])], Senior: SeniorPwdKind.Senior,
                 Held: new("OFF-0421", 0m, [new("SeniorPwdIdMissing", ReviewSeverityEnum.Hold, "The Senior Citizen ID number was left blank on the device")])),
+            new("office catering order, many lines", "Team meeting at 3 PM, please pack the pastries in separate boxes", OrderStatusEnum.Completed, PaymentMethodEnum.GCash, "Maria", -18, [new("Latte", 3, ["Large", "Vanilla"]), new("Cappuccino", 2, ["Medium", "Hot"]), new("Iced Americano", 4, ["Large"]), new("Matcha Latte", 2, ["Large", "Iced", "Oat Milk"]), new("Flat White", 2, []), new("Chai Latte", 1, []), new("Croissant", 6, []), new("Blueberry Muffin", 4, []), new("Cinnamon Roll", 3, []), new("Ham and Cheese Sandwich", 3, []), new("Chicken Pesto Panini", 2, []), new("Basque Cheesecake Slice", 4, []), new("Brownie", 4, [])]),
             new("customer link order waiting approval", "Please deliver to the front gate", OrderStatusEnum.PendingApproval, null, "Maria", -2, [new("Cappuccino", 2, ["Large", "Caramel"])], FromLink: true),
         };
 
@@ -650,7 +651,7 @@ async Task SeedMainShopAsync()
         }
 
         await db.SaveChangesAsync();
-        added.Add($"{specs.Count} orders (completed, held, cancelled, refunded, senior, PWD, customer link)");
+        added.Add($"{specs.Count} orders (completed, held, cancelled, refunded, senior, PWD, customer link, long catering order)");
     }
 
     if (!await db.OfflineSyncPolicies.AnyAsync())
@@ -737,6 +738,7 @@ async Task SeedMainShopAsync()
             new("kitchen cancelled while making", "Customer left before it was made", OrderStatusEnum.Cancelled, null, null, 0, [new("Espresso", 1, [])], MinutesAgo: -14, Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 2)),
             new("kitchen served, paid later", "Will pay at the end of the day", OrderStatusEnum.Pending, null, "Maria", 0, [new("Latte", 1, ["Medium", "Iced"])], MinutesAgo: -40, Kitchen: new(KitchenState.Served, StartedMinutesAfter: 2, ReadyMinutesAfter: 7, ServedMinutesAfter: 8)),
             new("kitchen served, prepaid", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, 0, [new("Chocolate Cake Slice", 1, []), new("Cappuccino", 1, ["Medium", "Hot"])], MinutesAgo: -55, Kitchen: new(KitchenState.Served, StartedMinutesAfter: 1, ReadyMinutesAfter: 6, ServedMinutesAfter: 7)),
+            new("kitchen long order, team lunch", "Bring everything out together, table of 8", OrderStatusEnum.Pending, null, "Ana", 0, [new("Latte", 2, ["Large", "Iced"]), new("Cappuccino", 2, ["Medium", "Hot"]), new("Iced Americano", 3, ["Large"]), new("Spanish Latte", 1, []), new("Mango Smoothie", 2, []), new("Garlic Rice with Tapa", 2, []), new("Pasta Aglio e Olio", 2, []), new("Chicken Pesto Panini", 2, []), new("Tuna Melt Sandwich", 1, []), new("Tiramisu Cup", 3, []), new("Leche Flan", 2, [])], MinutesAgo: -6, Instructions: "Serve the pasta first", Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 2)),
             new("kitchen left over from yesterday", null, OrderStatusEnum.Pending, null, "Juan", -30, [new("Latte", 1, ["Medium", "Hot"])], Kitchen: new(KitchenState.New)),
         };
 
