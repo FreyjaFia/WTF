@@ -127,7 +127,7 @@ public class BranchWallDatabaseTests
         }
 
         await using var db = shop.Database.CreateContext(new FixedTenant(Tenant));
-        var numbers = await db.Orders.OrderBy(o => o.CreatedAt).Select(o => new { o.BranchId, o.OrderNumber }).ToListAsync();
+        var numbers = await db.Orders.OrderBy(o => o.OrderNumber).Select(o => new { o.BranchId, o.OrderNumber }).ToListAsync();
         numbers.Where(n => n.BranchId == shop.Makati).Select(n => n.OrderNumber).ShouldBe([1, 2, 3]);
         numbers.Where(n => n.BranchId == shop.Cebu).Select(n => n.OrderNumber).ShouldBe([1, 2]);
     }

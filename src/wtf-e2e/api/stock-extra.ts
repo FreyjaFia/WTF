@@ -171,7 +171,9 @@ export class StockExtraApi {
   }
 
   public async alertsFor(itemId: string, role: Role = 'owner'): Promise<readonly NotificationRow[]> {
-    return (await this.notifications(role)).filter((row) => row.subjectId === itemId);
+    const branches = await this.api.json<readonly { id: string }[]>('owner', 'GET', 'branches');
+    const keys = new Set(branches.map((branch) => stockAlertKey(itemId, branch.id)));
+    return (await this.notifications(role)).filter((row) => row.subjectId !== null && keys.has(row.subjectId));
   }
 }
 
@@ -181,4 +183,21 @@ export async function linkAddOnsReliably(api: ApiClient, productId: string, addO
   for (let attempt = 0; attempt < 2; attempt++) {
     await api.json<unknown>('owner', 'POST', `products/${productId}/addons`, { productId, addOns });
   }
+}
+
+// The alert row of one item in one branch has a subject of its own (see StockAlertKey in the API), so the same item can
+// alert in one branch and not in another.
+export function stockAlertKey(itemId: string, branchId: string): string {
+  const toBytes = (guid: string): number[] => {
+    const hex = guid.replace(/-/g, '');
+    const raw = Array.from({ length: 16 }, (_, i) => parseInt(hex.slice(i * 2, i * 2 + 2), 16));
+    // .NET writes the first three groups little-endian.
+    return [...raw.slice(0, 4).reverse(), ...raw.slice(4, 6).reverse(), ...raw.slice(6, 8).reverse(), ...raw.slice(8)];
+  };
+  const a = toBytes(itemId);
+  const b = toBytes(branchId);
+  const out = Array.from({ length: 16 }, (_, i) => (a[i] ^ b[(i + 7) % 16] ^ ((i * 31 + 5) & 0xff)) & 0xff);
+  const net = [...out.slice(0, 4).reverse(), ...out.slice(4, 6).reverse(), ...out.slice(6, 8).reverse(), ...out.slice(8)];
+  const h = net.map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }

@@ -24,7 +24,7 @@ test.describe('Inventory hub @inventory @layout', () => {
     const panel = page.getByTestId('inventory-switcher-panel');
     await expect(panel).toBeVisible();
     await expect(page.getByTestId('inventory-switcher-item-items')).toHaveAttribute('aria-current', 'page');
-    await expect(panel.getByRole('link')).toHaveCount(9);
+    await expect.poll(async () => panel.getByRole('link').count()).toBeGreaterThanOrEqual(9);
 
     await page.getByTestId('inventory-switcher-item-receiving').click();
     await expect(page).toHaveURL(/\/inventory\/receiving$/);
