@@ -44,6 +44,9 @@ public class UnsyncedOrderDatabaseTests
             new Tenant { Id = TenantA, Name = "Shop A", Slug = "shop-a", Status = 2, CreatedAt = DateTime.UtcNow },
             new Tenant { Id = TenantB, Name = "Shop B", Slug = "shop-b", Status = 2, CreatedAt = DateTime.UtcNow });
         await db.SaveChangesAsync();
+
+        db.Branches.AddRange(SqlTestDatabase.MainBranch(TenantA), SqlTestDatabase.MainBranch(TenantB));
+        await db.SaveChangesAsync();
     }
 
     private static UnsyncedOrder Row(string localId, Guid cashierId) => new()

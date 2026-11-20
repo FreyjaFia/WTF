@@ -51,6 +51,7 @@ internal static class UnsyncedOrderRecorder
                     ErrorText = error,
                     ErrorCode = CodeFor(failure),
                     CashierUserId = cashierId.Value,
+                    BranchId = order.BranchId ?? Guid.Empty,
                     DeviceCreatedAt = order.CreatedAt?.ToUniversalTime(),
                     ReceivedAt = DateTime.UtcNow,
                     QuotedTotal = order.ExpectedTotal ?? QuotedTotalOf(order),

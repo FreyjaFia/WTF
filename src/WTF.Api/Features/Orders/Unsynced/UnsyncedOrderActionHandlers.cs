@@ -40,7 +40,7 @@ public class RetryUnsyncedOrderHandler(
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var results = await sender.Send(
-            new SyncOfflineOrdersCommand([quoted with { ActorUserId = row.CashierUserId, OfflineLocalId = row.OfflineLocalId }]),
+            new SyncOfflineOrdersCommand([quoted with { ActorUserId = row.CashierUserId, OfflineLocalId = row.OfflineLocalId, BranchId = row.BranchId }]),
             cancellationToken);
         var result = results.Single();
 
@@ -108,6 +108,7 @@ public class NoteOnlyUnsyncedOrderHandler(
         {
             CreatedAt = row.DeviceCreatedAt ?? row.ReceivedAt,
             CreatedBy = row.CashierUserId,
+            BranchId = row.BranchId,
             UpdatedAt = DateTime.UtcNow,
             UpdatedBy = userId,
             CustomerId = null,

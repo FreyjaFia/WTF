@@ -53,6 +53,8 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             return Failed(localId, tooLate);
         }
 
+        order = await DropUnknownBranchAsync(order, cancellationToken);
+
         var alreadySaved = await FindSavedAsync(localId, cancellationToken);
         if (alreadySaved is not null)
         {
@@ -101,6 +103,20 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             db.ChangeTracker.Clear();
             return await FindSavedAsync(localId, cancellationToken) ?? throw new InvalidOperationException("The order could not be saved.");
         }
+    }
+
+    // A device may name a branch that was deleted or never existed in this shop: the sale then goes to the open branch.
+    private async Task<CreateOrderCommand> DropUnknownBranchAsync(CreateOrderCommand order, CancellationToken cancellationToken)
+    {
+        if (order.BranchId is not { } branchId)
+        {
+            return order;
+        }
+
+        var exists = await db.Branches
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+            .AnyAsync(b => b.Id == branchId && b.IsActive, cancellationToken);
+        return exists ? order : order with { BranchId = null };
     }
 
     private static bool CanHonorSeniorPwd(CreateOrderCommand order)

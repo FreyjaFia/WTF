@@ -43,6 +43,8 @@ public partial class Branch
 
     public virtual ICollection<ShortLink> ShortLinks { get; set; } = new List<ShortLink>();
 
+    public virtual ICollection<UnsyncedOrder> UnsyncedOrders { get; set; } = new List<UnsyncedOrder>();
+
     public virtual ICollection<StockCount> StockCounts { get; set; } = new List<StockCount>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();

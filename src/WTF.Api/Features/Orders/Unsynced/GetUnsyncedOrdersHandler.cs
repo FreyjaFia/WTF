@@ -190,6 +190,7 @@ internal static class UnsyncedOrderMapper
             row.ResolvedAt,
             row.DiscardReason,
             row.ResultingOrderId,
-            lineCount);
+            lineCount,
+            row.BranchId);
     }
 }

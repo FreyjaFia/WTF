@@ -678,7 +678,11 @@ async Task SeedMainShopAsync()
 
     if (!await db.UnsyncedOrders.AnyAsync())
     {
-        UnsyncedOrder Unsynced(string localId, string code, string error, int hoursAgo, string product, int quantity, decimal price, bool resolved)
+        var branchByCode = await db.Branches.IgnoreQueryFilters()
+            .Where(b => b.TenantId == shopId)
+            .ToDictionaryAsync(b => b.Code, b => b.Id);
+
+        UnsyncedOrder Unsynced(string localId, string code, string error, int hoursAgo, string product, int quantity, decimal price, bool resolved, string branchCode)
         {
             var item = products[product];
             var command = new WTF.Api.Features.Orders.CreateOrderCommand
@@ -689,6 +693,7 @@ async Task SeedMainShopAsync()
                 CreatedAt = now.AddHours(hoursAgo),
                 OfflineLocalId = localId,
                 ExpectedTotal = price * quantity,
+                BranchId = branchByCode.GetValueOrDefault(branchCode),
             };
             return new UnsyncedOrder
             {
@@ -707,13 +712,14 @@ async Task SeedMainShopAsync()
                 ResolvedAt = resolved ? now.AddHours(hoursAgo).AddHours(20) : null,
                 DiscardReason = resolved ? "Customer already paid again at the counter" : null,
                 TenantId = shopId,
+                BranchId = branchByCode.GetValueOrDefault(branchCode),
             };
         }
 
         db.UnsyncedOrders.AddRange(
-            Unsynced("OFF-0405", "Rejected", "The server could not save this sale: the item was removed from the menu", -30, "Croissant", 2, 95m, false),
-            Unsynced("OFF-0409", "InvalidData", "The quantity on this sale was not valid", -11, "Iced Americano", 1, 120m, false),
-            Unsynced("OFF-0391", "Rejected", "The server could not save this sale: the customer was not found", -200, "Latte", 1, 140m, true));
+            Unsynced("OFF-0405", "Rejected", "The server could not save this sale: the item was removed from the menu", -30, "Croissant", 2, 95m, false, "MKT"),
+            Unsynced("OFF-0409", "InvalidData", "The quantity on this sale was not valid", -11, "Iced Americano", 1, 120m, false, "BGC"),
+            Unsynced("OFF-0391", "Rejected", "The server could not save this sale: the customer was not found", -200, "Latte", 1, 140m, true, "QC"));
         added.Add("3 unsynced offline sales");
     }
 

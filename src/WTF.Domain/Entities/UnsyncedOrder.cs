@@ -37,6 +37,10 @@ public partial class UnsyncedOrder
 
     public Guid TenantId { get; set; }
 
+    public Guid BranchId { get; set; }
+
+    public virtual Branch Branch { get; set; } = null!;
+
     public virtual User CashierUser { get; set; } = null!;
 
     public virtual User? ResolvedByNavigation { get; set; }

@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
 
 namespace WTF.Domain.Data;
@@ -2287,6 +2287,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<UnsyncedOrder>(entity =>
         {
+            entity.HasIndex(e => e.BranchId, "IX_UnsyncedOrders_BranchId");
+
             entity.HasIndex(e => new { e.TenantId, e.StatusId, e.ReceivedAt }, "IX_UnsyncedOrders_TenantId_StatusId_ReceivedAt");
 
             entity.HasIndex(e => new { e.TenantId, e.OfflineLocalId }, "UX_UnsyncedOrders_TenantId_OfflineLocalId").IsUnique();
@@ -2300,6 +2302,11 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.ReceivedAt).HasDefaultValueSql("(getutcdate())", "DF_UnsyncedOrders_ReceivedAt");
             entity.Property(e => e.StatusId).HasDefaultValue((byte)1, "DF_UnsyncedOrders_StatusId");
             entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_UnsyncedOrders_TenantId");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.UnsyncedOrders)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnsyncedOrders_Branches");
 
             entity.HasOne(d => d.CashierUser).WithMany(p => p.UnsyncedOrderCashierUsers)
                 .HasForeignKey(d => d.CashierUserId)

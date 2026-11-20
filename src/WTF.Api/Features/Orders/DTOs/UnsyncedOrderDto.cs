@@ -18,7 +18,8 @@ public record UnsyncedOrderDto(
     DateTime? ResolvedAt,
     string? DiscardReason,
     Guid? ResultingOrderId,
-    int LineCount);
+    int LineCount,
+    Guid BranchId = default);
 
 public record UnsyncedOrderLineDto(
     Guid ProductId,
