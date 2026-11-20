@@ -101,13 +101,13 @@ internal static class TestDb
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
-            LegacyStockSeeding.AddMainBranchRows(this);
+            LegacyStockSeeding.AddMainBranchRows(this, true);
             return base.SaveChanges(acceptAllChangesOnSuccess);
         }
 
         public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
         {
-            LegacyStockSeeding.AddMainBranchRows(this);
+            LegacyStockSeeding.AddMainBranchRows(this, true);
             return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
@@ -140,7 +140,7 @@ internal static class StockQuantityExtensions
 // a new item gets its row in its shop's Main branch when it is saved.
 internal static class LegacyStockSeeding
 {
-    public static void AddMainBranchRows(WTFDbContext db)
+    public static void AddMainBranchRows(WTFDbContext db, bool includeZero = false)
     {
         var added = db.ChangeTracker.Entries<Item>().Where(e => e.State == EntityState.Added).Select(e => e.Entity).ToList();
         if (added.Count == 0)
@@ -163,7 +163,12 @@ internal static class LegacyStockSeeding
                 item.Id = Guid.NewGuid();
             }
 
-            if (item.CurrentQuantity == 0m && item.LastAlertStatus == 0)
+            if (!includeZero && item.CurrentQuantity == 0m && item.LastAlertStatus == 0)
+            {
+                continue;
+            }
+
+            if (db.ChangeTracker.Entries<ItemBranchStock>().Any(e => e.State == EntityState.Added && e.Entity.ItemId == item.Id && e.Entity.BranchId == main.Id))
             {
                 continue;
             }

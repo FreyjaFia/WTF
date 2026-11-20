@@ -239,7 +239,7 @@ public class PlanGatingDatabaseTests
         var user = await SqlSeed.UserAsync(database);
         await using (var seed = database.CreateContext())
         {
-            seed.Items.Add(new Item { Id = Guid.NewGuid(), Name = "Beans", UnitName = "g", CurrentQuantity = 0m, WarningQuantity = 100m, CriticalQuantity = 10m, IsActive = true, CreatedAt = FixedClock.Today, CreatedBy = user.Id });
+            seed.Items.Add(new Item { Id = Guid.NewGuid(), Name = "Beans", UnitName = "g", CurrentQuantity = 0m, LastAlertStatus = 3, WarningQuantity = 100m, CriticalQuantity = 10m, IsActive = true, CreatedAt = FixedClock.Today, CreatedBy = user.Id });
             await seed.SaveChangesAsync();
         }
 
