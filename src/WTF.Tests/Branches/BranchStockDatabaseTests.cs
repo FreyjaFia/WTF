@@ -8,6 +8,7 @@ using WTF.Api.Features.Items;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Reports;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
@@ -357,6 +358,46 @@ public class BranchStockDatabaseTests
         check!.CanClose.ShouldBeFalse();
         check.ItemsWithStock.ShouldBe(1);
         check.Blockers.ShouldContain(b => b.Contains("still hold") || b.Contains("still holds"));
+    }
+
+    [SqlFact]
+    public async Task DailyClose_ForAllBranches_ListsEachBranchWithItsOwnNetSales_AndOneBranchSeesNoSplit()
+    {
+        var shop = await OpenShopAsync(allowNegative: true);
+        await using var _ = shop.Database;
+        foreach (var (branch, count) in new[] { (shop.Makati, 2), (shop.Cebu, 1) })
+        {
+            await using var db = AsLimited(shop, branch);
+            var create = new CreateOrderHandler(db, TestRequest.As(shop.UserId, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db), TestFakes.Features);
+            for (var i = 0; i < count; i++)
+            {
+                await create.Handle(new CreateOrderCommand
+                {
+                    Status = OrderStatusEnum.Completed,
+                    Items = [new OrderItemRequestDto(shop.Latte, 1, [], null, null)]
+                }, CancellationToken.None);
+            }
+        }
+
+        var query = new GetDailyCloseReportQuery { FromDate = DateTime.UtcNow.Date, ToDate = DateTime.UtcNow.Date };
+
+        await using (var all = AsAll(shop))
+        {
+            var rows = await new GetDailyCloseReportHandler(all, TestRequest.As(shop.UserId, AppRoles.Admin, "UTC")).Handle(query, CancellationToken.None);
+            var branches = rows.Where(r => r.Section == GetDailyCloseReportHandler.BranchesSection).ToDictionary(r => r.Label);
+            branches["Cebu"].OrderCount.ShouldBe(1);
+            branches["Cebu"].Amount.ShouldBe(150m);
+            branches["Main"].OrderCount.ShouldBe(2);
+            branches["Main"].Amount.ShouldBe(300m);
+            rows.Single(r => r.Label == "Net sales").Amount.ShouldBe(450m);
+        }
+
+        await using (var one = AsLimited(shop, shop.Cebu))
+        {
+            var rows = await new GetDailyCloseReportHandler(one, TestRequest.As(shop.UserId, AppRoles.Admin, "UTC")).Handle(query, CancellationToken.None);
+            rows.ShouldNotContain(r => r.Section == GetDailyCloseReportHandler.BranchesSection);
+            rows.Single(r => r.Label == "Net sales").Amount.ShouldBe(150m);
+        }
     }
 
     [SqlFact]

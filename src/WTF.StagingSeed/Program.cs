@@ -317,6 +317,43 @@ async Task SeedMainShopAsync()
         items[name] = item;
     }
 
+    var otherBranches = await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId && !b.IsMain).OrderBy(b => b.Name).ToListAsync();
+    var mainBranchId = await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId && b.IsMain).Select(b => b.Id).FirstAsync();
+    if (otherBranches.Count == 2 && !await db.ItemBranchStocks.IgnoreQueryFilters().AnyAsync(s => s.TenantId == shopId && s.BranchId != mainBranchId))
+    {
+        var bgc = otherBranches.First(b => b.Code == "BGC");
+        var quezonCity = otherBranches.First(b => b.Code == "QC");
+        var otherStart = new (string Name, decimal Bgc, decimal Qc)[]
+        {
+            ("Espresso Beans", 2500m, 900m),
+            ("Fresh Milk", 1500m, 420m),
+            ("Matcha Powder", 220m, 60m),
+        };
+        foreach (var (name, bgcQuantity, qcQuantity) in otherStart)
+        {
+            var item = items[name];
+            Move(db, item, StockMovementTypes.AddStock, bgcQuantity, owner.Id, shopId, null, null, "Opening stock", item.CostPrice, bgc.Id);
+            Move(db, item, StockMovementTypes.AddStock, qcQuantity, owner.Id, shopId, null, null, "Opening stock", item.CostPrice, quezonCity.Id);
+        }
+
+        var transfer = new StockTransfer
+        {
+            Id = Guid.NewGuid(),
+            TenantId = shopId,
+            FromBranchId = mainBranchId,
+            ToBranchId = bgc.Id,
+            Notes = "Beans for the BGC weekend rush",
+            CreatedAt = now.AddDays(-2),
+            CreatedBy = owner.Id,
+        };
+        db.StockTransfers.Add(transfer);
+        var beans = items["Espresso Beans"];
+        db.StockTransferLines.Add(new StockTransferLine { Id = Guid.NewGuid(), TenantId = shopId, TransferId = transfer.Id, ItemId = beans.Id, Quantity = 1000m, UnitCost = beans.CostPrice });
+        Move(db, beans, StockMovementTypes.TransferOut, -1000m, owner.Id, shopId, StockMovementTypes.StockTransferReference, transfer.Id, "Transfer to BGC", beans.CostPrice, mainBranchId);
+        Move(db, beans, StockMovementTypes.TransferIn, 1000m, owner.Id, shopId, StockMovementTypes.StockTransferReference, transfer.Id, "Transfer from Makati", beans.CostPrice, bgc.Id);
+        added.Add("stock at BGC and Quezon City, and a transfer from Makati to BGC");
+    }
+
     await db.SaveChangesAsync();
 
     // Recipes: what one sale takes out of stock
@@ -494,8 +531,8 @@ async Task SeedMainShopAsync()
                 Id = Guid.NewGuid(),
                 CountId = count.Id,
                 ItemId = item.Id,
-                ExpectedQuantity = item.CurrentQuantity,
-                CountedQuantity = counted ? item.CurrentQuantity - 25m : null,
+                ExpectedQuantity = MainQuantity(db, item, shopId),
+                CountedQuantity = counted ? MainQuantity(db, item, shopId) - 25m : null,
                 CountedAt = counted ? now.AddHours(-2) : null,
                 CountedBy = counted ? manager.Id : null,
                 TenantId = shopId,
@@ -1007,6 +1044,13 @@ async Task SeedBulkMainShopAsync(WTFDbContext db, User owner, User manager, User
             };
             db.Items.Add(item);
             Move(db, item, StockMovementTypes.AddStock, packUnits * 4m, owner.Id, shopId, null, null, "Opening stock", cost);
+            var shares = (await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId && !b.IsMain).OrderBy(b => b.Name).Select(b => new { b.Id, b.Code }).ToListAsync())
+                .Select(b => (BranchId: b.Id, Share: b.Code == "BGC" ? 2m : 1m));
+            foreach (var (branchId, share) in shares)
+            {
+                Move(db, item, StockMovementTypes.AddStock, packUnits * share, owner.Id, shopId, null, null, "Opening stock", cost, branchId);
+            }
+
             db.ItemSuppliers.Add(new ItemSupplier
             {
                 Id = Guid.NewGuid(),
@@ -1235,8 +1279,8 @@ async Task SeedBulkMainShopAsync(WTFDbContext db, User owner, User manager, User
                     Id = Guid.NewGuid(),
                     CountId = countId,
                     ItemId = item.Id,
-                    ExpectedQuantity = item.CurrentQuantity,
-                    CountedQuantity = item.CurrentQuantity,
+                    ExpectedQuantity = MainQuantity(db, item, shopId),
+                    CountedQuantity = MainQuantity(db, item, shopId),
                     CountedAt = createdAt.AddHours(1),
                     CountedBy = counter.Id,
                     TenantId = shopId,
@@ -1751,19 +1795,37 @@ async Task EnsurePromotionAsync(WTFDbContext db, string name, int typeId, Guid c
     added.Add($"promotion {name}");
 }
 
-// One stock change: moves the item's quantity and writes the matching history row
-static StockMovement Move(WTFDbContext db, Item item, string type, decimal delta, Guid userId, Guid tenantId, string? referenceType, Guid? referenceId, string notes, decimal? unitCost)
+static decimal MainQuantity(WTFDbContext db, Item item, Guid tenantId)
 {
-    var before = item.CurrentQuantity;
-    item.CurrentQuantity = before + delta;
+    var main = db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == tenantId && b.IsMain).Select(b => b.Id).First();
+    return db.ItemBranchStocks.Local.Where(s => s.ItemId == item.Id && s.BranchId == main).Select(s => s.CurrentQuantity).FirstOrDefault();
+}
+
+// One stock change: moves the item's quantity and writes the matching history row
+static StockMovement Move(WTFDbContext db, Item item, string type, decimal delta, Guid userId, Guid tenantId, string? referenceType, Guid? referenceId, string notes, decimal? unitCost, Guid? branchId = null)
+{
+    var branch = branchId ?? db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == tenantId && b.IsMain).Select(b => b.Id).First();
+    var stock = db.ItemBranchStocks.Local.FirstOrDefault(s => s.ItemId == item.Id && s.BranchId == branch)
+        ?? db.ItemBranchStocks.IgnoreQueryFilters().FirstOrDefault(s => s.ItemId == item.Id && s.BranchId == branch);
+    if (stock is null)
+    {
+        stock = new ItemBranchStock { Id = Guid.NewGuid(), TenantId = tenantId, ItemId = item.Id, BranchId = branch, CurrentQuantity = 0m, UpdatedAt = DateTime.UtcNow };
+        db.ItemBranchStocks.Add(stock);
+    }
+
+    var before = stock.CurrentQuantity;
+    stock.CurrentQuantity = before + delta;
+    stock.UpdatedAt = DateTime.UtcNow;
+    item.CurrentQuantity += delta;
     var movement = new StockMovement
     {
         Id = Guid.NewGuid(),
         ItemId = item.Id,
+        BranchId = branch,
         MovementType = type,
         QuantityDelta = delta,
         QuantityBefore = before,
-        QuantityAfter = item.CurrentQuantity,
+        QuantityAfter = stock.CurrentQuantity,
         UnitCost = unitCost,
         ReferenceType = referenceType,
         ReferenceId = referenceId,

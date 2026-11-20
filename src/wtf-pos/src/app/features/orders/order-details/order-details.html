@@ -51,7 +51,7 @@
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
                   <h2 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-                    #{{ currentOrder.orderNumber }}
+                    {{ orderNumberText(currentOrder) }}
                   </h2>
                   <app-badge [variant]="getStatusVariant(currentOrder.status)">
                     {{ getStatusLabel(currentOrder.status) }}
@@ -751,7 +751,7 @@
     (cancelled)="dismissRefundModal()"
   >
     Are you sure you want to refund order
-    <span class="font-medium text-gray-700">#{{ currentOrder.orderNumber }}</span
+    <span class="font-medium text-gray-700">{{ orderNumberText(currentOrder) }}</span
     >?
 
     <div dialogExtra class="mt-4 space-y-4">

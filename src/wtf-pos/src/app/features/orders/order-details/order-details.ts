@@ -1,4 +1,5 @@
 import type { BadgeVariant } from '@shared/components/badge/badge';
+import { orderNumberLabel } from '@shared/utils/order-number';
 import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
@@ -7,6 +8,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   AlertService,
   AuthService,
+  BranchService,
   CatalogCacheService,
   ConversationInboxService,
   InventoryService,
@@ -96,6 +98,7 @@ export class OrderDetails implements OnInit {
   private readonly signalR = inject(SignalRService);
   private readonly kitchenService = inject(KitchenService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly branchService = inject(BranchService);
 
   protected readonly showChat = signal(false);
   /** Messages from the customer that no staff member has read yet, for the badge on the Chat button. */
@@ -237,6 +240,10 @@ export class OrderDetails implements OnInit {
     sumAmounts(this.detailItems().map((item) => item.promoDiscount ?? 0)),
   );
 
+  protected orderNumberText(order: OrderDto): string {
+    return orderNumberLabel(order.orderNumber, order.branchCode, this.branchService.isMultiBranch());
+  }
+
   protected readonly receiptData = computed<ReceiptData | null>(() => {
     const order = this.order();
     if (!order) {
@@ -245,6 +252,7 @@ export class OrderDetails implements OnInit {
 
     return {
       orderNumber: order.orderNumber,
+      orderLabel: this.branchService.isMultiBranch() && order.branchCode ? orderNumberLabel(order.orderNumber, order.branchCode, true) : null,
       customerName: order.customerName || 'Walk-in customer',
       date: new Date(this.getOrderDate(order) || Date.now()).toLocaleString('en-PH', {
         day: 'numeric',

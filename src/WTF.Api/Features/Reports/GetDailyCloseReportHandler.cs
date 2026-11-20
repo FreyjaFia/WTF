@@ -29,6 +29,7 @@ public sealed class GetDailyCloseReportHandler(
     public const string SalesSection = "Sales";
     public const string PaymentsSection = "Payments";
     public const string StaffSection = "Staff";
+    public const string BranchesSection = "Branches";
     public const string VoidsSection = "Voids";
     public const string WasteSection = "Waste";
     public const string HeldOrdersLabel = "Offline sales held for review";
@@ -122,6 +123,21 @@ public sealed class GetDailyCloseReportHandler(
                     staffSummary.Revenue);
             })
             .OrderBy(r => r.Label));
+
+        if (db.VisibleBranchIds.Count > 1)
+        {
+            var branches = await db.Branches.AsNoTracking().OrderBy(b => b.Name).Select(b => new { b.Id, b.Name }).ToListAsync(cancellationToken);
+            rows.AddRange(branches.Select(branch =>
+            {
+                var branchSummary = SalesRules.Summarize(orders.Where(o => o.BranchId == branch.Id), overridePrices);
+                return new DailyCloseReportRowDto(
+                    BranchesSection,
+                    branch.Name,
+                    $"Gross PHP {branchSummary.GrossSales:N2}, refunds PHP {branchSummary.RefundedAmount:N2}",
+                    branchSummary.CompletedOrderCount,
+                    branchSummary.NetSales);
+            }));
+        }
 
         rows.AddRange(orders
             .Where(o => SalesRules.IsVoided(o.StatusId))
