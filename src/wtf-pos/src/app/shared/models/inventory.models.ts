@@ -26,6 +26,7 @@ export interface ItemDto {
   productLinks: ProductItemLinkDto[];
   recentMovements: StockMovementDto[];
   branchStocks?: ItemBranchStockDto[] | null;
+  parLevel?: number | null;
 }
 
 export interface ItemBranchStockDto {
@@ -34,6 +35,18 @@ export interface ItemBranchStockDto {
   branchName: string;
   quantity: number;
   status: string;
+  warningQuantity?: number | null;
+  criticalQuantity?: number | null;
+  parLevel?: number | null;
+  costPrice?: number | null;
+}
+
+export interface ItemBranchSettingInputDto {
+  branchId: string;
+  warningQuantity: number | null;
+  criticalQuantity: number | null;
+  parLevel: number | null;
+  costPrice: number | null;
 }
 
 export interface ItemPriceHistoryDto extends PriceHistoryEntryDto {

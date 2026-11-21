@@ -45,6 +45,7 @@ export interface KitchenOrderDto {
   changeKind?: KitchenChangeKindEnum | null;
   isStale: boolean;
   isStopMaking: boolean;
+  branchCode?: string | null;
 }
 
 export interface KitchenBoardDto {

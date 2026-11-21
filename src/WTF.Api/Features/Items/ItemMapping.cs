@@ -61,7 +61,8 @@ internal static class ItemMapping
             item.AverageCost,
             item.YieldPercent,
             CostRules.UsableCost(CostRules.MovementCost(item.AverageCost, item.CostPrice), item.YieldPercent),
-            [.. BranchStocks(item, item.ItemBranchStocks)]);
+            [.. BranchStocks(item, item.ItemBranchStocks)],
+            item.ParLevel);
     }
 
     public static IEnumerable<ItemBranchStockDto> BranchStocks(Item item, IEnumerable<ItemBranchStock> stocks)

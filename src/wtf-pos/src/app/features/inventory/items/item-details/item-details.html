@@ -288,6 +288,12 @@
         </div>
       </div>
 
+      @if (branchService.isMultiBranch() && (item()!.branchStocks?.length ?? 0) > 1) {
+        <div class="mt-4">
+          <app-item-branch-settings [item]="item()!" (saved)="loadItem(item()!.id)" />
+        </div>
+      }
+
       @if (canReadStock()) {
         <div class="card mt-4 rounded-xl bg-surface shadow-lg" data-testid="stock-history">
           <div class="card-body gap-4 p-6">

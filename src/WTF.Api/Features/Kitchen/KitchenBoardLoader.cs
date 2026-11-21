@@ -23,6 +23,7 @@ internal static class KitchenBoardLoader
     {
         var orders = await query
             .Include(o => o.Customer)
+            .Include(o => o.Branch)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .AsNoTrackingWithIdentityResolution()
@@ -96,7 +97,8 @@ internal static class KitchenBoardLoader
             order.KitchenChangeNote,
             order.KitchenChangeKind,
             onBoard && KitchenBoardRules.IsStale(order.CreatedAt, nowUtc, timeZone),
-            KitchenBoardRules.IsStopMakingCard(order.StatusId, state, dismissed));
+            KitchenBoardRules.IsStopMakingCard(order.StatusId, state, dismissed),
+            order.Branch?.Code);
     }
 
     private static DateTime? Utc(DateTime? value) => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;

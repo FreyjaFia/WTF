@@ -11,6 +11,8 @@ import {
   BulkIngredientLineDto,
   CreateItemDto,
   ItemAlertRecipientsDto,
+  ItemBranchSettingInputDto,
+  ItemBranchStockDto,
   ItemDto,
   OrderStockMovementDto,
   PagedStockMovementsDto,
@@ -96,6 +98,12 @@ export class InventoryService {
     return this.http
       .get<ItemDto>(`${this.baseUrl}/${id}`)
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch item.')));
+  }
+
+  public saveItemBranchSettings(itemId: string, rows: ItemBranchSettingInputDto[]): Observable<ItemBranchStockDto[]> {
+    return this.http
+      .put<ItemBranchStockDto[]>(`${this.baseUrl}/${itemId}/branch-settings`, rows)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to save the branch settings.')));
   }
 
   public updateInventoryItem(payload: UpdateItemDto): Observable<ItemDto> {

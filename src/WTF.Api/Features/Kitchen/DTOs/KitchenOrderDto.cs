@@ -19,4 +19,5 @@ public record KitchenOrderDto(
     string? ChangeNote,
     byte? ChangeKind,
     bool IsStale,
-    bool IsStopMaking);
+    bool IsStopMaking,
+    string? BranchCode = null);

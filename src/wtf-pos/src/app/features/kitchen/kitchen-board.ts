@@ -2,7 +2,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
-import { AlertService, AuthService, ConnectivityService, KitchenService, SignalRService } from '@core/services';
+import { AlertService, AuthService, BranchService, ConnectivityService, KitchenService, SignalRService } from '@core/services';
+import { orderNumberLabel } from '@shared/utils/order-number';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import {
   IconComponent,
@@ -54,6 +55,7 @@ const CHIME_KEY = 'wtf.kitchen.chime';
 })
 export class KitchenBoardComponent implements OnInit, OnDestroy {
   private readonly kitchen = inject(KitchenService);
+  protected readonly branchService = inject(BranchService);
   private readonly auth = inject(AuthService);
   private readonly alerts = inject(AlertService);
   private readonly signalR = inject(SignalRService);
@@ -167,6 +169,10 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
     this.signalR.stopStaffOrdersHub();
     void this.wakeLock?.release().catch(() => undefined);
     void this.audio?.close().catch(() => undefined);
+  }
+
+  protected orderLabel(order: KitchenOrderDto): string {
+    return orderNumberLabel(order.orderNumber, order.branchCode, this.branchService.isMultiBranch() && this.branchService.isAllSelected());
   }
 
   protected ordersIn(state: KitchenStateEnum): KitchenOrderDto[] {

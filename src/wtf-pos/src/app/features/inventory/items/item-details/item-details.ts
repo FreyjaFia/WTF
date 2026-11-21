@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AlertService,
   AuthService,
+  BranchService,
   InventoryService,
   ModalStackService,
   StockWasteService,
@@ -19,6 +20,7 @@ import {
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { ItemBranchSettingsComponent } from './item-branch-settings';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
@@ -54,12 +56,14 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
     ConfirmDialogComponent,
     StockAdjustDialogComponent,
     RecordWasteDialogComponent,
+    ItemBranchSettingsComponent,
   ],
   templateUrl: './item-details.html',
   host: { class: 'block h-full' },
 })
 export class ItemDetailsComponent implements OnInit {
   private readonly inventoryService = inject(InventoryService);
+  protected readonly branchService = inject(BranchService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -408,7 +412,7 @@ export class ItemDetailsComponent implements OnInit {
     this.isHistoryOpen.set(false);
   }
 
-  private loadItem(id: string): void {
+  protected loadItem(id: string): void {
     this.isLoading.set(true);
     this.inventoryService.getInventoryItem(id).subscribe({
       next: (item) => {

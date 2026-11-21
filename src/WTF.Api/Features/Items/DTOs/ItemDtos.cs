@@ -25,7 +25,8 @@ public record ItemDto(
     decimal? AverageCost = null,
     decimal YieldPercent = 100m,
     decimal? UsableCost = null,
-    List<ItemBranchStockDto>? BranchStocks = null);
+    List<ItemBranchStockDto>? BranchStocks = null,
+    decimal? ParLevel = null);
 
 public record ItemBranchStockDto(
     Guid BranchId,

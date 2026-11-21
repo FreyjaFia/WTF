@@ -3,7 +3,12 @@
     <div class="flex items-start justify-between gap-3">
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Kitchen</h1>
-        <p class="text-xs text-gray-500 sm:text-sm">What to make now, oldest first.</p>
+        <p class="text-xs text-gray-500 sm:text-sm" data-testid="kitchen-branch-label">
+          What to make now, oldest first.
+          @if (branchService.isMultiBranch()) {
+            <span class="font-medium text-gray-700">{{ branchService.activeLabel() }}</span>
+          }
+        </p>
       </div>
       <div class="flex items-center gap-1">
         <button
@@ -160,7 +165,7 @@
               <div class="flex items-center justify-between gap-3">
                 <div>
                   <p class="text-sm font-bold tracking-wide text-red-700 uppercase">Cancelled. Stop making</p>
-                  <p class="text-2xl font-extrabold text-gray-900">#{{ order.orderNumber }}</p>
+                  <p class="text-2xl font-extrabold text-gray-900">{{ orderLabel(order) }}</p>
                 </div>
                 @if (canUpdate()) {
                   <button
@@ -269,7 +274,7 @@
   >
     <header class="flex items-start justify-between gap-2">
       <div class="min-w-0">
-        <p class="text-3xl leading-none font-extrabold text-gray-900">#{{ order.orderNumber }}</p>
+        <p class="text-3xl leading-none font-extrabold text-gray-900">{{ orderLabel(order) }}</p>
         @if (order.customerName) {
           <p class="mt-1 truncate text-sm text-gray-600">{{ order.customerName }}</p>
         }
