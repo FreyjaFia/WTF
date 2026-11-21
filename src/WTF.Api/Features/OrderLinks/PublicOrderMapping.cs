@@ -101,7 +101,7 @@ public static class PublicOrderMapping
                         child.Price
                             ?? (overridePrices.TryGetValue((parent.ProductId, child.ProductId), out var price)
                                 ? price
-                                : child.Product.Price),
+                                : OrderMetrics.ListPrice(child)),
                         addOnTypes.GetValueOrDefault((parent.ProductId, child.ProductId))))];
 
                 // A pending order whose discount covers only part of a line shows two rows: the discounted items and the rest.
@@ -113,13 +113,13 @@ public static class PublicOrderMapping
                     {
                         rows.Add(new PublicOrderItemDto(
                             parent.Product.Name, discounted, preview.UnitPrice, AddOns(), parent.SpecialInstructions,
-                            parent.Product.Price, preview.Label));
+                            OrderMetrics.ListPrice(parent), preview.Label));
                     }
 
                     if (discounted < parent.Quantity)
                     {
                         rows.Add(new PublicOrderItemDto(
-                            parent.Product.Name, parent.Quantity - discounted, parent.Product.Price, AddOns(), parent.SpecialInstructions));
+                            parent.Product.Name, parent.Quantity - discounted, OrderMetrics.ListPrice(parent), AddOns(), parent.SpecialInstructions));
                     }
 
                     return rows;
@@ -128,7 +128,7 @@ public static class PublicOrderMapping
                 return [new PublicOrderItemDto(
                     parent.Product.Name,
                     parent.Quantity,
-                    parent.Price ?? parent.Product.Price,
+                    parent.Price ?? OrderMetrics.ListPrice(parent),
                     AddOns(),
                     parent.SpecialInstructions,
                     parent.OriginalPrice,

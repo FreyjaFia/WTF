@@ -27,6 +27,8 @@ internal static class PendingOrderPreview
             return new Dictionary<Guid, PreviewDiscount>();
         }
 
+        await BranchPriceLookup.StampAsync(db, unpriced, cancellationToken);
+
         var timeZone = httpContextAccessor is null
             ? TimeZoneInfo.Utc
             : RequestTimeZone.ResolveFromRequest(httpContextAccessor);
@@ -57,7 +59,7 @@ internal static class PendingOrderPreview
                     .Select(child => (child.ProductId, child.Quantity));
 
                 var applied = PromotionPricing.GetDiscountedUnitPrice(
-                    parent.Product.Price, parent.ProductId, addOns, loaded.RulesByProductId, parent.Quantity, budget);
+                    OrderMetrics.ListPrice(parent), parent.ProductId, addOns, loaded.RulesByProductId, parent.Quantity, budget);
                 if (applied is null)
                 {
                     continue;

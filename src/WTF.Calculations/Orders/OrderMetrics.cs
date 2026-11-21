@@ -63,11 +63,11 @@ public static class OrderMetrics
         {
             var discounted = Math.Clamp(preview.Quantity, 0, parentItem.Quantity);
             return (preview.UnitPrice + addOnPerUnit) * discounted
-                + (parentItem.Product.Price + addOnPerUnit) * (parentItem.Quantity - discounted)
+                + (ListPrice(parentItem) + addOnPerUnit) * (parentItem.Quantity - discounted)
                 - SeniorPwdReduction(parentItem);
         }
 
-        var parentUnitPrice = parentItem.Price ?? parentItem.Product.Price;
+        var parentUnitPrice = parentItem.Price ?? ListPrice(parentItem);
 
         return (parentUnitPrice + addOnPerUnit) * parentItem.Quantity - SeniorPwdReduction(parentItem);
     }
@@ -85,7 +85,10 @@ public static class OrderMetrics
         return (parents.Sum(p => p.SeniorPwdDiscount ?? 0m), parents.Sum(p => p.SeniorPwdVatExempt ?? 0m));
     }
 
-    public static decimal ParentItemUnitPrice(OrderItem parentItem) => parentItem.Price ?? parentItem.Product.Price;
+    public static decimal ParentItemUnitPrice(OrderItem parentItem) => parentItem.Price ?? ListPrice(parentItem);
+
+    // What the item costs in its order's branch today: the branch's own price when it has one, else the shop price.
+    public static decimal ListPrice(OrderItem item) => item.Order?.ListPriceOf(item.Product) ?? item.Product.Price;
 
     public static decimal ParentItemListUnitPrice(OrderItem parentItem)
     {
@@ -133,7 +136,7 @@ public static class OrderMetrics
         addOn.Price
         ?? (addOnOverridePrices.TryGetValue((parentItem.ProductId, addOn.ProductId), out var overridePrice)
             ? overridePrice
-            : addOn.Product.Price);
+            : ListPrice(addOn));
 
     public static decimal ComputeAddOnTotal(
         OrderItem parentItem,

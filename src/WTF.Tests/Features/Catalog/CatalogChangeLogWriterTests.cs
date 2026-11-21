@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Catalog;
 using WTF.Api.Features.Branding;
 using WTF.Api.Features.Products;
+using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Features.Promotions;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Calculations.Catalog;
@@ -61,6 +62,7 @@ public class CatalogChangeLogWriterTests
         nameof(RestoreProductCommand),
         nameof(CreateProductAddOnPriceOverrideCommand),
         nameof(UpdateProductAddOnPriceOverrideCommand),
+        nameof(SaveProductBranchPricesCommand),
         nameof(DeleteProductAddOnPriceOverrideCommand),
         nameof(CreateDiscountedProductPromotionCommand),
         nameof(UpdateDiscountedProductPromotionCommand),
@@ -129,6 +131,15 @@ public class CatalogChangeLogWriterTests
             await new UpdateProductAddOnPriceOverrideHandler(e.Context(), e.Http())
                 .Handle(new UpdateProductAddOnPriceOverrideCommand { ProductId = e.Product, AddOnId = e.AddOn, Price = 6m }, default);
         }, CatalogEntityTypes.AddOnPriceOverride, nameof(ProductAddOnPriceOverride.Price)),
+
+        new("SaveProductBranchPrices", async e =>
+        {
+            await ProductSeed.SeedAsync(e.Db, ProductSeed.NewProduct(id: e.Product));
+            await using var db = e.Context();
+            var branch = await db.Branches.Select(b => b.Id).FirstAsync();
+            await new SaveProductBranchPricesHandler(e.Context(), e.Http(), TestFakes.Audit())
+                .Handle(new SaveProductBranchPricesCommand(e.Product, [new ProductBranchPriceInputDto(branch, 135m)]), default);
+        }, CatalogEntityTypes.ProductBranchPrice, nameof(ProductBranchPrice.Price)),
 
         new("DeleteProductAddOnPriceOverride", async e =>
         {

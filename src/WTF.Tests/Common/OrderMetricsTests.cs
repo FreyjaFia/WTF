@@ -94,4 +94,40 @@ public class OrderMetricsTests
     {
         OrderMetrics.ComputeOrderTotal(new Order(), NoOverrides).ShouldBe(0m);
     }
+
+    [Fact]
+    public void ListPrice_UsesTheBranchPriceOfTheOrderWhenItHasOne_ElseTheShopPrice()
+    {
+        var latte = Prod(160m);
+        var syrup = Prod(10m);
+        var parent = Line(latte, 2);
+        var addOn = Line(syrup, 1, parent: parent);
+        var order = new Order { Id = Guid.NewGuid(), BranchPrices = new Dictionary<Guid, decimal> { [latte.Id] = 175m } };
+        parent.Order = order;
+        addOn.Order = order;
+        order.OrderItems.Add(parent);
+        order.OrderItems.Add(addOn);
+
+        OrderMetrics.ListPrice(parent).ShouldBe(175m);
+        OrderMetrics.ListPrice(addOn).ShouldBe(10m);
+        OrderMetrics.ComputeOrderTotal(order, NoOverrides).ShouldBe(370m);
+    }
+
+    [Fact]
+    public void ListPrice_OfAnItemWithNoOrder_IsTheShopPrice()
+    {
+        OrderMetrics.ListPrice(Line(Prod(160m), 1)).ShouldBe(160m);
+    }
+
+    [Fact]
+    public void ASavedLinePrice_IsNeverChangedByABranchPrice()
+    {
+        var latte = Prod(160m);
+        var parent = Line(latte, 1, price: 150m);
+        var order = new Order { Id = Guid.NewGuid(), BranchPrices = new Dictionary<Guid, decimal> { [latte.Id] = 175m } };
+        parent.Order = order;
+        order.OrderItems.Add(parent);
+
+        OrderMetrics.ComputeOrderTotal(order, NoOverrides).ShouldBe(150m);
+    }
 }

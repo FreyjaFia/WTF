@@ -83,12 +83,15 @@ internal static class OfflineOrderReview
             .Where(p => productIds.Contains(p.Id))
             .Select(p => new ReviewedProduct(p.Id, p.Name, p.Price, p.IsActive, p.IsSeniorPwdEligible))
             .ToListAsync(cancellationToken);
+        var branchId = await BranchPriceLookup.BranchForNewOrderAsync(db, command.BranchId, cancellationToken);
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, productIds, cancellationToken);
         var products = new Dictionary<Guid, ReviewedProduct>();
         foreach (var p in current)
         {
             products[p.Id] = p with
             {
-                Price = await atSale.ProductPriceAsync(p.Id, p.Price, cancellationToken),
+                Price = await atSale.ProductPriceAsync(
+                    p.Id, branchId, p.Price, branchPrices.TryGetValue(p.Id, out var branchPrice) ? branchPrice : null, cancellationToken),
                 IsActive = await atSale.ProductIsActiveAsync(p.Id, p.IsActive, cancellationToken)
             };
         }

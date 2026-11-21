@@ -49,3 +49,7 @@ public partial class UnsyncedOrder : IBranchOwned
 public partial class ItemBranchStock : IBranchOwned
 {
 }
+
+public partial class ProductBranchPrice : IBranchOwned
+{
+}

@@ -44,6 +44,8 @@ public static class CatalogHistoryRules
         return new Guid(hash);
     }
 
+    public static Guid BranchPriceKey(Guid productId, Guid branchId) => AddOnOverrideKey(productId, branchId);
+
     public static List<CatalogFieldDiff> Diff(
         IReadOnlyDictionary<string, string?> before,
         IReadOnlyDictionary<string, string?> after)

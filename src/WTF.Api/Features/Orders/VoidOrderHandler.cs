@@ -98,6 +98,8 @@ public class VoidOrderHandler(
             .Where(oi => oi.ParentOrderItemId == null)
             .ToDictionary(oi => oi.Id, oi => oi.ProductId);
 
+        await BranchPriceLookup.StampAsync(db, [order], cancellationToken);
+
         foreach (var orderItem in order.OrderItems)
         {
             if (orderItem.Price != null)
@@ -107,13 +109,13 @@ public class VoidOrderHandler(
 
             if (orderItem.ParentOrderItemId == null)
             {
-                orderItem.Price = orderItem.Product.Price;
+                orderItem.Price = OrderMetrics.ListPrice(orderItem);
                 continue;
             }
 
             if (!parentProductByOrderItemId.TryGetValue(orderItem.ParentOrderItemId.Value, out var parentProductId))
             {
-                orderItem.Price = orderItem.Product.Price;
+                orderItem.Price = OrderMetrics.ListPrice(orderItem);
                 continue;
             }
 
@@ -122,7 +124,7 @@ public class VoidOrderHandler(
                 .Select(o => (decimal?)o.Price)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            orderItem.Price = overridePrice ?? orderItem.Product.Price;
+            orderItem.Price = overridePrice ?? OrderMetrics.ListPrice(orderItem);
         }
 
         // Pending -> Cancelled, Completed -> Refunded

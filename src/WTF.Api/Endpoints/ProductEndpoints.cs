@@ -4,6 +4,7 @@ using System.Security.Claims;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Products;
+using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Services;
 
 namespace WTF.Api.Endpoints;
@@ -211,6 +212,24 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(new SetProductAddOnDefaultCommand { ProductId = id, AddOnId = addOnId, IsDefault = body.IsDefault });
                 return result ? Results.Ok() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ProductsWrite);
+
+        // GET /api/products/{id}/branch-prices - The price each branch charges (blank means the shop price)
+        productGroup.MapGet("/{id:guid}/branch-prices",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductBranchPricesQuery(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ProductsRead);
+
+        // PUT /api/products/{id}/branch-prices - Set or clear the price of some branches
+        productGroup.MapPut("/{id:guid}/branch-prices",
+            async (Guid id, List<ProductBranchPriceInputDto> body, ISender sender) =>
+            {
+                var result = await sender.Send(new SaveProductBranchPricesCommand(id, body));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.ProductsWrite);
 

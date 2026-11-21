@@ -40,6 +40,24 @@ internal sealed class CatalogAtSale
         return asOf ?? currentPrice;
     }
 
+    public async Task<decimal> ProductPriceAsync(
+        Guid productId,
+        Guid branchId,
+        decimal shopPrice,
+        decimal? currentBranchPrice,
+        CancellationToken cancellationToken)
+    {
+        var key = CatalogHistoryRules.BranchPriceKey(productId, branchId);
+        var branchPrice = currentBranchPrice;
+        if (await CoversAsync(CatalogEntityTypes.ProductBranchPrice, key, cancellationToken))
+        {
+            branchPrice = await CatalogHistory.DecimalAsOfAsync(
+                _db, CatalogEntityTypes.ProductBranchPrice, key, "Price", currentBranchPrice, SoldAt, cancellationToken);
+        }
+
+        return branchPrice ?? await ProductPriceAsync(productId, shopPrice, cancellationToken);
+    }
+
     public async Task<bool> ProductIsActiveAsync(Guid productId, bool currentlyActive, CancellationToken cancellationToken)
     {
         if (!await CoversAsync(CatalogEntityTypes.Product, productId, cancellationToken))

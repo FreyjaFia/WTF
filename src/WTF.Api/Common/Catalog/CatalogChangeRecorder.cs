@@ -10,6 +10,7 @@ public static class CatalogEntityTypes
 {
     public const string Product = "Product";
     public const string AddOnPriceOverride = "ProductAddOnPriceOverride";
+    public const string ProductBranchPrice = "ProductBranchPrice";
     public const string Promotion = "Promotion";
     public const string TenantSettings = "TenantSettings";
     public const string Baseline = "Baseline";
@@ -53,6 +54,25 @@ internal static class CatalogChangeRecorder
     {
         var key = CatalogHistoryRules.AddOnOverrideKey(addOnOverride.ProductId, addOnOverride.AddOnId);
         RecordEntry(db, db.Entry(addOnOverride), CatalogEntityTypes.AddOnPriceOverride, key, OverrideFields, null, changedBy);
+    }
+
+    // A branch's own price is its own history stream. A null value means the branch has no price of its own and uses the shop price.
+    public static void RecordBranchPrice(WTFDbContext db, Guid productId, Guid branchId, decimal? oldPrice, decimal? newPrice, Guid? changedBy)
+    {
+        if (oldPrice == newPrice)
+        {
+            return;
+        }
+
+        var key = CatalogHistoryRules.BranchPriceKey(productId, branchId);
+        var diffs = new List<CatalogFieldDiff>();
+        if (oldPrice is null)
+        {
+            diffs.Add(new CatalogFieldDiff(CatalogHistoryRules.CreatedField, null, "1"));
+        }
+
+        diffs.Add(new CatalogFieldDiff(nameof(ProductBranchPrice.Price), CatalogHistoryRules.Format(oldPrice), CatalogHistoryRules.Format(newPrice)));
+        Guard(() => Add(db, [.. diffs.Select(d => (CatalogEntityTypes.ProductBranchPrice, key, d))], changedBy, null));
     }
 
     public static void RecordTenantSettings(WTFDbContext db, TenantSetting settings, Guid? changedBy)

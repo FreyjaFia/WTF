@@ -11,13 +11,15 @@ namespace WTF.Api.Common.Orders;
 public static class AddOnPriceLookup
 {
     /// <summary>For orders whose <c>OrderItems</c> hold every line, parents and add-ons alike.</summary>
-    public static Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> ForOrdersAsync(
+    public static async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> ForOrdersAsync(
         WTFDbContext db,
         IEnumerable<Order> orders,
         CancellationToken cancellationToken)
     {
-        var lines = orders.SelectMany(o => o.OrderItems).ToList();
-        return LoadAsync(
+        var orderList = orders.ToList();
+        var lines = orderList.SelectMany(o => o.OrderItems).ToList();
+        await BranchPriceLookup.StampAsync(db, orderList, cancellationToken);
+        return await LoadAsync(
             db,
             lines.Where(oi => oi.ParentOrderItemId == null).Select(oi => oi.ProductId),
             lines.Where(oi => oi.ParentOrderItemId != null).Select(oi => oi.ProductId),
@@ -25,13 +27,14 @@ public static class AddOnPriceLookup
     }
 
     /// <summary>For parent lines that have their add-ons loaded through <c>InverseParentOrderItem</c>.</summary>
-    public static Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> ForParentItemsAsync(
+    public static async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> ForParentItemsAsync(
         WTFDbContext db,
         IEnumerable<OrderItem> parentItems,
         CancellationToken cancellationToken)
     {
         var parents = parentItems.ToList();
-        return LoadAsync(
+        await BranchPriceLookup.StampAsync(db, parents.Select(p => p.Order).Where(o => o is not null).Distinct(), cancellationToken);
+        return await LoadAsync(
             db,
             parents.Select(oi => oi.ProductId),
             parents.SelectMany(oi => oi.InverseParentOrderItem).Select(child => child.ProductId),

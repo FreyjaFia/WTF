@@ -1,6 +1,7 @@
 using WTF.Api.Features.Customers;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Orders;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Orders;
@@ -27,7 +28,7 @@ internal static class OrderMapping
                 child.ProductId,
                 child.Product.Name,
                 child.Quantity,
-                child.Price ?? (overridePrices.TryGetValue((oi.ProductId, child.ProductId), out var overridePrice) ? overridePrice : child.Product.Price),
+                child.Price ?? (overridePrices.TryGetValue((oi.ProductId, child.ProductId), out var overridePrice) ? overridePrice : OrderMetrics.ListPrice(child)),
                 [],
                 child.SpecialInstructions,
                 child.BundlePromotionId))
@@ -38,7 +39,7 @@ internal static class OrderMapping
             oi.ProductId,
             oi.Product.Name,
             oi.Quantity,
-            oi.Price ?? oi.Product.Price,
+            oi.Price ?? OrderMetrics.ListPrice(oi),
             addOns,
             oi.SpecialInstructions,
             oi.BundlePromotionId,

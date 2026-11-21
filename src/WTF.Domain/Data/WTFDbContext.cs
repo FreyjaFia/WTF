@@ -158,6 +158,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<ItemBranchStock> ItemBranchStocks { get; set; }
 
+    public virtual DbSet<ProductBranchPrice> ProductBranchPrices { get; set; }
+
     public virtual DbSet<StockTransfer> StockTransfers { get; set; }
 
     public virtual DbSet<StockTransferLine> StockTransferLines { get; set; }
@@ -306,6 +308,32 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ItemBranchStock_Tenants");
+        });
+
+        modelBuilder.Entity<ProductBranchPrice>(entity =>
+        {
+            entity.HasIndex(e => e.BranchId, "IX_ProductBranchPrices_BranchId");
+
+            entity.HasIndex(e => new { e.ProductId, e.BranchId }, "UQ_ProductBranchPrices_ProductBranch").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ProductBranchPrices_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProductBranchPrices_CreatedAt");
+            entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Branch).WithMany(p => p.ProductBranchPrices)
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductBranchPrices_Branches");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProductBranchPrices)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductBranchPrices_Products");
+
+            entity.HasOne(d => d.Tenant).WithMany()
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductBranchPrices_Tenants");
         });
 
         modelBuilder.Entity<StockTransfer>(entity =>

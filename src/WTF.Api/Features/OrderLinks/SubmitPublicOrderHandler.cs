@@ -118,7 +118,7 @@ public class SubmitPublicOrderHandler(
         // The total the customer is told, and the uses the order then holds, must come from the same view of the promotion uses.
         using var gate = await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
 
-        var (total, limitNotes) = await ComputeTotalAsync(lines, cancellationToken);
+        var (total, limitNotes) = await ComputeTotalAsync(lines, access.Link.BranchId, cancellationToken);
 
         // The page showed a total built from the promotions it knew. If one ran out or changed since, the customer is asked to
         // look again instead of being charged a total they never saw.
@@ -380,7 +380,7 @@ public class SubmitPublicOrderHandler(
     /// The price the customer will see, from today's catalog: product price plus each add-on at the price set for that
     /// product, less the discounted-product promotions on right now. The shop prices the order again when it completes it.
     /// </summary>
-    private async Task<(decimal Total, List<string> LimitNotes)> ComputeTotalAsync(List<Line> lines, CancellationToken cancellationToken)
+    private async Task<(decimal Total, List<string> LimitNotes)> ComputeTotalAsync(List<Line> lines, Guid linkBranchId, CancellationToken cancellationToken)
     {
         var parentIds = lines.Select(l => l.ProductId).Distinct().ToList();
         var addOnIds = lines.SelectMany(l => l.AddOns.Select(a => a.ProductId)).Distinct().ToList();
@@ -403,6 +403,9 @@ public class SubmitPublicOrderHandler(
             throw new InvalidOperationException(unavailable);
         }
 
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, linkBranchId, ids, cancellationToken);
+        decimal PriceOf(Guid productId) => BranchPriceLookup.PriceFor(branchPrices, productId, products[productId].Price);
+
         var overrides = addOnIds.Count == 0
             ? []
             : await db.ProductAddOnPriceOverrides
@@ -422,9 +425,10 @@ public class SubmitPublicOrderHandler(
         foreach (var line in lines)
         {
             var addOnPerUnit = line.AddOns.Sum(a =>
-                (overrides.TryGetValue((line.ProductId, a.ProductId), out var price) ? price : products[a.ProductId].Price)
+                (overrides.TryGetValue((line.ProductId, a.ProductId), out var price) ? price : PriceOf(a.ProductId))
                 * a.Quantity);
             var product = products[line.ProductId];
+            var unitPrice = PriceOf(line.ProductId);
             var addOns = line.AddOns.Select(a => (a.ProductId, a.Quantity)).ToList();
 
             // What stops a limited promotion from covering this whole line, taken before the line uses any of it.
@@ -433,7 +437,7 @@ public class SubmitPublicOrderHandler(
             // The discount the shop will apply when it completes the order, with the promotions on right now. A limit
             // can cover only part of a line; the rest is charged full price.
             var applied = PromotionPricing.GetDiscountedUnitPrice(
-                product.Price, line.ProductId, addOns, loaded.RulesByProductId, line.Quantity, loaded.Budget);
+                unitPrice, line.ProductId, addOns, loaded.RulesByProductId, line.Quantity, loaded.Budget);
             var discounted = applied?.DiscountedQuantity ?? 0;
 
             if (limited is not null && discounted < line.Quantity && (applied is null || applied.PromotionId == limited.PromotionId))
@@ -443,8 +447,8 @@ public class SubmitPublicOrderHandler(
 
             loaded.Budget.Use(applied?.PromotionId, discounted);
 
-            total += ((applied?.Price ?? product.Price) + addOnPerUnit) * discounted
-                + (product.Price + addOnPerUnit) * (line.Quantity - discounted);
+            total += ((applied?.Price ?? unitPrice) + addOnPerUnit) * discounted
+                + (unitPrice + addOnPerUnit) * (line.Quantity - discounted);
         }
 
         return (total, notes);

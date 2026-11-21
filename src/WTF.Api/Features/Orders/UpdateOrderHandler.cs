@@ -248,6 +248,10 @@ public class UpdateOrderHandler(
             discountBudget = isOverride ? null : loaded.Budget;
         }
 
+        // Prices are the branch's own where it sets one. An order keeps the branch it was made in.
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, order.BranchId, null, cancellationToken);
+        decimal ListPriceOf(Product p) => BranchPriceLookup.PriceFor(branchPrices, p.Id, p.Price);
+
         var pricedItems = new List<(
             OrderItemRequestDto Item,
             Product Product,
@@ -260,7 +264,7 @@ public class UpdateOrderHandler(
         {
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
-            var basePrice = product.Price;
+            var basePrice = ListPriceOf(product);
             // A line inside a bundle is sold at the bundle's price, so no discount applies to it.
             var appliedDiscount = (shouldCapturePrice || reservesDiscount) && !item.BundlePromotionId.HasValue
                 ? PromotionPricing.GetDiscountedUnitPrice(
@@ -288,7 +292,7 @@ public class UpdateOrderHandler(
                     .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
                     .Select(o => (decimal?)o.Price)
                     .FirstOrDefaultAsync(cancellationToken);
-                addOnPrices.Add((addOn, addOnOverridePrice ?? addOnProduct.Price));
+                addOnPrices.Add((addOn, addOnOverridePrice ?? ListPriceOf(addOnProduct)));
             }
 
             var finalUnitPrice = (discountedPrice ?? basePrice)
@@ -301,7 +305,7 @@ public class UpdateOrderHandler(
             if (seniorPwd is not null && item.SeniorPwdPersonIndex.HasValue && !isOverride)
             {
                 coveredAmounts[itemIndex] = seniorPwd.AmountsFor(
-                    product.Price, addOnPrices.Sum(a => a.Price * a.AddOn.Quantity), item.Quantity);
+                    basePrice, addOnPrices.Sum(a => a.Price * a.AddOn.Quantity), item.Quantity);
             }
 
             pricedItems.Add((item, product, discountedPrice, appliedDiscount, addOnPrices));
@@ -312,8 +316,8 @@ public class UpdateOrderHandler(
             var linesTotal = pricedItems
                 .Where(p => !p.Item.BundlePromotionId.HasValue)
                 .Sum(p => OrderMetrics.LineTotal(
-                    p.Product.Price,
-                    p.DiscountedPrice ?? p.Product.Price,
+                    ListPriceOf(p.Product),
+                    p.DiscountedPrice ?? ListPriceOf(p.Product),
                     p.AppliedDiscount?.DiscountedQuantity ?? 0,
                     p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity),
                     p.Item.Quantity));
@@ -462,8 +466,8 @@ public class UpdateOrderHandler(
                 // Capture price snapshot when order is Completed or Cancelled
                 if (shouldCapturePrice)
                 {
-                    newItem.Price = segment.Discounted ? discountedPrice ?? product.Price : product.Price;
-                    newItem.OriginalPrice = product.Price;
+                    newItem.Price = segment.Discounted ? discountedPrice ?? ListPriceOf(product) : ListPriceOf(product);
+                    newItem.OriginalPrice = ListPriceOf(product);
                     newItem.PromoLabel = segment.Discounted
                         ? appliedDiscount?.LabelWith(addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity))
                         : null;
@@ -519,7 +523,7 @@ public class UpdateOrderHandler(
                     var amounts = coveredAmounts.TryGetValue(itemIndex, out var checkedAmounts)
                         ? checkedAmounts
                         : seniorPwd.AmountsFor(
-                            newItem.Price ?? product.Price,
+                            newItem.Price ?? ListPriceOf(product),
                             addOnPrices.Sum(addOn => addOn.AddOn.Quantity
                                 * (addOnPriceSnapshots.TryGetValue((item.ProductId, addOn.AddOn.ProductId), out var paid)
                                     ? paid

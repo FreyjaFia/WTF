@@ -338,13 +338,18 @@ public class CreateOrderHandler(
                 null)?.PromotionId;
         }
 
+        // Prices are the branch's own where it sets one. A sale from the register keeps the quoted price instead.
+        var orderBranchPrices = await BranchPriceLookup.ForBranchAsync(
+            db, await BranchPriceLookup.BranchForNewOrderAsync(db, request.BranchId, cancellationToken), null, cancellationToken);
+        decimal ListPriceOf(Product p) => BranchPriceLookup.PriceFor(orderBranchPrices, p.Id, p.Price);
+
         // Add order items with parent-child relationships
         var sortOrder = 0;
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
         {
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
-            var basePrice = product.Price;
+            var basePrice = ListPriceOf(product);
             // A line inside a bundle is sold at the bundle's price, so no discount applies to it.
             var appliedDiscount = (shouldCapturePrice || reservesDiscount) && !honor && !item.BundlePromotionId.HasValue
                 ? PromotionPricing.GetDiscountedUnitPrice(
@@ -373,7 +378,7 @@ public class CreateOrderHandler(
                     .FirstOrDefaultAsync(cancellationToken);
                 addOnPrices.Add((addOn, honor
                     ? OfflineOrderReview.QuotedPriceOrThrow(addOn.QuotedPrice, addOnProduct.Name)
-                    : addOnOverridePrice ?? addOnProduct.Price));
+                    : addOnOverridePrice ?? ListPriceOf(addOnProduct)));
             }
 
             var finalUnitPrice = (discountedPrice ?? basePrice)

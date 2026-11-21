@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Catalog;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
@@ -13,8 +14,9 @@ namespace WTF.Api.Features.Sync;
 internal static class PosCatalogLoader
 {
     public static async Task<List<ProductDto>> LoadProductsAsync(
-        WTFDbContext db, IHttpContextAccessor httpContextAccessor, CancellationToken cancellationToken)
+        WTFDbContext db, IHttpContextAccessor httpContextAccessor, Guid branchId, CancellationToken cancellationToken)
     {
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, null, cancellationToken);
         var products = await db.Products
             .Where(p => !p.IsAddOn && p.IsActive)
             .Include(p => p.ProductImage)
@@ -38,7 +40,7 @@ internal static class PosCatalogLoader
                 : null;
 
             return new ProductDto(
-                p.Id, p.Name, p.Code, p.Description, p.Price,
+                p.Id, p.Name, p.Code, p.Description, BranchPriceLookup.PriceFor(branchPrices, p.Id, p.Price),
                 p.CategoryId,
                 p.SubCategoryId,
                 p.IsAddOn, p.IsActive, p.CreatedAt, p.CreatedBy, p.UpdatedAt, p.UpdatedBy,
@@ -50,8 +52,9 @@ internal static class PosCatalogLoader
 
     public static async Task<Dictionary<Guid, List<AddOnGroupDto>>> LoadAddOnsByProductIdAsync(
         WTFDbContext db, IHttpContextAccessor httpContextAccessor,
-        List<ProductDto> products, CancellationToken cancellationToken)
+        List<ProductDto> products, Guid branchId, CancellationToken cancellationToken)
     {
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, null, cancellationToken);
         var productIds = products.Select(p => p.Id).ToList();
 
         var allAddOns = await db.ProductAddOns
@@ -97,7 +100,7 @@ internal static class PosCatalogLoader
 
                             return new ProductDto(
                                 item.AddOn.Id, item.AddOn.Name, item.AddOn.Code, item.AddOn.Description,
-                                item.AddOn.Price,
+                                BranchPriceLookup.PriceFor(branchPrices, item.AddOn.Id, item.AddOn.Price),
                                 item.AddOn.CategoryId,
                                 item.AddOn.SubCategoryId,
                                 item.AddOn.IsAddOn, item.AddOn.IsActive,

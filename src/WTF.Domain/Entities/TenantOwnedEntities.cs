@@ -253,3 +253,7 @@ public partial class StockTransfer : ITenantOwned
 public partial class StockTransferLine : ITenantOwned
 {
 }
+
+public partial class ProductBranchPrice : ITenantOwned
+{
+}
