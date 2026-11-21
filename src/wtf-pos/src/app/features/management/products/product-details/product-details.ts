@@ -1,7 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, CatalogLookupService, ModalStackService, ProductService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  BranchService,
+  CatalogLookupService,
+  ModalStackService,
+  ProductService,
+} from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -13,6 +20,7 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
+  ProductBranchPriceRowDto,
   ProductDto,
   ProductPriceHistoryDto,
 } from '@shared/models';
@@ -43,12 +51,14 @@ export class ProductDetailsComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly branchService = inject(BranchService);
   protected readonly routes = AppRoutes;
 
   protected readonly product = signal<ProductDto | null>(null);
   protected readonly addOns = signal<AddOnGroupDto[]>([]);
   protected readonly linkedProducts = signal<AddOnGroupDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly branchPrices = signal<ProductBranchPriceRowDto[]>([]);
   protected readonly isHistoryOpen = signal(false);
   protected readonly priceHistory = signal<ProductPriceHistoryDto[]>([]);
   protected readonly showAllAddOns = signal(false);
@@ -84,6 +94,21 @@ export class ProductDetailsComponent implements OnInit {
   protected readonly totalLinkedCount = computed(() =>
     this.linkedProducts().reduce((sum, group) => sum + group.options.length, 0),
   );
+
+  // The shop's branches can arrive after the product (a refresh or a link), so wait for both.
+  private readonly loadBranchPrices = effect(() => {
+    const product = this.product();
+    if (!product || !this.branchService.isMultiBranch()) {
+      return;
+    }
+
+    untracked(() => {
+      this.productService.getProductBranchPrices(product.id).subscribe({
+        next: (prices) => this.branchPrices.set(prices.branches),
+        error: () => this.branchPrices.set([]),
+      });
+    });
+  });
 
   public ngOnInit(): void {
     void this.lookups.ensureLoaded();

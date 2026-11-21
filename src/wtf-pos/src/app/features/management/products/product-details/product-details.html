@@ -116,6 +116,36 @@
                   <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
                   {{ product()!.price | number: '1.2-2' }}
                 </p>
+                @if (branchPrices().length > 0) {
+                  <div class="mt-4" data-testid="branch-prices">
+                    <p class="mb-2 text-xs font-medium text-gray-400">Price by branch</p>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      @for (row of branchPrices(); track row.branchId) {
+                        <div
+                          class="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-4 py-2.5"
+                          [attr.data-testid]="'branch-price-' + row.branchCode"
+                        >
+                          <div class="min-w-0">
+                            <span class="block text-sm font-medium wrap-break-word text-gray-800">
+                              {{ row.branchName }}
+                            </span>
+                            @if (row.price === null) {
+                              <span class="text-[11px] text-gray-500">Shop price</span>
+                            } @else {
+                              <span class="text-[11px] font-semibold text-amber-700">Own price</span>
+                            }
+                          </div>
+                          <span
+                            class="inline-flex shrink-0 items-center gap-0.5 text-sm font-bold text-gray-800"
+                          >
+                            <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
+                            {{ row.effectivePrice | number: '1.2-2' }}
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
               </div>
 
               <!-- Basic Info -->

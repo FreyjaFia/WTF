@@ -103,6 +103,33 @@ describe('ProductService', () => {
     expect(http.expectOne(`${base}/p1/addon-price-overrides/a1`).request.method).toBe('DELETE');
   });
 
+  it('reads and saves the prices of the branches', () => {
+    const { service, http } = setupHttpService(ProductService);
+
+    service.getProductBranchPrices('p1').subscribe();
+    expect(http.expectOne(`${base}/p1/branch-prices`).request.method).toBe('GET');
+
+    service.saveProductBranchPrices('p1', [{ branchId: 'b1', price: 175 }, { branchId: 'b2', price: null }]).subscribe();
+    const save = http.expectOne(`${base}/p1/branch-prices`);
+    expect(save.request.method).toBe('PUT');
+    expect(save.request.body).toEqual([{ branchId: 'b1', price: 175 }, { branchId: 'b2', price: null }]);
+  });
+
+  it('maps branch price errors to messages', () => {
+    const { service, http } = setupHttpService(ProductService);
+
+    const load = capture(service.getProductBranchPrices('p1'));
+    failWith(http.expectOne(`${base}/p1/branch-prices`), 500);
+    const refused = capture(service.saveProductBranchPrices('p1', []));
+    failWith(http.expectOne(`${base}/p1/branch-prices`), 400, { message: 'A branch price must be between 0.01 and 999,999.99.' });
+    const fallback = capture(service.saveProductBranchPrices('p1', []));
+    failWith(http.expectOne(`${base}/p1/branch-prices`), 500);
+
+    expect(load.error).toBe(msgs.FetchBranchPricesFailed);
+    expect(refused.error).toBe('A branch price must be between 0.01 and 999,999.99.');
+    expect(fallback.error).toBe(msgs.SaveBranchPricesFailed);
+  });
+
   describe('error mapping', () => {
     it('network loss re-checks connectivity', () => {
       const { service, http, connectivity } = setupHttpService(ProductService);

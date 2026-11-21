@@ -112,6 +112,8 @@ export const ServiceErrorMessages = {
     AssignProductsFailed: 'Failed to assign products. Please try again later.',
     InvalidProductsRequest: 'Invalid request. Please check the selected products.',
     CreatePriceOverrideFailed: 'Failed to create add-on price override. Please try again later.',
+    FetchBranchPricesFailed: 'Failed to load the branch prices. Please try again later.',
+    SaveBranchPricesFailed: 'Failed to save the branch prices. Please try again later.',
     UpdatePriceOverrideFailed: 'Failed to update add-on price override. Please try again later.',
     DeletePriceOverrideFailed: 'Failed to delete add-on price override. Please try again later.',
     InvalidPriceOverrideRequest: 'Invalid price override request.',

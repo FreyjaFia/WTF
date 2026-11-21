@@ -83,6 +83,8 @@ public partial class Tenant
 
     public virtual ICollection<ProductAddOn> ProductAddOns { get; set; } = new List<ProductAddOn>();
 
+    public virtual ICollection<ProductBranchPrice> ProductBranchPrices { get; set; } = new List<ProductBranchPrice>();
+
     public virtual ICollection<ProductCategory> ProductCategories { get; set; } = new List<ProductCategory>();
 
     public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();

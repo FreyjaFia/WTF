@@ -4,7 +4,7 @@ import { CatalogLookupService } from '@core/services';
 import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
-import { AlertService, AuthService, ModalStackService, ProductService } from '@core/services';
+import { AlertService, AuthService, BranchService, ModalStackService, ProductService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { AddOnGroupDto, ProductDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
@@ -43,7 +43,7 @@ describe('ProductDetailsComponent', () => {
   let alerts: Record<string, ReturnType<typeof vi.fn>>;
   let router: Router;
 
-  function setup(opts: { id?: string | null; canWrite?: boolean } = {}): void {
+  function setup(opts: { id?: string | null; canWrite?: boolean; multi?: boolean } = {}): void {
     const id = opts.id === undefined ? 'p1' : opts.id;
     service = {
       getProduct: vi.fn(() => of(product({ priceHistory: [{ price: 1 } as any] }))),
@@ -51,6 +51,17 @@ describe('ProductDetailsComponent', () => {
       getProductAddOns: vi.fn(() => of([group(AddOnTypeEnum.Size, ['Small'])])),
       deleteProduct: vi.fn(() => of(undefined)),
       restoreProduct: vi.fn(() => of(undefined)),
+      getProductBranchPrices: vi.fn(() =>
+        of({
+          productId: 'p1',
+          productName: 'Latte',
+          shopPrice: 100,
+          branches: [
+            { branchId: 'b1', branchName: 'Makati', branchCode: 'MAK', isMain: true, price: null, effectivePrice: 100 },
+            { branchId: 'b2', branchName: 'BGC', branchCode: 'BGC', isMain: false, price: 115, effectivePrice: 115 },
+          ],
+        }),
+      ),
     };
     alerts = {
       error: vi.fn(),
@@ -65,6 +76,7 @@ describe('ProductDetailsComponent', () => {
         { provide: ProductService, useValue: service },
         { provide: AlertService, useValue: alerts },
         { provide: AuthService, useValue: { canWriteProducts: () => opts.canWrite ?? true } },
+        { provide: BranchService, useValue: { isMultiBranch: () => opts.multi ?? false } },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => id } } },
@@ -305,6 +317,28 @@ describe('ProductDetailsComponent', () => {
     it('shows the product name in the shared expandable title', () => {
       const title = (fixture.nativeElement as HTMLElement).querySelector('app-page-title h1');
       expect(title?.textContent?.trim()).toBe('Latte');
+    });
+  });
+
+  describe('branch prices', () => {
+    it('lists the price of each branch when the shop has several', () => {
+      setup({ multi: true });
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(service['getProductBranchPrices']).toHaveBeenCalledWith('p1');
+      expect(el.querySelector('[data-testid="branch-price-MAK"]')?.textContent).toContain('Shop price');
+      expect(el.querySelector('[data-testid="branch-price-MAK"]')?.textContent).toContain('100.00');
+      expect(el.querySelector('[data-testid="branch-price-BGC"]')?.textContent).toContain('Own price');
+      expect(el.querySelector('[data-testid="branch-price-BGC"]')?.textContent).toContain('115.00');
+    });
+
+    it('shows nothing for a shop with one branch', () => {
+      setup();
+      fixture.detectChanges();
+
+      expect(service['getProductBranchPrices']).not.toHaveBeenCalled();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="branch-prices"]')).toBeNull();
     });
   });
 

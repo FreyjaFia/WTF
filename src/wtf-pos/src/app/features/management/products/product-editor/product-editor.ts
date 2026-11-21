@@ -1,11 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  OnInit,
+  signal,
+  untracked,
+  ViewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, FormRecord, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AlertService,
   AuthService,
+  BranchService,
   CatalogLookupService,
   InventoryService,
   ModalStackService,
@@ -31,6 +41,8 @@ import {
   ItemDto,
   ProductAddOnAssignmentDto,
   ProductAddOnPriceOverrideDto,
+  ProductBranchPriceInputDto,
+  ProductBranchPriceRowDto,
   ProductPriceHistoryDto,
   RecipeCostDto,
   UpdateProductAddOnPriceOverrideDto,
@@ -42,6 +54,14 @@ import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units'
 import { Observable, of, switchMap } from 'rxjs';
 
 export type StockTrackingMode = 'none' | 'own' | 'existing';
+
+export interface BranchPriceRow {
+  branchId: string;
+  name: string;
+  code: string;
+  isMain: boolean;
+  locked: boolean;
+}
 
 @Component({
   selector: 'app-product-editor',
@@ -71,6 +91,7 @@ export class ProductEditorComponent implements OnInit {
   private readonly modalStack = inject(ModalStackService);
   private readonly inventoryService = inject(InventoryService);
   private readonly authService = inject(AuthService);
+  private readonly branchService = inject(BranchService);
 
   @ViewChild(AddonsSwapperComponent) private addonsSwapper!: AddonsSwapperComponent;
   @ViewChild(ProductsSwapperComponent) private productsSwapper!: ProductsSwapperComponent;
@@ -121,6 +142,11 @@ export class ProductEditorComponent implements OnInit {
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected readonly showAllAddOns = signal(false);
   protected readonly showAllLinked = signal(false);
+
+  protected readonly showBranchPrices = computed(() => this.branchService.isMultiBranch());
+  protected readonly branchPriceRows = signal<BranchPriceRow[]>([]);
+  protected readonly branchPriceForm = new FormRecord<FormControl<number | null>>({});
+  private branchPriceOriginal: Record<string, number | null> = {};
 
   protected readonly stockMode = signal<StockTrackingMode>('none');
   protected readonly stockItems = signal<ItemDto[]>([]);
@@ -237,6 +263,37 @@ export class ProductEditorComponent implements OnInit {
 
   protected productId: string | null = null;
 
+  private branchPricesStarted = false;
+
+  // The shop's branches can arrive after this screen opens (a refresh or a link), so wait for them.
+  private readonly startBranchPrices = effect(() => {
+    if (!this.showBranchPrices() || this.branchPricesStarted) {
+      return;
+    }
+
+    this.branchPricesStarted = true;
+    const id = this.route.snapshot.paramMap.get('id');
+    untracked(() => {
+      if (id) {
+        this.loadBranchPrices(id);
+      } else {
+        this.setUpBranchPriceRows(
+          this.branchService
+            .branches()
+            .filter((branch) => branch.isActive)
+            .map((branch) => ({
+              branchId: branch.id,
+              branchName: branch.name,
+              branchCode: branch.code,
+              isMain: branch.isMain,
+              price: null,
+              effectivePrice: 0,
+            })),
+        );
+      }
+    });
+  });
+
   // Unsaved changes guard
   protected readonly showDiscardModal = signal(false);
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
@@ -276,6 +333,94 @@ export class ProductEditorComponent implements OnInit {
         this.productForm.controls.category.enable();
         this.productForm.controls.subCategory.enable();
       }
+    });
+  }
+
+  private loadBranchPrices(productId: string): void {
+    this.productService.getProductBranchPrices(productId).subscribe({
+      next: (prices) => this.setUpBranchPriceRows(prices.branches),
+      error: (err: Error) => this.alertService.error(err.message),
+    });
+  }
+
+  private setUpBranchPriceRows(rows: ProductBranchPriceRowDto[]): void {
+    const mine = new Set(this.branchService.branches().map((branch) => branch.id));
+    const canSeeAll = this.branchService.canSeeAll();
+    this.branchPriceOriginal = {};
+
+    for (const name of Object.keys(this.branchPriceForm.controls)) {
+      this.branchPriceForm.removeControl(name);
+    }
+
+    this.branchPriceRows.set(
+      rows.map((row) => ({
+        branchId: row.branchId,
+        name: row.branchName,
+        code: row.branchCode,
+        isMain: row.isMain,
+        locked: !canSeeAll && !mine.has(row.branchId),
+      })),
+    );
+
+    for (const row of rows) {
+      const locked = !canSeeAll && !mine.has(row.branchId);
+      const control = new FormControl<number | null>(
+        { value: row.price, disabled: locked },
+        [Validators.min(0.01), Validators.max(999999.99), Validators.pattern(/^\d+(\.\d{1,2})?$/)],
+      );
+      this.branchPriceForm.addControl(row.branchId, control);
+      this.branchPriceOriginal[row.branchId] = row.price;
+    }
+  }
+
+  protected branchPriceControl(branchId: string): FormControl<number | null> {
+    return this.branchPriceForm.controls[branchId];
+  }
+
+  protected branchPriceInvalid(branchId: string): boolean {
+    const control = this.branchPriceControl(branchId);
+    return control.invalid && (control.touched || control.dirty);
+  }
+
+  protected branchEffectivePrice(branchId: string): number {
+    return this.branchPriceControl(branchId).value ?? this.productForm.controls.price.value;
+  }
+
+  protected clearBranchPrice(branchId: string): void {
+    const control = this.branchPriceControl(branchId);
+    control.setValue(null);
+    control.markAsDirty();
+  }
+
+  private changedBranchPrices(): ProductBranchPriceInputDto[] {
+    return this.branchPriceRows()
+      .filter((row) => !row.locked)
+      .map((row) => ({ branchId: row.branchId, price: this.branchPriceControl(row.branchId).value }))
+      .filter((input) => input.price !== this.branchPriceOriginal[input.branchId]);
+  }
+
+  // The product is already saved when this runs, so a failure here only reports itself and the save carries on.
+  private saveBranchPrices(productId: string): Observable<unknown> {
+    const changes = this.changedBranchPrices();
+    if (!this.showBranchPrices() || changes.length === 0) {
+      return of(null);
+    }
+
+    return new Observable((subscriber) => {
+      this.productService.saveProductBranchPrices(productId, changes).subscribe({
+        next: () => undefined,
+        error: (err: Error) => {
+          this.alertService.error(
+            `The product was saved, but its branch prices were not: ${err.message}`,
+          );
+          subscriber.next(null);
+          subscriber.complete();
+        },
+        complete: () => {
+          subscriber.next(null);
+          subscriber.complete();
+        },
+      });
     });
   }
 
@@ -342,8 +487,9 @@ export class ProductEditorComponent implements OnInit {
       return;
     }
 
-    if (this.productForm.invalid) {
+    if (this.productForm.invalid || this.branchPriceForm.invalid) {
       this.productForm.markAllAsTouched();
+      this.branchPriceForm.markAllAsTouched();
       return;
     }
 
@@ -363,7 +509,7 @@ export class ProductEditorComponent implements OnInit {
       };
 
       this.productService.updateProduct(updateDto).subscribe({
-        next: () => this.setUpStock(this.productId!, updateDto.name).subscribe(() => {
+        next: () => this.finishSetUp(this.productId!, updateDto.name).subscribe(() => {
           // If there's a file selected, upload it after updating the product
           if (this.selectedFile()) {
             this.uploadImage();
@@ -387,7 +533,7 @@ export class ProductEditorComponent implements OnInit {
 
       this.productService.createProduct(createDto).subscribe({
         next: (createdProduct) =>
-          this.setUpStock(createdProduct.id, createDto.name).subscribe(() => {
+          this.finishSetUp(createdProduct.id, createDto.name).subscribe(() => {
             // If there's a file selected, upload it after creating the product
             if (this.selectedFile()) {
               this.uploadImage(createdProduct.id);
@@ -404,6 +550,12 @@ export class ProductEditorComponent implements OnInit {
         },
       });
     }
+  }
+
+  private finishSetUp(productId: string, productName: string): Observable<unknown> {
+    return this.setUpStock(productId, productName).pipe(
+      switchMap(() => this.saveBranchPrices(productId)),
+    );
   }
 
   protected setStockMode(mode: StockTrackingMode): void {
@@ -599,7 +751,7 @@ export class ProductEditorComponent implements OnInit {
   }
 
   public canDeactivate(): boolean | Promise<boolean> {
-    if (this.skipGuard || !this.productForm.dirty) {
+    if (this.skipGuard || (!this.productForm.dirty && !this.branchPriceForm.dirty)) {
       return true;
     }
 

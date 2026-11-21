@@ -109,6 +109,27 @@ export interface ProductAddOnPriceOverrideDto {
   isActive: boolean;
 }
 
+export interface ProductBranchPriceRowDto {
+  branchId: string;
+  branchName: string;
+  branchCode: string;
+  isMain: boolean;
+  price: number | null;
+  effectivePrice: number;
+}
+
+export interface ProductBranchPricesDto {
+  productId: string;
+  productName: string;
+  shopPrice: number;
+  branches: ProductBranchPriceRowDto[];
+}
+
+export interface ProductBranchPriceInputDto {
+  branchId: string;
+  price: number | null;
+}
+
 export interface CreateProductAddOnPriceOverrideDto {
   productId: string;
   addOnId: string;

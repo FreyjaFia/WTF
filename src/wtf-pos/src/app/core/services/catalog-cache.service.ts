@@ -16,6 +16,7 @@ import {
 } from '@shared/models';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { AuthService } from './auth.service';
+import { BranchService } from './branch.service';
 import { CatalogLookupService } from './catalog-lookup.service';
 import { ConnectivityService } from './connectivity.service';
 import { db } from './db';
@@ -57,6 +58,7 @@ export class CatalogCacheService {
   private readonly imageCache = inject(ImageCacheService);
   private readonly lookups = inject(CatalogLookupService);
   private readonly auth = inject(AuthService);
+  private readonly branchService = inject(BranchService);
 
   private readonly _products = signal<ProductDto[]>([]);
   public readonly products = this._products.asReadonly();
@@ -202,6 +204,7 @@ export class CatalogCacheService {
   private async syncFromApi(): Promise<void> {
     try {
       const previousCatalog = await db.catalog.get(CatalogCacheService.CATALOG_ROW_ID);
+      const branchId = this.branchService.activeId();
       const [catalog, bundles, discountedPromotions] = await Promise.all([
         firstValueFrom(this.http.get<PosCatalogDto>(`${environment.apiUrl}/sync/pos-catalog`)),
         firstValueFrom(
@@ -231,6 +234,7 @@ export class CatalogCacheService {
         mixMatchPromotions: bundles.mixMatch,
         lookups: catalog.lookups,
         settings: settingsOf(catalog),
+        branchId,
         syncedAt: catalog.syncedAt,
       });
 
@@ -249,7 +253,13 @@ export class CatalogCacheService {
       this._discountedPromotions.set(discountedPromotions);
       this.lookups.set(catalog.lookups);
       this._shopSettings.set(settingsOf(catalog));
-      this.detectStalePrices(previousCatalog?.products ?? [], catalog.products);
+      // Another branch can price a product differently: that is not a price change for the cashier to be told about.
+      const sameBranch = (previousCatalog?.branchId ?? null) === branchId;
+      if (!sameBranch) {
+        this._stalePriceItems.set([]);
+      }
+
+      this.detectStalePrices(sameBranch ? (previousCatalog?.products ?? []) : [], catalog.products);
     } catch {
       await this.loadFromCache();
     }

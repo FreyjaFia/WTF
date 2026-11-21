@@ -6,6 +6,7 @@ import { environment } from '@environments/environment.development';
 import { ProductDto, PromotionTypeEnum } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
+import { BranchService } from './branch.service';
 import { CatalogCacheService } from './catalog-cache.service';
 import { ConnectivityService } from './connectivity.service';
 import { CachedCatalog, db } from './db';
@@ -102,6 +103,7 @@ describe('CatalogCacheService', () => {
   });
 
   afterEach(() => {
+    localStorage.removeItem('wtf_active_branch');
     Object.defineProperty(db, 'catalog', {
       value: originalCatalog,
       configurable: true,
@@ -365,6 +367,48 @@ describe('CatalogCacheService', () => {
       await done;
 
       expect(service.hasStalePrices()).toBe(false);
+    });
+  });
+
+  describe('branch prices', () => {
+    const cachedWith = (branchId: string | null, ...products: ProductDto[]): CachedCatalog =>
+      ({ id: 1, products, customers: [], addOnsByProductId: {}, branchId, syncedAt: 'x' }) as never;
+
+    it('remembers which branch the catalog is for', async () => {
+      TestBed.inject(BranchService).select('b-bgc');
+      const service = create();
+      const done = service.load();
+
+      await answerSync({ products: [prod('a', 175)] });
+      await done;
+
+      expect(stored?.branchId).toBe('b-bgc');
+    });
+
+    it('does not call another branch\'s price a price change', async () => {
+      stored = cachedWith('b-main', prod('a', 160, 'Latte'));
+      TestBed.inject(BranchService).select('b-bgc');
+      const service = create();
+      const done = service.load();
+
+      await answerSync({ products: [prod('a', 175, 'Latte')] });
+      await done;
+
+      expect(service.hasStalePrices()).toBe(false);
+    });
+
+    it('still reports a price change within the same branch', async () => {
+      stored = cachedWith('b-bgc', prod('a', 175, 'Latte'));
+      TestBed.inject(BranchService).select('b-bgc');
+      const service = create();
+      const done = service.load();
+
+      await answerSync({ products: [prod('a', 180, 'Latte')] });
+      await done;
+
+      expect(service.stalePriceItems()).toEqual([
+        { productId: 'a', productName: 'Latte', oldPrice: 175, newPrice: 180 },
+      ]);
     });
   });
 

@@ -35,6 +35,8 @@ export interface CachedCatalog {
   mixMatchPromotions?: MixMatchPromotionDto[];
   lookups?: CatalogLookupsDto;
   settings?: PosShopSettingsDto;
+  // The branch whose prices this catalog holds (a branch can price a product on its own). Missing: saved before branches.
+  branchId?: string | null;
   syncedAt: string;
 }
 

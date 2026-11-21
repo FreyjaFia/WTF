@@ -11,6 +11,8 @@ import {
   PagedResultDto,
   ProductAddOnAssignmentDto,
   ProductAddOnPriceOverrideDto,
+  ProductBranchPriceInputDto,
+  ProductBranchPricesDto,
   ProductDto,
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
@@ -65,6 +67,10 @@ export class ProductService {
     ServiceErrorMessages.Product.DeletePriceOverrideFailed;
   private static readonly MSG_INVALID_PRICE_OVERRIDE_REQUEST =
     ServiceErrorMessages.Product.InvalidPriceOverrideRequest;
+  private static readonly MSG_FETCH_BRANCH_PRICES_FAILED =
+    ServiceErrorMessages.Product.FetchBranchPricesFailed;
+  private static readonly MSG_SAVE_BRANCH_PRICES_FAILED =
+    ServiceErrorMessages.Product.SaveBranchPricesFailed;
 
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
@@ -407,6 +413,42 @@ export class ProductService {
           } else if (error.status === 0) {
             errorMessage = this.getNetworkErrorMessage();
           } else {
+            errorMessage = extractHttpErrorMessage(error) || errorMessage;
+          }
+
+          return throwError(() => new Error(errorMessage));
+        }),
+      );
+  }
+
+  public getProductBranchPrices(productId: string): Observable<ProductBranchPricesDto> {
+    return this.http.get<ProductBranchPricesDto>(`${this.baseUrl}/${productId}/branch-prices`).pipe(
+      catchError((error: HttpErrorResponse) =>
+        throwError(
+          () =>
+            new Error(
+              error.status === 0
+                ? this.getNetworkErrorMessage()
+                : ProductService.MSG_FETCH_BRANCH_PRICES_FAILED,
+            ),
+        ),
+      ),
+    );
+  }
+
+  public saveProductBranchPrices(
+    productId: string,
+    prices: ProductBranchPriceInputDto[],
+  ): Observable<ProductBranchPricesDto> {
+    return this.http
+      .put<ProductBranchPricesDto>(`${this.baseUrl}/${productId}/branch-prices`, prices)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          let errorMessage: string = ProductService.MSG_SAVE_BRANCH_PRICES_FAILED;
+
+          if (error.status === 0) {
+            errorMessage = this.getNetworkErrorMessage();
+          } else if (error.status === 400 || error.status === 403) {
             errorMessage = extractHttpErrorMessage(error) || errorMessage;
           }
 
