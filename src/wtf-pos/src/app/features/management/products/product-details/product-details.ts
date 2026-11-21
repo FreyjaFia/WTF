@@ -7,6 +7,7 @@ import {
   BranchService,
   CatalogLookupService,
   ModalStackService,
+  ProductAccessService,
   ProductService,
 } from '@core/services';
 import {
@@ -21,6 +22,7 @@ import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
   ProductBranchPriceRowDto,
+  ProductSoldAtDto,
   ProductDto,
   ProductPriceHistoryDto,
 } from '@shared/models';
@@ -52,6 +54,7 @@ export class ProductDetailsComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly modalStack = inject(ModalStackService);
   private readonly branchService = inject(BranchService);
+  private readonly productAccess = inject(ProductAccessService);
   protected readonly routes = AppRoutes;
 
   protected readonly product = signal<ProductDto | null>(null);
@@ -59,6 +62,7 @@ export class ProductDetailsComponent implements OnInit {
   protected readonly linkedProducts = signal<AddOnGroupDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly branchPrices = signal<ProductBranchPriceRowDto[]>([]);
+  protected readonly soldAt = signal<ProductSoldAtDto | null>(null);
   protected readonly isHistoryOpen = signal(false);
   protected readonly priceHistory = signal<ProductPriceHistoryDto[]>([]);
   protected readonly showAllAddOns = signal(false);
@@ -109,6 +113,24 @@ export class ProductDetailsComponent implements OnInit {
       });
     });
   });
+
+  private readonly loadSoldAt = effect(() => {
+    const product = this.product();
+    if (!product || !this.branchService.isMultiBranch()) {
+      return;
+    }
+
+    untracked(() => {
+      this.productService.getProductSoldAt(product.id).subscribe({
+        next: (soldAt) => this.soldAt.set(soldAt),
+        error: () => this.soldAt.set(null),
+      });
+    });
+  });
+
+  protected readonly soldAtBranches = computed(
+    () => this.soldAt()?.branches.filter((row) => row.isSoldHere) ?? [],
+  );
 
   public ngOnInit(): void {
     void this.lookups.ensureLoaded();
@@ -319,6 +341,7 @@ export class ProductDetailsComponent implements OnInit {
   }
 
   protected canWriteProducts(): boolean {
-    return this.authService.canWriteProducts();
+    const product = this.product();
+    return product ? this.productAccess.canChange(product) : this.authService.canAddProducts();
   }
 }

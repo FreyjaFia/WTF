@@ -43,7 +43,7 @@
         type="submit"
         form="productForm"
         class="app-btn app-btn-primary app-btn-sm gap-2"
-        [disabled]="productForm.invalid || branchPriceForm.invalid || isBusy()"
+        [disabled]="productForm.invalid || branchPriceForm.invalid || soldAtEmpty() || isBusy()"
       >
         @if (isSaving()) {
           <span class="loading loading-spinner loading-sm"></span>
@@ -244,6 +244,102 @@
                 </div>
               </div>
             </div>
+
+            <!-- Sold At Card -->
+            @if (showSoldAt() && soldAtRows().length > 0) {
+              <div class="card rounded-xl bg-surface shadow-lg" data-testid="sold-at-card">
+                <div class="card-body space-y-4">
+                  <div>
+                    <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                      Sold At
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500">
+                      Choose which branches sell this product. A branch that does not sell it
+                      cannot add it to an order. Orders already placed keep working.
+                    </p>
+                  </div>
+
+                  @if (soldAtLocked()) {
+                    <p class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600" data-testid="sold-at-locked">
+                      This product is sold outside your branches, so only the owner can change it.
+                    </p>
+                  }
+
+                  <div class="space-y-2 text-sm" role="radiogroup" aria-label="Where the product is sold">
+                    @if (canSellEverywhere()) {
+                      <label class="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          class="radio radio-sm"
+                          name="sold-at-mode"
+                          [checked]="soldAtMode() === 'all'"
+                          [disabled]="soldAtLocked()"
+                          (change)="setSoldAtMode('all')"
+                          data-testid="sold-at-all"
+                        />
+                        Every branch
+                      </label>
+                    }
+                    <label class="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        class="radio radio-sm"
+                        name="sold-at-mode"
+                        [checked]="soldAtMode() === 'some'"
+                        [disabled]="soldAtLocked()"
+                        (change)="setSoldAtMode('some')"
+                        data-testid="sold-at-some"
+                      />
+                      Only the branches I pick
+                    </label>
+                  </div>
+
+                  @if (soldAtMode() === 'some') {
+                    <div class="divide-y divide-gray-100 rounded-xl bg-gray-50 px-4">
+                      @for (row of soldAtRows(); track row.branchId) {
+                        <label
+                          class="flex cursor-pointer items-center justify-between gap-3 py-3"
+                          [class.opacity-50]="row.locked"
+                          [attr.data-testid]="'sold-at-row-' + row.code"
+                        >
+                          <span class="min-w-0">
+                            <span class="block text-sm font-medium wrap-break-word text-gray-900">
+                              {{ row.name }}
+                            </span>
+                            <span class="font-mono text-[10px] text-gray-400">{{ row.code }}</span>
+                            @if (row.isMain) {
+                              <span class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-gray-600 uppercase">
+                                Main
+                              </span>
+                            }
+                            @if (row.locked) {
+                              <span class="ml-2 text-[10px] text-gray-400">Not your branch</span>
+                            }
+                          </span>
+                          <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm"
+                            [checked]="soldAtSelected().has(row.branchId)"
+                            [disabled]="row.locked || soldAtLocked()"
+                            (change)="toggleSoldAtBranch(row.branchId)"
+                            [attr.aria-label]="'Sold at ' + row.name"
+                            [attr.data-testid]="'sold-at-check-' + row.code"
+                          />
+                        </label>
+                      }
+                    </div>
+                  }
+
+                  @if (soldAtEmpty()) {
+                    <p class="text-error text-xs" data-testid="sold-at-empty">
+                      Pick at least one branch{{ canSellEverywhere() ? ', or sell it at every branch' : '' }}.
+                    </p>
+                  } @else {
+                    <p class="text-[11px] text-gray-500" data-testid="sold-at-summary">{{ soldAtSummary() }}</p>
+                  }
+                </div>
+              </div>
+            }
 
             <!-- Branch Prices Card -->
             @if (showBranchPrices() && branchPriceRows().length > 0) {

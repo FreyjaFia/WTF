@@ -51,6 +51,19 @@ describe('ProductDetailsComponent', () => {
       getProductAddOns: vi.fn(() => of([group(AddOnTypeEnum.Size, ['Small'])])),
       deleteProduct: vi.fn(() => of(undefined)),
       restoreProduct: vi.fn(() => of(undefined)),
+      getProductSoldAt: vi.fn(() =>
+        of({
+          productId: 'p1',
+          productName: 'Latte',
+          isAllBranches: false,
+          canChange: true,
+          canSellEverywhere: true,
+          branches: [
+            { branchId: 'b1', branchName: 'Makati', branchCode: 'MAK', isMain: true, isSoldHere: false },
+            { branchId: 'b2', branchName: 'BGC', branchCode: 'BGC', isMain: false, isSoldHere: true },
+          ],
+        }),
+      ),
       getProductBranchPrices: vi.fn(() =>
         of({
           productId: 'p1',
@@ -75,8 +88,18 @@ describe('ProductDetailsComponent', () => {
         provideRouter([]),
         { provide: ProductService, useValue: service },
         { provide: AlertService, useValue: alerts },
-        { provide: AuthService, useValue: { canWriteProducts: () => opts.canWrite ?? true } },
-        { provide: BranchService, useValue: { isMultiBranch: () => opts.multi ?? false } },
+        {
+          provide: AuthService,
+          useValue: {
+            canWriteProducts: () => opts.canWrite ?? true,
+            canAddProducts: () => opts.canWrite ?? true,
+            canWriteBranchProducts: () => false,
+          },
+        },
+        {
+          provide: BranchService,
+          useValue: { isMultiBranch: () => opts.multi ?? false, canSeeAll: () => true, branches: () => [] },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => id } } },
@@ -339,6 +362,26 @@ describe('ProductDetailsComponent', () => {
 
       expect(service['getProductBranchPrices']).not.toHaveBeenCalled();
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="branch-prices"]')).toBeNull();
+    });
+  });
+
+  describe('sold at', () => {
+    it('lists the branches that sell a limited product', () => {
+      setup({ multi: true });
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(service['getProductSoldAt']).toHaveBeenCalledWith('p1');
+      expect(el.querySelector('[data-testid="sold-at-BGC"]')).not.toBeNull();
+      expect(el.querySelector('[data-testid="sold-at-MAK"]')).toBeNull();
+    });
+
+    it('shows nothing for a shop with one branch', () => {
+      setup();
+      fixture.detectChanges();
+
+      expect(service['getProductSoldAt']).not.toHaveBeenCalled();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="sold-at"]')).toBeNull();
     });
   });
 

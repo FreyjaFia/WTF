@@ -114,6 +114,8 @@ export const ServiceErrorMessages = {
     CreatePriceOverrideFailed: 'Failed to create add-on price override. Please try again later.',
     FetchBranchPricesFailed: 'Failed to load the branch prices. Please try again later.',
     SaveBranchPricesFailed: 'Failed to save the branch prices. Please try again later.',
+    FetchSoldAtFailed: 'Failed to load where this product is sold. Please try again later.',
+    SaveSoldAtFailed: 'Failed to save where this product is sold. Please try again later.',
     UpdatePriceOverrideFailed: 'Failed to update add-on price override. Please try again later.',
     DeletePriceOverrideFailed: 'Failed to delete add-on price override. Please try again later.',
     InvalidPriceOverrideRequest: 'Invalid price override request.',

@@ -4,7 +4,8 @@ import { CatalogLookupService } from '@core/services';
 import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { AlertService, AuthService, ModalStackService, ProductService } from '@core/services';
+import { signal } from '@angular/core';
+import { AlertService, AuthService, BranchService, ModalStackService, ProductService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PagedResultDto, ProductDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
@@ -45,6 +46,12 @@ const paged = (
   facets?: Record<string, number>,
 ): PagedResultDto<ProductDto> => ({ items, page, pageSize: 25, totalCount, facets });
 
+const branchState = {
+  isMultiBranch: signal(false),
+  canSeeAll: signal(true),
+  branches: signal<{ id: string; name: string; code: string; isActive: boolean; isMain: boolean }[]>([]),
+};
+
 describe('ProductListComponent', () => {
   let fixture: ComponentFixture<ProductListComponent>;
   let c: any;
@@ -79,7 +86,15 @@ describe('ProductListComponent', () => {
         provideRouter([]),
         { provide: ProductService, useValue: service },
         { provide: AlertService, useValue: alerts },
-        { provide: AuthService, useValue: { canWriteProducts: vi.fn(() => canWrite) } },
+        {
+          provide: AuthService,
+          useValue: {
+            canWriteProducts: vi.fn(() => canWrite),
+            canAddProducts: vi.fn(() => canWrite),
+            canWriteBranchProducts: vi.fn(() => false),
+          },
+        },
+        { provide: BranchService, useValue: branchState },
       ],
     });
     if (bare) {
@@ -288,6 +303,7 @@ describe('ProductListComponent', () => {
         searchTerm: '',
         selectedTypes: [2],
         selectedStatuses: ['active'],
+        soldAt: '',
         sortColumn: 'price',
         sortDirection: 'asc',
         pageSize: 25,
@@ -476,6 +492,73 @@ describe('ProductListComponent', () => {
     setup(true);
     expect(c.canWriteProducts()).toBe(true);
   });
+  describe('sold at', () => {
+    const twoBranches = [
+      { id: 'b-main', name: 'Makati', code: 'MAK', isActive: true, isMain: true },
+      { id: 'b-bgc', name: 'BGC', code: 'BGC', isActive: true, isMain: false },
+    ];
+
+    afterEach(() => {
+      branchState.isMultiBranch.set(false);
+      branchState.branches.set([]);
+    });
+
+    it('shows no filter or chip for a shop with one branch', () => {
+      setup(true);
+      fixture.detectChanges();
+
+      expect(c.showSoldAtFilter()).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="sold-at-filter"]')).toBeNull();
+    });
+
+    it('lists each branch and the limited products with their counts, and asks the server for one', () => {
+      branchState.isMultiBranch.set(true);
+      branchState.branches.set(twoBranches);
+      setup(true);
+      service['getProductsPaged'].mockReturnValue(
+        of({ items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 1, facets: { active: 4, inactive: 1, 'soldat:b-main': 3, 'soldat:b-bgc': 4, 'soldat:limited': 2 } }),
+      );
+      fixture.detectChanges();
+
+      expect(c.soldAtOptions().map((o: any) => [o.id, o.count])).toEqual([
+        ['b-main', 3],
+        ['b-bgc', 4],
+        ['limited', 2],
+      ]);
+
+      c.selectSoldAt('b-bgc');
+      expect(lastQuery()).toEqual(expect.objectContaining({ soldAtBranchId: 'b-bgc', limitedOnly: false, page: 1 }));
+      expect(c.activeFilterCount()).toBe(2);
+
+      c.selectSoldAt('limited');
+      expect(lastQuery()).toEqual(expect.objectContaining({ soldAtBranchId: null, limitedOnly: true }));
+
+      c.clearSoldAt();
+      expect(lastQuery()).toEqual(expect.objectContaining({ soldAtBranchId: null, limitedOnly: false }));
+      expect(JSON.parse(localStorage.getItem(STATE_KEY) as string).soldAt).toBe('');
+    });
+
+    it('labels a limited product with its branch', () => {
+      branchState.isMultiBranch.set(true);
+      branchState.branches.set(twoBranches);
+      setup(true);
+
+      expect(c.soldAtLabel({ soldAtBranchIds: null })).toBeNull();
+      expect(c.soldAtLabel({ soldAtBranchIds: ['b-bgc'] })).toBe('Only BGC');
+      expect(c.soldAtLabel({ soldAtBranchIds: ['b-bgc', 'b-main'] })).toBe('2 branches');
+    });
+
+    it('keeps the chosen branch when the page is opened again', () => {
+      branchState.isMultiBranch.set(true);
+      branchState.branches.set(twoBranches);
+      localStorage.setItem(STATE_KEY, JSON.stringify({ searchTerm: '', selectedTypes: [], selectedStatuses: ['active'], soldAt: 'b-bgc', sortColumn: 'name', sortDirection: 'asc' }));
+      setup(true);
+      fixture.detectChanges();
+
+      expect(lastQuery()).toEqual(expect.objectContaining({ soldAtBranchId: 'b-bgc' }));
+    });
+  });
+
   describe('filter count on the Filters button', () => {
     it('adds the chosen types to the chosen statuses', () => {
       setup(true);

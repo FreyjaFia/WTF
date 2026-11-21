@@ -55,6 +55,16 @@ import { Observable, of, switchMap } from 'rxjs';
 
 export type StockTrackingMode = 'none' | 'own' | 'existing';
 
+export interface SoldAtRow {
+  branchId: string;
+  name: string;
+  code: string;
+  isMain: boolean;
+  locked: boolean;
+}
+
+export type SoldAtMode = 'all' | 'some';
+
 export interface BranchPriceRow {
   branchId: string;
   name: string;
@@ -142,6 +152,35 @@ export class ProductEditorComponent implements OnInit {
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected readonly showAllAddOns = signal(false);
   protected readonly showAllLinked = signal(false);
+
+  protected readonly showSoldAt = computed(() => this.branchService.isMultiBranch());
+  protected readonly soldAtRows = signal<SoldAtRow[]>([]);
+  protected readonly soldAtMode = signal<SoldAtMode>('all');
+  protected readonly soldAtSelected = signal<ReadonlySet<string>>(new Set());
+  protected readonly canSellEverywhere = signal(true);
+  protected readonly soldAtLocked = signal(false);
+  private readonly soldAtOriginal = signal<{ mode: SoldAtMode; ids: ReadonlySet<string> }>({
+    mode: 'all',
+    ids: new Set(),
+  });
+
+  protected readonly soldAtDirty = computed(() => {
+    const original = this.soldAtOriginal();
+    const mode = this.soldAtMode();
+    if (mode !== original.mode) {
+      return true;
+    }
+
+    const selected = this.soldAtSelected();
+    return (
+      mode === 'some' &&
+      (selected.size !== original.ids.size || [...selected].some((id) => !original.ids.has(id)))
+    );
+  });
+
+  protected readonly soldAtEmpty = computed(
+    () => this.showSoldAt() && this.soldAtMode() === 'some' && this.soldAtSelected().size === 0,
+  );
 
   protected readonly showBranchPrices = computed(() => this.branchService.isMultiBranch());
   protected readonly branchPriceRows = signal<BranchPriceRow[]>([]);
@@ -263,6 +302,24 @@ export class ProductEditorComponent implements OnInit {
 
   protected productId: string | null = null;
 
+  private soldAtStarted = false;
+
+  private readonly startSoldAt = effect(() => {
+    if (!this.showSoldAt() || this.soldAtStarted) {
+      return;
+    }
+
+    this.soldAtStarted = true;
+    const id = this.route.snapshot.paramMap.get('id');
+    untracked(() => {
+      if (id) {
+        this.loadSoldAt(id);
+      } else {
+        this.setUpNewSoldAt();
+      }
+    });
+  });
+
   private branchPricesStarted = false;
 
   // The shop's branches can arrive after this screen opens (a refresh or a link), so wait for them.
@@ -333,6 +390,115 @@ export class ProductEditorComponent implements OnInit {
         this.productForm.controls.category.enable();
         this.productForm.controls.subCategory.enable();
       }
+    });
+  }
+
+  protected setSoldAtMode(mode: SoldAtMode): void {
+    this.soldAtMode.set(mode);
+  }
+
+  protected toggleSoldAtBranch(branchId: string): void {
+    this.soldAtSelected.update((current) => {
+      const next = new Set(current);
+      if (!next.delete(branchId)) {
+        next.add(branchId);
+      }
+
+      return next;
+    });
+  }
+
+  protected soldAtSummary(): string {
+    const rows = this.soldAtRows();
+    const selected = this.soldAtSelected();
+    if (this.soldAtMode() === 'all') {
+      return 'Every branch, including branches you open later.';
+    }
+
+    const names = rows.filter((row) => selected.has(row.branchId)).map((row) => row.name);
+    return names.length === 1 ? `Only ${names[0]}.` : `${names.length} branches.`;
+  }
+
+  private setUpNewSoldAt(): void {
+    const mine = this.branchService.branches().filter((branch) => branch.isActive);
+    const canSeeAll = this.branchService.canSeeAll();
+    const active = this.branchService.activeBranch();
+    this.canSellEverywhere.set(canSeeAll);
+    this.soldAtRows.set(
+      mine.map((branch) => ({
+        branchId: branch.id,
+        name: branch.name,
+        code: branch.code,
+        isMain: branch.isMain,
+        locked: false,
+      })),
+    );
+
+    const ids = canSeeAll ? new Set<string>() : new Set<string>([(active ?? mine[0])?.id].filter(Boolean));
+    this.applySoldAt(canSeeAll ? 'all' : 'some', ids);
+  }
+
+  private loadSoldAt(productId: string): void {
+    this.productService.getProductSoldAt(productId).subscribe({
+      next: (soldAt) => {
+        const mine = new Set(this.branchService.branches().map((branch) => branch.id));
+        const canSeeAll = this.branchService.canSeeAll();
+        this.canSellEverywhere.set(soldAt.canSellEverywhere);
+        this.soldAtLocked.set(!soldAt.canChange);
+        this.soldAtRows.set(
+          soldAt.branches.map((row) => ({
+            branchId: row.branchId,
+            name: row.branchName,
+            code: row.branchCode,
+            isMain: row.isMain,
+            locked: !canSeeAll && !mine.has(row.branchId),
+          })),
+        );
+        this.applySoldAt(
+          soldAt.isAllBranches ? 'all' : 'some',
+          new Set(soldAt.branches.filter((row) => row.isSoldHere && !soldAt.isAllBranches).map((row) => row.branchId)),
+        );
+      },
+      error: (err: Error) => this.alertService.error(err.message),
+    });
+  }
+
+  private applySoldAt(mode: SoldAtMode, ids: ReadonlySet<string>): void {
+    this.soldAtMode.set(mode);
+    this.soldAtSelected.set(ids);
+    this.soldAtOriginal.set({ mode, ids });
+  }
+
+  private soldAtBranchIds(): string[] | null {
+    return this.soldAtMode() === 'some' ? [...this.soldAtSelected()] : null;
+  }
+
+  // The product is already saved when this runs, so a failure here only reports itself and the save carries on.
+  private saveSoldAt(productId: string): Observable<unknown> {
+    if (!this.showSoldAt() || this.soldAtLocked() || !this.soldAtDirty()) {
+      return of(null);
+    }
+
+    return new Observable((subscriber) => {
+      this.productService
+        .saveProductSoldAt(productId, {
+          isAllBranches: this.soldAtMode() === 'all',
+          branchIds: this.soldAtBranchIds(),
+        })
+        .subscribe({
+          next: () => undefined,
+          error: (err: Error) => {
+            this.alertService.error(
+              `The product was saved, but where it is sold was not: ${err.message}`,
+            );
+            subscriber.next(null);
+            subscriber.complete();
+          },
+          complete: () => {
+            subscriber.next(null);
+            subscriber.complete();
+          },
+        });
     });
   }
 
@@ -487,7 +653,7 @@ export class ProductEditorComponent implements OnInit {
       return;
     }
 
-    if (this.productForm.invalid || this.branchPriceForm.invalid) {
+    if (this.productForm.invalid || this.branchPriceForm.invalid || this.soldAtEmpty()) {
       this.productForm.markAllAsTouched();
       this.branchPriceForm.markAllAsTouched();
       return;
@@ -529,6 +695,7 @@ export class ProductEditorComponent implements OnInit {
       const createDto: CreateProductDto = {
         ...formValue,
         category: formValue.category,
+        ...(this.showSoldAt() ? { soldAtBranchIds: this.soldAtBranchIds() } : {}),
       };
 
       this.productService.createProduct(createDto).subscribe({
@@ -554,6 +721,7 @@ export class ProductEditorComponent implements OnInit {
 
   private finishSetUp(productId: string, productName: string): Observable<unknown> {
     return this.setUpStock(productId, productName).pipe(
+      switchMap(() => (this.isEditMode() ? this.saveSoldAt(productId) : of(null))),
       switchMap(() => this.saveBranchPrices(productId)),
     );
   }
@@ -751,7 +919,10 @@ export class ProductEditorComponent implements OnInit {
   }
 
   public canDeactivate(): boolean | Promise<boolean> {
-    if (this.skipGuard || (!this.productForm.dirty && !this.branchPriceForm.dirty)) {
+    if (
+      this.skipGuard ||
+      (!this.productForm.dirty && !this.branchPriceForm.dirty && !this.soldAtDirty())
+    ) {
       return true;
     }
 

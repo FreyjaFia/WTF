@@ -9,9 +9,11 @@ import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
   AuthService,
+  BranchService,
   CatalogLookupService,
   ListStateService,
   ModalStackService,
+  ProductAccessService,
   ProductService,
 } from '@core/services';
 import type { FilterOption } from '@shared/components';
@@ -42,6 +44,7 @@ interface ProductListState {
   searchTerm: string;
   selectedTypes: number[];
   selectedStatuses: string[];
+  soldAt?: string;
   sortColumn: SortColumn | null;
   sortDirection: SortDirection;
   pageSize?: number;
@@ -75,6 +78,8 @@ export class ProductListComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
+  private readonly branchService = inject(BranchService);
+  private readonly productAccess = inject(ProductAccessService);
   private readonly listState = inject(ListStateService);
   private readonly modalStack = inject(ModalStackService);
   protected readonly routes = AppRoutes;
@@ -95,6 +100,7 @@ export class ProductListComponent implements OnInit {
 
   protected readonly selectedTypes = signal<number[]>([]);
   protected readonly selectedStatuses = signal<string[]>(['active']);
+  protected readonly soldAt = signal('');
 
   protected readonly filterForm = new FormGroup({
     searchTerm: new FormControl(''),
@@ -139,6 +145,20 @@ export class ProductListComponent implements OnInit {
     { id: 'inactive', label: 'Inactive', count: this.statusCounts().inactive },
   ]);
 
+  protected readonly showSoldAtFilter = computed(() => this.branchService.isMultiBranch());
+
+  protected readonly soldAtOptions = computed<FilterOption[]>(() => [
+    ...this.branchService
+      .branches()
+      .filter((branch) => branch.isActive)
+      .map((branch) => ({
+        id: branch.id,
+        label: `Sold at ${branch.name}`,
+        count: this.facets()[`soldat:${branch.id}`] ?? 0,
+      })),
+    { id: 'limited', label: 'Limited to some branches', count: this.facets()['soldat:limited'] ?? 0 },
+  ]);
+
   public ngOnInit(): void {
     void this.lookups.ensureLoaded();
     this.restoreState();
@@ -162,6 +182,8 @@ export class ProductListComponent implements OnInit {
         searchTerm: this.filterForm.controls.searchTerm.value,
         isActive: this.activeFilter(),
         categories: this.selectedTypes(),
+        soldAtBranchId: this.soldAt() && this.soldAt() !== 'limited' ? this.soldAt() : null,
+        limitedOnly: this.soldAt() === 'limited',
         sortBy: this.sortColumn() ?? undefined,
         sortDirection: this.sortDirection(),
         page: this.page(),
@@ -223,7 +245,8 @@ export class ProductListComponent implements OnInit {
   protected readonly activeFilterCount = computed(
     () =>
       selectedFilterCount(this.selectedTypes().length, this.typeOptions().length) +
-      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
+      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length) +
+      (this.soldAt() ? 1 : 0),
   );
 
   protected openFilters(): void {
@@ -235,7 +258,7 @@ export class ProductListComponent implements OnInit {
   }
 
   protected navigateToEditor(productId?: string): void {
-    if (!this.canWriteProducts()) {
+    if (!this.canAddProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -252,7 +275,7 @@ export class ProductListComponent implements OnInit {
   }
 
   protected deleteProduct(product: ProductDto): void {
-    if (!this.canWriteProducts()) {
+    if (!this.canAddProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -273,7 +296,7 @@ export class ProductListComponent implements OnInit {
   }
 
   protected restoreProduct(product: ProductDto): void {
-    if (!this.canWriteProducts()) {
+    if (!this.canAddProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -298,7 +321,7 @@ export class ProductListComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteProducts()) {
+    if (!this.canAddProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -330,7 +353,7 @@ export class ProductListComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteProducts()) {
+    if (!this.canAddProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -459,6 +482,38 @@ export class ProductListComponent implements OnInit {
     return this.authService.canWriteProducts();
   }
 
+  protected canAddProducts(): boolean {
+    return this.productAccess.canAdd();
+  }
+
+  protected canChangeProduct(product: ProductDto): boolean {
+    return this.productAccess.canChange(product);
+  }
+
+  protected selectSoldAt(id: string): void {
+    this.soldAt.set(this.soldAt() === id ? '' : id);
+    this.saveState();
+    this.reloadFromFirstPage();
+  }
+
+  protected clearSoldAt(): void {
+    this.selectSoldAt('');
+  }
+
+  protected soldAtLabel(product: ProductDto): string | null {
+    const ids = product.soldAtBranchIds;
+    if (!ids || ids.length === 0) {
+      return null;
+    }
+
+    if (ids.length === 1) {
+      const branch = this.branchService.branches().find((b) => b.id === ids[0]);
+      return branch ? `Only ${branch.name}` : '1 branch';
+    }
+
+    return `${ids.length} branches`;
+  }
+
   private restoreState(): void {
     const state = this.listState.load<ProductListState>(this.stateKey, {
       searchTerm: '',
@@ -476,6 +531,7 @@ export class ProductListComponent implements OnInit {
     );
     this.selectedTypes.set(state.selectedTypes);
     this.selectedStatuses.set(state.selectedStatuses);
+    this.soldAt.set(state.soldAt ?? '');
     this.pageSize.set(isPageSizeOption(state.pageSize) ? (state.pageSize as number) : DEFAULT_PAGE_SIZE);
     this.sortColumn.set(state.sortColumn);
     this.sortDirection.set(state.sortDirection);
@@ -486,6 +542,7 @@ export class ProductListComponent implements OnInit {
       searchTerm: this.filterForm.controls.searchTerm.value ?? '',
       selectedTypes: this.selectedTypes(),
       selectedStatuses: this.selectedStatuses(),
+      soldAt: this.soldAt(),
       sortColumn: this.sortColumn(),
       sortDirection: this.sortDirection(),
       pageSize: this.pageSize(),

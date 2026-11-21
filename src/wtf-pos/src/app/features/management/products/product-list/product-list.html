@@ -7,7 +7,7 @@
         <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Products</h1>
         <p class="text-xs text-gray-500 sm:text-sm">Manage products, pricing, and catalog status</p>
       </div>
-      @if (canWriteProducts()) {
+      @if (canAddProducts()) {
         <a
           draggable="false"
           class="app-btn app-btn-primary app-btn-sm"
@@ -128,6 +128,41 @@
           }
         </div>
       </div>
+
+      @if (showSoldAtFilter()) {
+        <div class="rounded-xl border border-gray-200 bg-surface p-3" data-testid="sold-at-filter">
+          <div class="mb-3 flex items-center justify-between">
+            <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Sold at</p>
+            <button
+              type="button"
+              class="app-btn app-btn-secondary app-btn-xs"
+              (click)="clearSoldAt()"
+            >
+              Clear
+            </button>
+          </div>
+          <div class="space-y-2">
+            @for (option of soldAtOptions(); track option.id) {
+              <label
+                class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+              >
+                <span>{{ option.label }}</span>
+                <span class="flex items-center gap-2">
+                  <span class="text-xs text-gray-500">{{ option.count }}</span>
+                  <input
+                    type="radio"
+                    class="radio radio-sm"
+                    name="sold-at-filter"
+                    [checked]="soldAt() === option.id"
+                    (click)="selectSoldAt(option.id.toString())"
+                    [attr.data-testid]="'sold-at-filter-' + option.id"
+                  />
+                </span>
+              </label>
+            }
+          </div>
+        </div>
+      }
     </div>
   </app-side-drawer>
 
@@ -271,6 +306,14 @@
                         {{ product.name }}
                       </h3>
                       <p class="font-mono text-xs break-all text-gray-400">{{ product.code }}</p>
+                      @if (soldAtLabel(product); as soldAtText) {
+                        <span
+                          class="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase"
+                          [attr.data-testid]="'sold-at-chip-' + product.code"
+                        >
+                          {{ soldAtText }}
+                        </span>
+                      }
                       <!-- Mobile: inline price + status -->
                       <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
                         <span
@@ -331,7 +374,7 @@
                   (keydown)="$event.stopPropagation()"
                   role="presentation"
                 >
-                  @if (canWriteProducts()) {
+                  @if (canChangeProduct(product)) {
                     <div class="dropdown dropdown-end" [class.dropdown-top]="isLast && !isFirst">
                       <button
                         type="button"
@@ -411,7 +454,7 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-@if (showDeleteModal() && productToDelete() && canWriteProducts()) {
+@if (showDeleteModal() && productToDelete() && canAddProducts()) {
   <app-confirm-dialog
     icon="icon-delete"
     heading="Delete Product?"
@@ -427,7 +470,7 @@
   </app-confirm-dialog>
 }
 
-@if (showRestoreModal() && productToRestore() && canWriteProducts()) {
+@if (showRestoreModal() && productToRestore() && canAddProducts()) {
   <app-confirm-dialog
     variant="success"
     icon="icon-refresh"

@@ -148,6 +148,28 @@
                 }
               </div>
 
+              @if (soldAt(); as sold) {
+                <div class="border-t border-gray-100 pt-5" data-testid="sold-at">
+                  <p class="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Sold at
+                  </p>
+                  @if (sold.isAllBranches) {
+                    <p class="text-sm text-gray-700" data-testid="sold-at-all">Every branch</p>
+                  } @else {
+                    <div class="flex flex-wrap gap-2">
+                      @for (row of soldAtBranches(); track row.branchId) {
+                        <span
+                          class="rounded-lg bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-800"
+                          [attr.data-testid]="'sold-at-' + row.branchCode"
+                        >
+                          {{ row.branchName }}
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
               <!-- Basic Info -->
               <div class="border-t border-gray-100 pt-5">
                 <p class="mb-4 text-xs font-semibold tracking-wider text-gray-400 uppercase">

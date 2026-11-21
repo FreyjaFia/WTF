@@ -13,6 +13,8 @@ import {
   ProductAddOnPriceOverrideDto,
   ProductBranchPriceInputDto,
   ProductBranchPricesDto,
+  ProductSoldAtDto,
+  ProductSoldAtInputDto,
   ProductDto,
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
@@ -71,6 +73,8 @@ export class ProductService {
     ServiceErrorMessages.Product.FetchBranchPricesFailed;
   private static readonly MSG_SAVE_BRANCH_PRICES_FAILED =
     ServiceErrorMessages.Product.SaveBranchPricesFailed;
+  private static readonly MSG_FETCH_SOLD_AT_FAILED = ServiceErrorMessages.Product.FetchSoldAtFailed;
+  private static readonly MSG_SAVE_SOLD_AT_FAILED = ServiceErrorMessages.Product.SaveSoldAtFailed;
 
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
@@ -82,6 +86,8 @@ export class ProductService {
     isActive?: boolean | null;
     sortBy?: string;
     sortDirection?: string;
+    soldAtBranchId?: string | null;
+    limitedOnly?: boolean;
     page: number;
     pageSize: number;
   }): Observable<PagedResultDto<ProductDto>> {
@@ -98,6 +104,14 @@ export class ProductService {
     query.categories?.forEach((category) => {
       params = params.append('categories', String(category));
     });
+
+    if (query.soldAtBranchId) {
+      params = params.set('soldAtBranchId', query.soldAtBranchId);
+    }
+
+    if (query.limitedOnly) {
+      params = params.set('limitedOnly', 'true');
+    }
 
     if (query.sortBy) {
       params = params.set('sortBy', query.sortBy).set('sortDirection', query.sortDirection ?? 'asc');
@@ -455,6 +469,40 @@ export class ProductService {
           return throwError(() => new Error(errorMessage));
         }),
       );
+  }
+
+  public getProductSoldAt(productId: string): Observable<ProductSoldAtDto> {
+    return this.http.get<ProductSoldAtDto>(`${this.baseUrl}/${productId}/sold-at`).pipe(
+      catchError((error: HttpErrorResponse) =>
+        throwError(
+          () =>
+            new Error(
+              error.status === 0
+                ? this.getNetworkErrorMessage()
+                : ProductService.MSG_FETCH_SOLD_AT_FAILED,
+            ),
+        ),
+      ),
+    );
+  }
+
+  public saveProductSoldAt(
+    productId: string,
+    input: ProductSoldAtInputDto,
+  ): Observable<ProductSoldAtDto> {
+    return this.http.put<ProductSoldAtDto>(`${this.baseUrl}/${productId}/sold-at`, input).pipe(
+      catchError((error: HttpErrorResponse) => {
+        let errorMessage: string = ProductService.MSG_SAVE_SOLD_AT_FAILED;
+
+        if (error.status === 0) {
+          errorMessage = this.getNetworkErrorMessage();
+        } else if (error.status === 400 || error.status === 403) {
+          errorMessage = extractHttpErrorMessage(error) || errorMessage;
+        }
+
+        return throwError(() => new Error(errorMessage));
+      }),
+    );
   }
 
   public getProductAddOnPriceOverrides(

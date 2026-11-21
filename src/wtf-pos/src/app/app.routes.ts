@@ -79,7 +79,12 @@ import { PlatformTenantDetailComponent } from '@features/platform/platform-tenan
 import { PlatformTenantsComponent } from '@features/platform/platform-tenants';
 import { PublicOrderComponent } from '@features/public-order/public-order';
 import { LayoutComponent } from '@shared/components';
-import { ManagementMenuPermissions, Permissions, SetupPermissions } from '@shared/permissions';
+import {
+  ManagementMenuPermissions,
+  Permissions,
+  ProductEditPermissions,
+  SetupPermissions,
+} from '@shared/permissions';
 
 export const routes: Routes = [
   {
@@ -376,7 +381,7 @@ export const routes: Routes = [
                 component: ProductEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { permission: Permissions.ProductsWrite },
+                data: { anyPermission: ProductEditPermissions },
               },
               {
                 path: 'details/:id',
@@ -387,7 +392,7 @@ export const routes: Routes = [
                 component: ProductEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { permission: Permissions.ProductsWrite },
+                data: { anyPermission: ProductEditPermissions },
               },
             ],
           },

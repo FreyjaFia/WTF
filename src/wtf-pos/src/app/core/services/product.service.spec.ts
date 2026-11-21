@@ -130,6 +130,43 @@ describe('ProductService', () => {
     expect(fallback.error).toBe(msgs.SaveBranchPricesFailed);
   });
 
+  it('reads and saves where a product is sold', () => {
+    const { service, http } = setupHttpService(ProductService);
+
+    service.getProductSoldAt('p1').subscribe();
+    expect(http.expectOne(`${base}/p1/sold-at`).request.method).toBe('GET');
+
+    service.saveProductSoldAt('p1', { isAllBranches: false, branchIds: ['b1'] }).subscribe();
+    const save = http.expectOne(`${base}/p1/sold-at`);
+    expect(save.request.method).toBe('PUT');
+    expect(save.request.body).toEqual({ isAllBranches: false, branchIds: ['b1'] });
+  });
+
+  it('maps sold at errors to messages', () => {
+    const { service, http } = setupHttpService(ProductService);
+
+    const load = capture(service.getProductSoldAt('p1'));
+    failWith(http.expectOne(`${base}/p1/sold-at`), 500);
+    const refused = capture(service.saveProductSoldAt('p1', { isAllBranches: true, branchIds: null }));
+    failWith(http.expectOne(`${base}/p1/sold-at`), 403, { message: 'Only the owner can sell a product at every branch.' });
+    const fallback = capture(service.saveProductSoldAt('p1', { isAllBranches: true, branchIds: null }));
+    failWith(http.expectOne(`${base}/p1/sold-at`), 500);
+
+    expect(load.error).toBe(msgs.FetchSoldAtFailed);
+    expect(refused.error).toBe('Only the owner can sell a product at every branch.');
+    expect(fallback.error).toBe(msgs.SaveSoldAtFailed);
+  });
+
+  it('asks the list for one branch or only the limited products', () => {
+    const { service, http } = setupHttpService(ProductService);
+
+    service.getProductsPaged({ soldAtBranchId: 'b1', page: 1, pageSize: 25 }).subscribe();
+    expect(http.expectOne((r) => r.url === `${base}/paged` && r.params.get('soldAtBranchId') === 'b1').request.method).toBe('GET');
+
+    service.getProductsPaged({ limitedOnly: true, page: 1, pageSize: 25 }).subscribe();
+    http.expectOne((r) => r.url === `${base}/paged` && r.params.get('limitedOnly') === 'true' && !r.params.has('soldAtBranchId'));
+  });
+
   describe('error mapping', () => {
     it('network loss re-checks connectivity', () => {
       const { service, http, connectivity } = setupHttpService(ProductService);

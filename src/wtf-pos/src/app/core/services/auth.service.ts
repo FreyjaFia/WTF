@@ -392,6 +392,14 @@ export class AuthService {
     return this.can(Permissions.ProductsWrite);
   }
 
+  public canWriteBranchProducts(): boolean {
+    return this.can(Permissions.ProductsWriteBranch);
+  }
+
+  public canAddProducts(): boolean {
+    return this.canWriteProducts() || this.canWriteBranchProducts();
+  }
+
   public canReadUsers(): boolean {
     return this.can(Permissions.UsersRead);
   }

@@ -75,6 +75,11 @@ export const SetupPermissions: readonly PermissionKey[] = [
   Permissions.SuppliersRead,
 ];
 
+export const ProductEditPermissions: readonly PermissionKey[] = [
+  Permissions.ProductsWrite,
+  Permissions.ProductsWriteBranch,
+];
+
 export const ManagementMenuPermissions: readonly PermissionKey[] = [
   Permissions.ProductsRead,
   Permissions.CustomersRead,

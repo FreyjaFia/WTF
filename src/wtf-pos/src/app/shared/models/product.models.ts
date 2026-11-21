@@ -47,6 +47,8 @@ export interface ProductDto {
   overridePrice?: number | null;
   /** False for merchandise or retail items the Senior / PWD discount does not cover. Missing means eligible. */
   isSeniorPwdEligible?: boolean;
+  /** Branches that sell the product. Missing or empty means every branch. */
+  soldAtBranchIds?: string[] | null;
 }
 
 export interface ProductListDto {
@@ -67,6 +69,7 @@ export interface CreateProductDto {
   isAddOn: boolean;
   isActive: boolean;
   isSeniorPwdEligible?: boolean;
+  soldAtBranchIds?: string[] | null;
 }
 
 export interface UpdateProductDto {
@@ -128,6 +131,28 @@ export interface ProductBranchPricesDto {
 export interface ProductBranchPriceInputDto {
   branchId: string;
   price: number | null;
+}
+
+export interface ProductSoldAtRowDto {
+  branchId: string;
+  branchName: string;
+  branchCode: string;
+  isMain: boolean;
+  isSoldHere: boolean;
+}
+
+export interface ProductSoldAtDto {
+  productId: string;
+  productName: string;
+  isAllBranches: boolean;
+  canChange: boolean;
+  canSellEverywhere: boolean;
+  branches: ProductSoldAtRowDto[];
+}
+
+export interface ProductSoldAtInputDto {
+  isAllBranches: boolean;
+  branchIds: string[] | null;
 }
 
 export interface CreateProductAddOnPriceOverrideDto {

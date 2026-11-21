@@ -47,11 +47,13 @@ describe('ProductEditorComponent: branch prices', () => {
       getProductAddOnPriceOverrides: vi.fn(() => of([])),
       getProductBranchPrices: vi.fn(() => of(prices)),
       saveProductBranchPrices: vi.fn(() => (saveFails ? throwError(() => new Error('No luck.')) : of(prices))),
+      getProductSoldAt: vi.fn(() => of({ productId: 'p1', productName: 'Latte', isAllBranches: true, canChange: true, canSellEverywhere: true, branches: [] })),
     };
     const alerts = { error: vi.fn(), successUpdated: vi.fn(), successCreated: vi.fn() };
     const branches = {
       isMultiBranch: signal(multi),
       canSeeAll: signal(canSeeAll),
+      activeBranch: signal(null),
       branches: signal(
         mine.map((branchId) => ({ id: branchId, name: branchId, code: branchId.toUpperCase(), isMain: branchId === 'b-main', isActive: true })),
       ),

@@ -190,6 +190,8 @@ async Task SeedMainShopAsync()
         ("DES-505", "Brownie", 95m, "Dessert", null, true),
         ("RTL-602", "Cold Brew Bottle 1L", 380m, "Other", null, false),
         ("RTL-603", "Tumbler 16oz", 650m, "Other", null, false),
+        ("BAK-305", "Ube Cheese Pandesal", 85m, "Food", null, true),
+        ("COF-114", "Kapeng Barako", 125m, "Drink", coffeeSub, true),
     };
     var products = new Dictionary<string, Product>();
     foreach (var (code, name, price, category, sub, seniorPwd) in menu)
@@ -260,6 +262,36 @@ async Task SeedMainShopAsync()
         }
 
         added.Add("branch prices (BGC and Quezon City)");
+    }
+
+    // Most of the menu is sold everywhere (no rows). A few items are limited: one only at BGC, one only at Quezon City, and
+    // the tumbler at Makati and BGC.
+    var soldAtBranches = new (string Product, string[] BranchCodes)[]
+    {
+        ("Ube Cheese Pandesal", ["BGC"]),
+        ("Kapeng Barako", ["QC"]),
+        ("Tumbler 16oz", ["MKT", "BGC"]),
+    };
+    if (!await db.ProductBranches.IgnoreQueryFilters().AnyAsync(p => p.TenantId == shopId))
+    {
+        var soldAtBranchIdByCode = await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId).ToDictionaryAsync(b => b.Code, b => b.Id);
+        foreach (var (productName, branchCodes) in soldAtBranches)
+        {
+            foreach (var branchCode in branchCodes.Where(soldAtBranchIdByCode.ContainsKey))
+            {
+                db.ProductBranches.Add(new ProductBranch
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = shopId,
+                    ProductId = products[productName].Id,
+                    BranchId = soldAtBranchIdByCode[branchCode],
+                    CreatedAt = now.AddDays(-30),
+                    CreatedBy = owner.Id,
+                });
+            }
+        }
+
+        added.Add("products sold at some branches only (BGC pandesal, Quezon City barako, tumbler at Makati and BGC)");
     }
 
     var drinksAddOns = new Dictionary<string, string[]>
@@ -709,6 +741,8 @@ async Task SeedMainShopAsync()
         {
             new("cash sale, 3 days ago", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -72, [new("Latte", 2, ["Large", "Vanilla"]), new("Croissant", 1, [])]),
             new("BGC cash sale at the branch prices", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -26, [new("Latte", 1, ["Large", "Oat Milk"]), new("Cappuccino", 1, ["Medium"])], BranchCode: "BGC"),
+            new("BGC pandesal and a latte", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -3, [new("Ube Cheese Pandesal", 2, []), new("Latte", 1, ["Medium", "Hot"])], BranchCode: "BGC"),
+            new("Quezon City barako, morning rush", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -4, [new("Kapeng Barako", 2, []), new("Croissant", 1, [])], BranchCode: "QC"),
             new("BGC held order at the branch prices", "Will pick up after the meeting", OrderStatusEnum.Pending, null, "Ana", -1, [new("Spanish Latte", 2, []), new("Basque Cheesecake Slice", 1, [])], BranchCode: "BGC"),
             new("gcash sale, 2 days ago", "Paid by GCash, sent the receipt by message", OrderStatusEnum.Completed, PaymentMethodEnum.GCash, "Maria", -48, [new("Cappuccino", 1, ["Medium"]), new("Chocolate Cake Slice", 1, [])]),
             new("cash sale with tips", "Less ice please", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, "Juan", -30, [new("Matcha Latte", 1, ["Large", "Iced", "Oat Milk"])], Tips: 20m),

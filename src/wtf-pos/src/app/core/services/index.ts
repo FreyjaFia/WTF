@@ -58,3 +58,4 @@ export * from './catalog-setup.service';
 export * from './list-scroll.service';
 export * from './section-nav.service';
 export * from './branch.service';
+export * from './product-access.service';
