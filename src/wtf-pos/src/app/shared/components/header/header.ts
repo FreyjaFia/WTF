@@ -1,28 +1,23 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { AuthLoadingService, AuthService, BrandService, ConnectivityService, ImageCacheService } from '@core/services';
-import { appVersion } from '@environments/version';
+import { AuthLoadingService, AuthService, BrandService, ImageCacheService } from '@core/services';
 import { BranchSwitcherComponent } from '@shared/components/branch-switcher/branch-switcher';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
-import { IconComponent } from '@shared/components/icons/icon/icon';
 import { NeedsAttentionButtonComponent } from '@shared/components/needs-attention-button/needs-attention-button';
 import { NotificationBellComponent } from '@shared/components/notification-bell/notification-bell';
+import { ProfileMenuComponent } from '@shared/components/profile-menu/profile-menu';
 import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
-import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-header',
   imports: [
-    CommonModule,
     AvatarComponent,
     BranchSwitcherComponent,
-    IconComponent,
     NeedsAttentionButtonComponent,
     NotificationBellComponent,
+    ProfileMenuComponent,
     StaffEnvelopeComponent,
-    ThemeSwitcherComponent,
   ],
   templateUrl: './header.html',
 })
@@ -33,7 +28,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   protected readonly brand = inject(BrandService);
   protected readonly router = inject(Router);
   protected readonly routes = AppRoutes;
-  private readonly connectivity = inject(ConnectivityService);
   private readonly imageCache = inject(ImageCacheService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly authLoading = inject(AuthLoadingService);
@@ -41,17 +35,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   protected imageUrl: string | null = null;
   protected userFullName = 'User';
   protected userRoleLabel = 'Unknown';
-  protected readonly now = signal(new Date());
-  protected readonly appVersion = appVersion;
-  protected readonly isOnline = this.connectivity.isOnline;
-  private clockIntervalId: ReturnType<typeof setInterval> | null = null;
   private routeSubscription?: { unsubscribe: () => void };
   private meRefreshSubscription?: { unsubscribe: () => void };
 
   public ngOnInit(): void {
-    this.clockIntervalId = setInterval(() => {
-      this.now.set(new Date());
-    }, 1000);
     this.routeSubscription = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         this.closeDropdownFocus();
@@ -65,10 +52,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
-    if (this.clockIntervalId) {
-      clearInterval(this.clockIntervalId);
-      this.clockIntervalId = null;
-    }
     this.routeSubscription?.unsubscribe();
     this.meRefreshSubscription?.unsubscribe();
   }

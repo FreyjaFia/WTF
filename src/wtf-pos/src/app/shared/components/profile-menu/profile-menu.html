@@ -1,0 +1,74 @@
+<div
+  tabindex="-1"
+  class="dropdown-content z-45 text-left mt-3 w-56 overflow-hidden rounded-xl border border-gray-200 bg-surface shadow-xl"
+  [class.right-0]="align() === 'end'"
+  [class.left-0]="align() === 'start'"
+>
+  <div class="border-b border-gray-100 px-4 py-3" data-user-info>
+    <div class="truncate text-sm font-semibold text-gray-800">{{ userFullName() }}</div>
+    <div class="flex items-center gap-2 text-xs text-gray-500">
+      <span class="truncate">{{ userRoleLabel() }}</span>
+      <span [class.text-emerald-700]="isOnline()" [class.text-amber-700]="!isOnline()">{{
+        isOnline() ? 'Online' : 'Offline'
+      }}</span>
+    </div>
+    <div class="mt-0.5 text-[10px] text-gray-400">
+      {{ now() | date: 'EEE, MMM d, y • h:mm:ss a' }}
+    </div>
+    <div class="mt-0.5 text-[10px] font-semibold text-gray-400" data-testid="menu-version">v{{ appVersion }}</div>
+  </div>
+  <div class="p-1.5">
+    <div class="px-3 pb-1 pt-2 text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Style</div>
+    <div role="radiogroup" aria-label="Style" data-testid="menu-styles">
+      @for (theme of themeService.themes; track theme.id) {
+        <button
+          type="button"
+          role="radio"
+          class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors duration-200 ease-out hover:bg-gray-100 active:bg-gray-200"
+          [attr.aria-checked]="theme.id === themeService.current().id"
+          [attr.data-testid]="'menu-style-' + theme.id"
+          (click)="themeService.set(theme.id)"
+        >
+          <span
+            class="relative h-4.5 w-6 shrink-0 overflow-hidden rounded border border-gray-300"
+            [style.background-color]="theme.swatches[0]"
+            aria-hidden="true"
+          >
+            <span class="absolute right-0.5 bottom-0.5 h-1.5 w-3 rounded-full" [style.background-color]="theme.swatches[1]"></span>
+          </span>
+          <span class="min-w-0 flex-1 truncate">{{ theme.label }}</span>
+          @if (theme.id === themeService.current().id) {
+            <app-icon name="icon-success" [class]="'h-4.5 w-4.5 shrink-0 text-brand-ink'" />
+          }
+        </button>
+      }
+    </div>
+
+    <div class="my-1 border-t border-gray-100" aria-hidden="true"></div>
+
+    <a
+      role="button"
+      tabindex="0"
+      class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 active:bg-gray-200"
+      (click)="goToMyProfile($event)"
+      (keydown.enter)="goToMyProfile($event)"
+      (keydown.space)="goToMyProfile($event)"
+    >
+      <app-icon name="icon-user" [class]="'h-4.5 w-4.5 text-gray-500'" />
+      My Profile
+    </a>
+
+    <div class="my-1 border-t border-gray-100" aria-hidden="true"></div>
+
+    <a
+      role="button"
+      tabindex="0"
+      class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
+      (click)="logoutRequested.emit()"
+      (keydown.enter)="logoutRequested.emit()"
+      (keydown.space)="logoutRequested.emit()"
+    >
+      <app-icon name="icon-logout" [class]="'h-4.5 w-4.5 text-red-500'" />
+      Logout
+    </a>
+  </div></div>

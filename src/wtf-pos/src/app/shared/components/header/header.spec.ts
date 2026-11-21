@@ -155,6 +155,23 @@ describe('HeaderComponent', () => {
     expect(el.textContent).toContain('Offline');
   });
 
+  it('keeps the style choice and the version inside the avatar menu', async () => {
+    const { el } = await setup();
+    const menuEl = el.querySelector('[data-user-info]')!.closest('.dropdown-content')!;
+
+    expect(el.querySelector('app-theme-switcher')).toBeNull();
+    expect(menuEl.querySelectorAll('[data-testid="menu-styles"] [role="radio"]').length).toBeGreaterThan(1);
+    expect(menuEl.querySelector('[data-testid="menu-version"]')!.className).not.toContain('sm:hidden');
+  });
+
+  it('applies a style picked in the avatar menu', async () => {
+    const { el } = await setup();
+
+    (el.querySelector('[data-testid="menu-style-cafe"]') as HTMLElement).click();
+
+    expect(document.documentElement.getAttribute('data-theme')).toBe('cafe');
+  });
+
   it('shows the app version', async () => {
     const { el } = await setup();
     expect(el.textContent).toMatch(/v\d+\.\d+\.\d+/);

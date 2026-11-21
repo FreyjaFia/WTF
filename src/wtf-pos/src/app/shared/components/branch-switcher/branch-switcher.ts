@@ -20,8 +20,8 @@ export class BranchSwitcherComponent {
       return;
     }
 
-    this.branchService.select(id);
-    // Every open screen holds one branch's data, so the app starts over on the new branch.
+    // Only the saved choice changes before the reload, so screens never show the new branch over the old data.
+    this.branchService.switchTo(id);
     window.location.reload();
   }
 }

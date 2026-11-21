@@ -253,6 +253,15 @@ describe('SidebarComponent', () => {
     expect(aside.classList).toContain('w-21');
   });
 
+  it('uses the same profile menu as the phone header, with the style choice inside it', async () => {
+    const { fixture } = await setup();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('app-profile-menu [data-testid="menu-styles"]')).not.toBeNull();
+    expect(el.querySelector('app-profile-menu [data-testid="menu-version"]')).not.toBeNull();
+    expect(el.querySelector('app-theme-switcher')).toBeNull();
+  });
+
   it('navigates to my profile', async () => {
     const { byText, navigate } = await setup();
     byText('a[role="button"]', 'My Profile')!.click();

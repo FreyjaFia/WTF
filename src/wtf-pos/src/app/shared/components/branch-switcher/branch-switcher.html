@@ -4,12 +4,13 @@
       type="button"
       tabindex="0"
       class="app-btn app-btn-ghost flex max-w-28 items-center gap-1.5 px-2 py-1.5 text-sm font-semibold text-gray-700 sm:max-w-56"
-      aria-label="Switch branch"
+      [attr.aria-label]="'Switch branch, current ' + branchService.activeLabel()"
+      [attr.title]="branchService.activeLabel()"
       data-testid="branch-switcher-button"
     >
       <app-icon name="icon-storefront" [class]="'h-4.5 w-4.5 shrink-0 text-gray-500'" />
       @if (!compact()) {
-        <span class="truncate">{{ branchService.activeLabel() }}</span>
+        <span class="truncate">{{ branchService.activeCode() }}</span>
       }
     </button>
     <ul

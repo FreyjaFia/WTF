@@ -20,7 +20,7 @@ import { IconComponent } from '@shared/components/icons/icon/icon';
 import { NeedsAttentionButtonComponent } from '@shared/components/needs-attention-button/needs-attention-button';
 import { NotificationBellComponent } from '@shared/components/notification-bell/notification-bell';
 import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
-import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
+import { ProfileMenuComponent } from '@shared/components/profile-menu/profile-menu';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { ordersNavSection } from '@shared/utils/orders-nav';
 import { filter, map } from 'rxjs';
@@ -38,7 +38,7 @@ import { filter, map } from 'rxjs';
     NeedsAttentionButtonComponent,
     NotificationBellComponent,
     StaffEnvelopeComponent,
-    ThemeSwitcherComponent,
+    ProfileMenuComponent,
   ],
   templateUrl: './sidebar.html',
 })

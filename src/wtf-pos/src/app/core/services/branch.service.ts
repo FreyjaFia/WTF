@@ -36,6 +36,9 @@ export class BranchService {
   public readonly activeBranch = computed<MyBranchDto | null>(
     () => this.branches().find((b) => b.id === this._activeId()) ?? null,
   );
+  public readonly activeCode = computed(() =>
+    this.isAllSelected() ? 'All' : (this.activeBranch()?.code ?? ""),
+  );
   public readonly activeLabel = computed(() =>
     this.isAllSelected() ? 'All branches' : (this.activeBranch()?.name ?? ''),
   );
@@ -52,6 +55,10 @@ export class BranchService {
       tap((mine) => this.apply(mine)),
       map(() => this._activeId()),
     );
+  }
+
+  public switchTo(id: string): void {
+    writeStored(id);
   }
 
   public select(id: string): void {
