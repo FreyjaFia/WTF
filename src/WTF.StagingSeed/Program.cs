@@ -217,6 +217,51 @@ async Task SeedMainShopAsync()
         addOnProducts[name] = await EnsureProductAsync(db, shopId, owner.Id, code, name, price, categories["Other"], null, false, true);
     }
 
+    // Some branches charge their own price for a few items (BGC a little more, Quezon City a little less on bakery); the rest keep the shop price
+    var branchPrices = new (string Branch, string Product, decimal Price)[]
+    {
+        ("BGC", "Latte", 150m),
+        ("BGC", "Cappuccino", 150m),
+        ("BGC", "Spanish Latte", 175m),
+        ("BGC", "Iced Latte", 155m),
+        ("BGC", "Matcha Latte", 170m),
+        ("BGC", "Chai Latte", 160m),
+        ("BGC", "Mango Smoothie", 170m),
+        ("BGC", "Chicken Pesto Panini", 225m),
+        ("BGC", "Basque Cheesecake Slice", 185m),
+        ("BGC", "Large", 35m),
+        ("BGC", "Extra Shot", 40m),
+        ("BGC", "Oat Milk", 45m),
+        ("QC", "Blueberry Muffin", 80m),
+        ("QC", "Brownie", 90m),
+        ("QC", "Mango Smoothie", 155m),
+    };
+    if (!await db.ProductBranchPrices.IgnoreQueryFilters().AnyAsync(p => p.TenantId == shopId))
+    {
+        var branchIdByCode = await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId).ToDictionaryAsync(b => b.Code, b => b.Id);
+        foreach (var (branchCode, productName, price) in branchPrices)
+        {
+            var priced = products.GetValueOrDefault(productName) ?? addOnProducts.GetValueOrDefault(productName);
+            if (priced is null || !branchIdByCode.TryGetValue(branchCode, out var priceBranchId))
+            {
+                continue;
+            }
+
+            db.ProductBranchPrices.Add(new ProductBranchPrice
+            {
+                Id = Guid.NewGuid(),
+                TenantId = shopId,
+                ProductId = priced.Id,
+                BranchId = priceBranchId,
+                Price = price,
+                CreatedAt = now.AddDays(-45),
+                CreatedBy = owner.Id,
+            });
+        }
+
+        added.Add("branch prices (BGC and Quezon City)");
+    }
+
     var drinksAddOns = new Dictionary<string, string[]>
     {
         ["Espresso"] = ["Size", "Extra"],
@@ -659,9 +704,12 @@ async Task SeedMainShopAsync()
     if (!await db.Orders.AnyAsync())
     {
         var vatRegistered = settings?.VatRegistered ?? false;
+        var branchPricing = await LoadBranchPricingAsync(db, shopId);
         var specs = new List<OrderSpec>
         {
             new("cash sale, 3 days ago", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -72, [new("Latte", 2, ["Large", "Vanilla"]), new("Croissant", 1, [])]),
+            new("BGC cash sale at the branch prices", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -26, [new("Latte", 1, ["Large", "Oat Milk"]), new("Cappuccino", 1, ["Medium"])], BranchCode: "BGC"),
+            new("BGC held order at the branch prices", "Will pick up after the meeting", OrderStatusEnum.Pending, null, "Ana", -1, [new("Spanish Latte", 2, []), new("Basque Cheesecake Slice", 1, [])], BranchCode: "BGC"),
             new("gcash sale, 2 days ago", "Paid by GCash, sent the receipt by message", OrderStatusEnum.Completed, PaymentMethodEnum.GCash, "Maria", -48, [new("Cappuccino", 1, ["Medium"]), new("Chocolate Cake Slice", 1, [])]),
             new("cash sale with tips", "Less ice please", OrderStatusEnum.Completed, PaymentMethodEnum.Cash, "Juan", -30, [new("Matcha Latte", 1, ["Large", "Iced", "Oat Milk"])], Tips: 20m),
             new("promo price on Latte", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, -24, [new("Latte", 1, ["Medium"], PromoPrice: 120m, PromoLabel: "Latte Happy Price")]),
@@ -683,7 +731,7 @@ async Task SeedMainShopAsync()
         var statusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
         foreach (var spec in specs.Where(s => statusIds.Contains((int)s.Status)).OrderBy(s => s.HoursAgo))
         {
-            AddOrder(db, spec, products, addOnProducts, customers, spec.FromLink ? owner : cashier, shopId, now, vatRegistered);
+            AddOrder(db, spec, products, addOnProducts, customers, spec.FromLink ? owner : cashier, shopId, now, vatRegistered, branchPricing);
             await db.SaveChangesAsync();
         }
 
@@ -786,15 +834,22 @@ async Task SeedMainShopAsync()
         };
 
         var statusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
+        var kitchenPricing = await LoadBranchPricingAsync(db, shopId);
         foreach (var spec in kitchenSpecs.Where(s => statusIds.Contains((int)s.Status)).OrderBy(s => s.HoursAgo).ThenBy(s => s.MinutesAgo))
         {
-            AddOrder(db, spec, products, addOnProducts, customers, spec.FromLink ? owner : cashier, shopId, now, vatRegistered);
+            AddOrder(db, spec, products, addOnProducts, customers, spec.FromLink ? owner : cashier, shopId, now, vatRegistered, kitchenPricing);
             await db.SaveChangesAsync();
         }
 
         added.Add($"{kitchenSpecs.Count} kitchen board orders (new, preparing, ready, changed, cancelled, served, left over)");
     }
 }
+
+static async Task<BranchPricing> LoadBranchPricingAsync(WTFDbContext db, Guid shopId) => new(
+    await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId).ToDictionaryAsync(b => b.Code, b => b.Id),
+    (await db.ProductBranchPrices.IgnoreQueryFilters().Where(p => p.TenantId == shopId).ToListAsync())
+        .GroupBy(p => p.BranchId)
+        .ToDictionary(g => g.Key, g => g.ToDictionary(p => p.ProductId, p => p.Price)));
 
 async Task SeedStarterShopAsync()
 {
@@ -1391,9 +1446,10 @@ async Task SeedBulkMainShopAsync(WTFDbContext db, User owner, User manager, User
         }
 
         var statusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
+        var bulkPricing = await LoadBranchPricingAsync(db, shopId);
         foreach (var spec in specs.Where(s => statusIds.Contains((int)s.Status)).OrderBy(s => s.HoursAgo))
         {
-            AddOrder(db, spec, products, addOnProducts, customersByName, Pick(cashiers), shopId, now, vatRegistered);
+            AddOrder(db, spec, products, addOnProducts, customersByName, Pick(cashiers), shopId, now, vatRegistered, bulkPricing);
             await db.SaveChangesAsync();
         }
 
@@ -1838,8 +1894,13 @@ static StockMovement Move(WTFDbContext db, Item item, string type, decimal delta
     return movement;
 }
 
-static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product> products, Dictionary<string, Product> addOns, Dictionary<string, Customer> customers, User creator, Guid tenantId, DateTime now, bool vatRegistered)
+static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Product> products, Dictionary<string, Product> addOns, Dictionary<string, Customer> customers, User creator, Guid tenantId, DateTime now, bool vatRegistered, BranchPricing? pricing = null)
 {
+    // A sale is priced the way its branch prices things: the branch the spec names, else the one its cashier works in
+    var orderBranchId = spec.BranchCode is not null && pricing is not null && pricing.BranchIds.TryGetValue(spec.BranchCode, out var specBranchId) ? specBranchId : creator.DefaultBranchId;
+    var branchPrices = orderBranchId is { } branchKey && pricing is not null && pricing.Prices.TryGetValue(branchKey, out var found) ? found : [];
+    decimal PriceIn(Product p) => branchPrices.GetValueOrDefault(p.Id, p.Price);
+
     var orderId = Guid.NewGuid();
     var createdAt = now.AddHours(spec.HoursAgo).AddMinutes(spec.MinutesAgo);
     var customer = spec.Customer is null ? null : customers[spec.Customer];
@@ -1851,7 +1912,7 @@ static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Produc
     foreach (var line in spec.Lines)
     {
         var product = products[line.Product];
-        var unitPrice = line.PromoPrice ?? product.Price;
+        var unitPrice = line.PromoPrice ?? PriceIn(product);
         var lineId = Guid.NewGuid();
         var lineItem = new OrderItem
         {
@@ -1860,7 +1921,7 @@ static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Produc
             ProductId = product.Id,
             Quantity = line.Quantity,
             Price = unitPrice,
-            OriginalPrice = line.PromoPrice is null ? null : product.Price,
+            OriginalPrice = line.PromoPrice is null ? null : PriceIn(product),
             PromoLabel = line.PromoLabel,
             SortOrder = sortOrder++,
             TenantId = tenantId,
@@ -1877,12 +1938,12 @@ static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Produc
                 OrderId = orderId,
                 ProductId = addOn.Id,
                 Quantity = 1,
-                Price = addOn.Price,
+                Price = PriceIn(addOn),
                 ParentOrderItemId = lineId,
                 SortOrder = sortOrder++,
                 TenantId = tenantId,
             });
-            addOnTotal += addOn.Price;
+            addOnTotal += PriceIn(addOn);
         }
 
         gross += (unitPrice + addOnTotal) * line.Quantity;
@@ -1958,7 +2019,7 @@ static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Produc
         CatalogSyncedAt = held is null ? null : createdAt.AddHours(-3),
         ReviewReasons = held is null ? null : string.Join("\n", held.Reasons.Where(r => r.Severity == ReviewSeverityEnum.Hold).Select(r => r.Text)),
         TenantId = tenantId,
-        BranchId = creator.DefaultBranchId ?? Guid.Empty,
+        BranchId = orderBranchId ?? Guid.Empty,
     };
     db.Orders.Add(order);
 
@@ -1986,6 +2047,8 @@ static Order AddOrder(WTFDbContext db, OrderSpec spec, Dictionary<string, Produc
     return order;
 }
 
+internal sealed record BranchPricing(Dictionary<string, Guid> BranchIds, Dictionary<Guid, Dictionary<Guid, decimal>> Prices);
+
 internal enum SeniorPwdKind : byte
 {
     Senior = 1,
@@ -2008,7 +2071,8 @@ internal sealed record OrderSpec(
     HeldSpec? Held = null,
     int MinutesAgo = 0,
     KitchenSpec? Kitchen = null,
-    string? Instructions = null);
+    string? Instructions = null,
+    string? BranchCode = null);
 
 internal sealed record KitchenSpec(
     KitchenState State,
