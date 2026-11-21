@@ -67,8 +67,13 @@ public static class ItemEndpoints
         itemGroup.MapGet("/{id:guid}/branch-settings",
             async (Guid id, ISender sender, ClaimsPrincipal user) =>
             {
-                var item = await sender.Send(new GetItemByIdQuery(id));
-                return item is not null ? Results.Ok(CostAccess.ForUser(item, user).BranchStocks ?? []) : Results.NotFound();
+                var rows = await sender.Send(new GetItemBranchSettingsQuery(id));
+                if (rows is null)
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Ok(CostAccess.CanReadCosts(user) ? rows : [.. rows.Select(s => s with { CostPrice = null })]);
             })
             .RequireAuthorization(AppPolicies.ItemsRead);
 

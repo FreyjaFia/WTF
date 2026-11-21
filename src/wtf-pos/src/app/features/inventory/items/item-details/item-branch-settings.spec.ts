@@ -30,13 +30,14 @@ function makeItem(): ItemDto {
 }
 
 describe('ItemBranchSettingsComponent', () => {
-  const inventory = { saveItemBranchSettings: vi.fn() };
+  const inventory = { saveItemBranchSettings: vi.fn(), getItemBranchSettings: vi.fn() };
   const alerts = { success: vi.fn(), error: vi.fn() };
   const auth = { canWriteItems: vi.fn(() => true), canReadInventoryCosts: vi.fn(() => true) };
 
   beforeEach(() => {
     vi.clearAllMocks();
     inventory.saveItemBranchSettings.mockReturnValue(of([]));
+    inventory.getItemBranchSettings.mockReturnValue(of(makeItem().branchStocks));
     TestBed.configureTestingModule({
       providers: [
         { provide: InventoryService, useValue: inventory },

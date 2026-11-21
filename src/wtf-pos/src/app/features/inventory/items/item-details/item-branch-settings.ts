@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AlertService, AuthService, InventoryService } from '@core/services';
 import { ItemBranchStockDto, ItemDto } from '@shared/models';
@@ -27,13 +36,20 @@ export class ItemBranchSettingsComponent {
 
   protected readonly rows = new FormArray<RowGroup>([]);
   protected readonly isSaving = signal(false);
-  protected readonly branches = computed(() => this.item().branchStocks ?? []);
+  protected readonly branches = signal<ItemBranchStockDto[]>([]);
   protected readonly canEdit = computed(() => this.authService.canWriteItems());
   protected readonly canSeeCosts = computed(() => this.authService.canReadInventoryCosts());
 
   public constructor() {
     effect(() => {
-      this.fill(this.branches());
+      const id = this.item().id;
+      this.inventoryService.getItemBranchSettings(id).subscribe({
+        next: (stocks) => {
+          this.branches.set(stocks);
+          this.fill(stocks);
+        },
+        error: (err) => this.alertService.error(err.message),
+      });
     });
   }
 
@@ -74,6 +90,7 @@ export class ItemBranchSettingsComponent {
       next: (stocks) => {
         this.isSaving.set(false);
         this.rows.markAsPristine();
+        this.branches.set(stocks);
         this.alertService.success('Branch settings saved.');
         this.saved.emit(stocks);
       },

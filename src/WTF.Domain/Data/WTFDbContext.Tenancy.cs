@@ -48,6 +48,8 @@ public partial class WTFDbContext
 
     public IReadOnlyCollection<Guid> VisibleBranchIds => _currentBranch.VisibleBranchIds;
 
+    public IReadOnlyCollection<Guid> AllowedBranchIds => _currentBranch.AllowedBranchIds;
+
     public Guid? ActiveBranchId => _currentBranch.ActiveBranchId;
 
     // False when the person is limited to some branches and this one is not among them (a transfer opens one exception).

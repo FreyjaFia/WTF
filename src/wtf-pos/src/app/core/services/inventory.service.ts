@@ -100,6 +100,12 @@ export class InventoryService {
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch item.')));
   }
 
+  public getItemBranchSettings(itemId: string): Observable<ItemBranchStockDto[]> {
+    return this.http
+      .get<ItemBranchStockDto[]>(`${this.baseUrl}/${itemId}/branch-settings`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to load the branch settings.')));
+  }
+
   public saveItemBranchSettings(itemId: string, rows: ItemBranchSettingInputDto[]): Observable<ItemBranchStockDto[]> {
     return this.http
       .put<ItemBranchStockDto[]>(`${this.baseUrl}/${itemId}/branch-settings`, rows)

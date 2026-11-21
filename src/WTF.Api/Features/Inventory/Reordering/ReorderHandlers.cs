@@ -32,13 +32,16 @@ public class GetReorderListHandler(WTFDbContext db) : IRequestHandler<GetReorder
                 i.UnitName,
                 CurrentQuantity = i.ItemBranchStocks.Sum(s => s.CurrentQuantity),
                 HasPar = i.ParLevel != null || i.ItemBranchStocks.Any(s => s.ParLevel != null),
-                ParTotal = i.ItemBranchStocks.Sum(s => s.ParLevel ?? i.ParLevel ?? 0m)
+                ShopPar = i.ParLevel,
+                BranchPars = i.ItemBranchStocks.Select(s => s.ParLevel).ToList()
             })
             .ToListAsync(cancellationToken);
 
         // The par level is what each branch should hold (its own, else the item's): working in one branch it is compared with that
         // branch, in "All branches" with the sum of the branches the person may see.
-        var withPar = items.Where(i => i.HasPar).ToList();
+        var withPar = items.Where(i => i.HasPar)
+            .Select(i => new { i.Id, i.Name, i.UnitName, i.CurrentQuantity, ParTotal = i.BranchPars.Sum(p => p ?? i.ShopPar ?? 0m) })
+            .ToList();
         var ids = withPar.Select(i => i.Id).ToList();
         var since = DateTime.UtcNow.AddDays(-days);
 

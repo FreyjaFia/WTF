@@ -1,84 +1,110 @@
-<div class="card rounded-xl bg-surface shadow-lg" data-testid="branch-settings">
-  <div class="card-body gap-4 p-6">
-    <div>
-      <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Settings by branch</p>
-      <p class="mt-1 text-sm text-gray-500">
-        Leave a box empty to use the shop value shown inside it.
-      </p>
-    </div>
+@if (branches().length > 1) {
+  <div class="card bg-surface rounded-xl shadow-lg" data-testid="branch-settings">
+    <div class="card-body gap-4 p-6">
+      <div>
+        <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+          Settings by branch
+        </p>
+        <p class="mt-1 text-sm text-gray-500">
+          Leave a box empty to use the shop value shown inside it.
+        </p>
+      </div>
 
-    <div class="space-y-4">
-      @for (row of rows.controls; track row.controls.branchId.value; let i = $index) {
-        <div class="rounded-lg border border-gray-100 p-3" data-testid="branch-settings-row" [formGroup]="row">
-          <p class="mb-3 text-sm font-semibold text-gray-800">
-            {{ branches()[i]?.branchName }}
-            <span class="ml-1 text-xs font-medium text-gray-400">{{ branches()[i]?.branchCode }}</span>
-          </p>
-          <div class="grid grid-cols-2 gap-3" [class.md:grid-cols-4]="canSeeCosts()" [class.md:grid-cols-3]="!canSeeCosts()">
-            <label class="flex flex-col gap-1 text-xs font-medium text-gray-500">
-              Warning level
-              <input
-                type="number"
-                step="any"
-                min="0"
-                formControlName="warningQuantity"
-                [placeholder]="shopLevel(item().warningQuantity)"
-                [attr.data-testid]="'branch-warning-' + branches()[i]?.branchCode"
-                class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
-              />
-            </label>
-            <label class="flex flex-col gap-1 text-xs font-medium text-gray-500">
-              Critical level
-              <input
-                type="number"
-                step="any"
-                min="0"
-                formControlName="criticalQuantity"
-                [placeholder]="shopLevel(item().criticalQuantity)"
-                [attr.data-testid]="'branch-critical-' + branches()[i]?.branchCode"
-                class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
-              />
-            </label>
-            <label class="flex flex-col gap-1 text-xs font-medium text-gray-500">
-              Par level
-              <input
-                type="number"
-                step="any"
-                min="0"
-                formControlName="parLevel"
-                [placeholder]="shopLevel(item().parLevel)"
-                [attr.data-testid]="'branch-par-' + branches()[i]?.branchCode"
-                class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
-              />
-            </label>
-            @if (canSeeCosts()) {
+      <div class="space-y-4">
+        @for (row of rows.controls; track row.controls.branchId.value; let i = $index) {
+          <div
+            class="rounded-lg border border-gray-100 p-3"
+            data-testid="branch-settings-row"
+            [formGroup]="row"
+          >
+            <p class="mb-3 text-sm font-semibold text-gray-800">
+              {{ branches()[i]?.branchName }}
+              <span class="ml-1 text-xs font-medium text-gray-400">{{
+                branches()[i]?.branchCode
+              }}</span>
+            </p>
+            <div
+              class="grid grid-cols-2 gap-3"
+              [class.md:grid-cols-4]="canSeeCosts()"
+              [class.md:grid-cols-3]="!canSeeCosts()"
+            >
               <label class="flex flex-col gap-1 text-xs font-medium text-gray-500">
-                Cost
+                Warning level
                 <input
                   type="number"
                   step="any"
                   min="0"
-                  formControlName="costPrice"
-                  [placeholder]="shopCost()"
-                  [attr.data-testid]="'branch-cost-' + branches()[i]?.branchCode"
-                  class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+                  formControlName="warningQuantity"
+                  [placeholder]="shopLevel(item().warningQuantity)"
+                  [attr.data-testid]="'branch-warning-' + branches()[i]?.branchCode"
+                  class="input focus:border-brand focus:bg-surface focus:ring-brand/20 w-full border-transparent bg-gray-50 transition-all focus:ring-1"
                 />
               </label>
-            }
+              <label class="flex flex-col gap-1 text-xs font-medium text-gray-500">
+                Critical level
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  formControlName="criticalQuantity"
+                  [placeholder]="shopLevel(item().criticalQuantity)"
+                  [attr.data-testid]="'branch-critical-' + branches()[i]?.branchCode"
+                  class="input focus:border-brand focus:bg-surface focus:ring-brand/20 w-full border-transparent bg-gray-50 transition-all focus:ring-1"
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-xs font-medium text-gray-500">
+                Par level
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  formControlName="parLevel"
+                  [placeholder]="shopLevel(item().parLevel)"
+                  [attr.data-testid]="'branch-par-' + branches()[i]?.branchCode"
+                  class="input focus:border-brand focus:bg-surface focus:ring-brand/20 w-full border-transparent bg-gray-50 transition-all focus:ring-1"
+                />
+              </label>
+              @if (canSeeCosts()) {
+                <label class="flex flex-col gap-1 text-xs font-medium text-gray-500">
+                  Cost
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    formControlName="costPrice"
+                    [placeholder]="shopCost()"
+                    [attr.data-testid]="'branch-cost-' + branches()[i]?.branchCode"
+                    class="input focus:border-brand focus:bg-surface focus:ring-brand/20 w-full border-transparent bg-gray-50 transition-all focus:ring-1"
+                  />
+                </label>
+              }
+            </div>
           </div>
+        }
+      </div>
+
+      @if (canEdit()) {
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="app-btn app-btn-ghost"
+            [disabled]="!isChanged() || isSaving()"
+            (click)="reset()"
+            data-testid="branch-settings-reset"
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            class="app-btn app-btn-primary"
+            [disabled]="!isChanged() || isSaving()"
+            (click)="save()"
+            data-testid="branch-settings-save"
+          >
+            {{ isSaving() ? 'Saving...' : 'Save' }}
+          </button>
         </div>
       }
     </div>
-
-    @if (canEdit()) {
-      <div class="flex justify-end gap-2">
-        <button type="button" class="app-btn app-btn-ghost" [disabled]="!isChanged() || isSaving()" (click)="reset()" data-testid="branch-settings-reset">
-          Reset
-        </button>
-        <button type="button" class="app-btn app-btn-primary" [disabled]="!isChanged() || isSaving()" (click)="save()" data-testid="branch-settings-save">
-          {{ isSaving() ? 'Saving...' : 'Save' }}
-        </button>
-      </div>
-    }
   </div>
-</div>
+}

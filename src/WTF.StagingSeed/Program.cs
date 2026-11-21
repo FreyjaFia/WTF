@@ -843,7 +843,64 @@ async Task SeedMainShopAsync()
 
         added.Add($"{kitchenSpecs.Count} kitchen board orders (new, preparing, ready, changed, cancelled, served, left over)");
     }
+
+    // Stock levels and costs that differ by branch: BGC is the busy one with a higher bar and a dearer supplier, Quezon City is small.
+    var branchRows = await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId).ToDictionaryAsync(b => b.Code, b => b.Id);
+    if (branchRows.TryGetValue("BGC", out var bgcId) && branchRows.TryGetValue("QC", out var qcId)
+        && !await db.ItemBranchStocks.IgnoreQueryFilters().AnyAsync(s => s.TenantId == shopId && (s.WarningQuantity != null || s.CostPrice != null)))
+    {
+        var branchSettings = new (string Item, Guid Branch, decimal? Warning, decimal? Critical, decimal? Par, decimal? Cost)[]
+        {
+            ("Espresso Beans", bgcId, 2000m, 800m, 3500m, 0.95m),
+            ("Fresh Milk", bgcId, 1200m, 500m, 3000m, 0.09m),
+            ("Espresso Beans", qcId, 600m, 250m, 1200m, 0.88m),
+            ("Fresh Milk", qcId, 400m, 150m, 900m, 0.082m),
+            ("Matcha Powder", qcId, 80m, 40m, 150m, null),
+        };
+        foreach (var (itemName, branchId, warning, critical, par, cost) in branchSettings)
+        {
+            var itemId = items[itemName].Id;
+            var stock = await db.ItemBranchStocks.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.ItemId == itemId && s.BranchId == branchId);
+            if (stock is null)
+            {
+                continue;
+            }
+
+            stock.WarningQuantity = warning;
+            stock.CriticalQuantity = critical;
+            stock.ParLevel = par;
+            stock.CostPrice = cost;
+        }
+
+        await db.SaveChangesAsync();
+        added.Add("stock levels and costs set per branch (BGC and Quezon City)");
+    }
+
+    // One kitchen board per branch: BGC and Quezon City get their own orders to make.
+    if (branchRows.ContainsKey("BGC") && !await db.Orders.IgnoreQueryFilters().AnyAsync(o => o.TenantId == shopId && o.KitchenStatus != null && o.BranchId == branchRows["BGC"]))
+    {
+        var vatForBranches = settings?.VatRegistered ?? false;
+        var branchKitchenSpecs = new List<OrderSpec>
+        {
+            new("BGC kitchen new, pickup", null, OrderStatusEnum.Pending, null, "Ana", 0, [new("Spanish Latte", 2, []), new("Croissant", 1, [])], MinutesAgo: -3, Instructions: "Name on the cup: Bea", BranchCode: "BGC", Kitchen: new(KitchenState.New)),
+            new("BGC kitchen preparing, prepaid", null, OrderStatusEnum.Completed, PaymentMethodEnum.GCash, null, 0, [new("Cappuccino", 1, ["Medium", "Iced"]), new("Basque Cheesecake Slice", 1, [])], MinutesAgo: -8, BranchCode: "BGC", Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 2)),
+            new("BGC kitchen ready", null, OrderStatusEnum.Pending, null, "Juan", 0, [new("Latte", 1, ["Large", "Hot"])], MinutesAgo: -11, BranchCode: "BGC", Kitchen: new(KitchenState.Ready, StartedMinutesAfter: 1, ReadyMinutesAfter: 5)),
+            new("Quezon City kitchen new", null, OrderStatusEnum.Pending, null, "Maria", 0, [new("Iced Americano", 2, ["Large"])], MinutesAgo: -4, BranchCode: "QC", Kitchen: new(KitchenState.New)),
+            new("Quezon City kitchen preparing", null, OrderStatusEnum.Completed, PaymentMethodEnum.Cash, null, 0, [new("Matcha Latte", 1, ["Medium", "Iced"]), new("Croissant", 2, [])], MinutesAgo: -9, BranchCode: "QC", Kitchen: new(KitchenState.Preparing, StartedMinutesAfter: 2)),
+        };
+
+        var branchStatusIds = await db.Statuses.Select(s => s.Id).ToListAsync();
+        var branchKitchenPricing = await LoadBranchPricingAsync(db, shopId);
+        foreach (var spec in branchKitchenSpecs.Where(s => branchStatusIds.Contains((int)s.Status)))
+        {
+            AddOrder(db, spec, products, addOnProducts, customers, cashier, shopId, now, vatForBranches, branchKitchenPricing);
+            await db.SaveChangesAsync();
+        }
+
+        added.Add($"{branchKitchenSpecs.Count} kitchen board orders at BGC and Quezon City");
+    }
 }
+
 
 static async Task<BranchPricing> LoadBranchPricingAsync(WTFDbContext db, Guid shopId) => new(
     await db.Branches.IgnoreQueryFilters().Where(b => b.TenantId == shopId).ToDictionaryAsync(b => b.Code, b => b.Id),

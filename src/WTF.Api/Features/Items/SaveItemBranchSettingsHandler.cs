@@ -109,8 +109,10 @@ public class SaveItemBranchSettingsHandler(
 
     public static async Task<List<ItemBranchStockDto>> LoadAsync(WTFDbContext db, Item item, CancellationToken cancellationToken)
     {
+        // The settings of every branch the person may use, whichever one they are working in.
         var stocks = await db.ItemBranchStocks.AsNoTracking()
-            .Where(s => s.ItemId == item.Id)
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+            .Where(s => s.ItemId == item.Id && s.Branch.IsActive && (!db.BranchFilterEnabled || db.AllowedBranchIds.Contains(s.BranchId)))
             .Include(s => s.Branch)
             .ToListAsync(cancellationToken);
 
@@ -136,5 +138,16 @@ public class SaveItemBranchSettingsHandler(
         {
             throw new InvalidOperationException("The critical level cannot be above the warning level.");
         }
+    }
+}
+
+public record GetItemBranchSettingsQuery(Guid ItemId) : IRequest<List<ItemBranchStockDto>?>;
+
+public class GetItemBranchSettingsHandler(WTFDbContext db) : IRequestHandler<GetItemBranchSettingsQuery, List<ItemBranchStockDto>?>
+{
+    public async Task<List<ItemBranchStockDto>?> Handle(GetItemBranchSettingsQuery request, CancellationToken cancellationToken)
+    {
+        var item = await db.Items.AsNoTracking().FirstOrDefaultAsync(i => i.Id == request.ItemId, cancellationToken);
+        return item is null ? null : await SaveItemBranchSettingsHandler.LoadAsync(db, item, cancellationToken);
     }
 }

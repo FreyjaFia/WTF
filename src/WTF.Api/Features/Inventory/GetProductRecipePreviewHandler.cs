@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Features.Inventory.DTOs;
 using WTF.Api.Features.Catalog;
+using WTF.Api.Features.Inventory.DTOs;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 

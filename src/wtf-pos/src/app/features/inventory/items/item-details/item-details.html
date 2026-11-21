@@ -288,7 +288,7 @@
         </div>
       </div>
 
-      @if (branchService.isMultiBranch() && (item()!.branchStocks?.length ?? 0) > 1) {
+      @if (branchService.isMultiBranch()) {
         <div class="mt-4">
           <app-item-branch-settings [item]="item()!" (saved)="loadItem(item()!.id)" />
         </div>
