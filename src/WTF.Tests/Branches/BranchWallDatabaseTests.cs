@@ -171,7 +171,8 @@ public class BranchWallDatabaseTests
         using var db = TestDb.Create();
         foreach (var entityType in db.Model.GetEntityTypes())
         {
-            var hasBranchId = entityType.FindProperty(nameof(IBranchOwned.BranchId)) is not null && entityType.ClrType != typeof(UserBranch);
+            // ProductBranch lists the branches a product is sold at, so every branch must be able to read all of its rows.
+            var hasBranchId = entityType.FindProperty(nameof(IBranchOwned.BranchId)) is not null && entityType.ClrType != typeof(UserBranch) && entityType.ClrType != typeof(ProductBranch);
             var isOwned = typeof(IBranchOwned).IsAssignableFrom(entityType.ClrType);
             isOwned.ShouldBe(hasBranchId, $"{entityType.ClrType.Name}: a BranchId column and IBranchOwned must go together");
 

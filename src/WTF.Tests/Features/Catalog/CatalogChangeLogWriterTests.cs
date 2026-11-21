@@ -273,7 +273,7 @@ public class CatalogChangeLogWriterTests
         [
             "UploadProductImageCommand", "RemoveProductImageCommand", "AssignProductAddOnsCommand", "AssignAddOnProductsCommand",
             "SetProductAddOnDefaultCommand", "UploadPromotionImageCommand", "RemovePromotionImageCommand",
-            "UploadBrandLogoCommand", "RemoveBrandLogoCommand",
+            "UploadBrandLogoCommand", "RemoveBrandLogoCommand", "SaveProductSoldAtCommand",
         ];
         string[] features = ["WTF.Api.Features.Products", "WTF.Api.Features.Promotions", "WTF.Api.Features.Branding"];
 

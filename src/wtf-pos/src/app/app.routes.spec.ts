@@ -160,7 +160,8 @@ describe('app.routes', () => {
     expect(writes.length).toBeGreaterThan(8);
     for (const { fullPath, route } of writes) {
       const permission = route.data?.['permission'] as string | undefined;
-      expect(permission, `write route "${fullPath}"`).toBeDefined();
+      const anyPermission = route.data?.['anyPermission'] as string[] | undefined;
+      expect(permission ?? anyPermission?.[0], `write route "${fullPath}"`).toBeDefined();
       expect(rolesAllowedBy(route), `write route "${fullPath}"`).not.toContain(AppRoles.AdminViewer);
     }
   });

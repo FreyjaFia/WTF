@@ -41,6 +41,22 @@ public sealed class GetPosBundlesHandler(WTFDbContext db, IHttpContextAccessor h
             .OrderBy(p => p.Name)
             .ToListAsync(cancellationToken);
 
+        // A bundle needs every product in it, so a bundle with one the branch does not sell is hidden there. A mix and match
+        // keeps the products the branch sells and is hidden when none is left.
+        var branchId = await BranchPriceLookup.BranchForNewOrderAsync(db, null, cancellationToken);
+        var notSoldHere = await ProductBranchLookup.NotSoldAtAsync(db, tenantFeatures, branchId, cancellationToken);
+        if (notSoldHere.Count > 0)
+        {
+            promotions = [.. promotions.Where(p => p.FixedBundlePromotion is null || !p.FixedBundlePromotion.FixedBundlePromotionItems.Any(i =>
+                notSoldHere.Contains(i.ProductId) || i.FixedBundlePromotionItemAddOns.Any(a => notSoldHere.Contains(a.AddOnProductId))))];
+            foreach (var mixMatch in promotions.Select(p => p.MixMatchPromotion).OfType<Domain.Entities.MixMatchPromotion>())
+            {
+                mixMatch.MixMatchPromotionProducts = [.. mixMatch.MixMatchPromotionProducts.Where(i => !notSoldHere.Contains(i.ProductId))];
+            }
+
+            promotions = [.. promotions.Where(p => p.MixMatchPromotion is null || p.MixMatchPromotion.MixMatchPromotionProducts.Count > 0)];
+        }
+
         var used = await PromotionUsage.CountAsync(db, [.. promotions.Select(p => p.Id)], null, cancellationToken);
 
         return new PosBundlesDto(

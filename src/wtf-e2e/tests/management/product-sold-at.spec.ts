@@ -84,7 +84,7 @@ test.describe('products sold at some branches @management @branches', () => {
       const created = await api.client.call('owner', 'POST', 'products', {
         body: { name, code: unique('SP').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(-8), price: 99, category: 1, isAddOn: false, isActive: true, subCategory: null, soldAtBranchIds: [branch.id] },
       });
-      expect(created.status(), await created.text()).toBe(200);
+      expect(created.ok(), await created.text()).toBe(true);
       const { id, soldAtBranchIds } = (await created.json()) as { id: string; soldAtBranchIds: string[] };
       expect(soldAtBranchIds).toEqual([branch.id]);
 
@@ -139,7 +139,7 @@ test.describe('products sold at some branches @management @branches', () => {
         await page.getByTestId(`sold-at-filter-${main.id}`).click();
         await page.screenshot({ path: `${SHOTS}/list-filter-${viewport.width}.png` });
         await page.keyboard.press('Escape');
-        await page.getByPlaceholder('Search by product name').fill(product.name);
+        await page.getByRole('searchbox', { name: 'Search' }).fill(product.name);
         await expect(page.getByTestId(`sold-at-chip-${await codeOf(api, product.id)}`)).toHaveCount(0);
 
         await page.getByRole('button', { name: /^Filters/ }).click();

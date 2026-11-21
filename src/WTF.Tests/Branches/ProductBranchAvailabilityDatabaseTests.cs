@@ -4,6 +4,8 @@ using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products;
+using WTF.Api.Features.Promotions;
+using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Features.Sync;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -226,5 +228,32 @@ public class ProductBranchAvailabilityDatabaseTests
         var limited = await new GetPagedProductsHandler(db, TestRequest.As(shop.UserId, AppRoles.Owner))
             .Handle(new GetPagedProductsQuery(IsAddOn: false, LimitedOnly: true), default);
         limited.Items.Select(p => p.Id).ShouldBe([shop.Special, shop.Pair], ignoreOrder: true);
+    }
+
+    [SqlFact]
+    public async Task TheBundles_HideWhatTheBranchCannotFullySell()
+    {
+        var shop = await OpenShopAsync();
+        await using var _ = shop.Database;
+        await using (var seed = shop.Database.CreateContext())
+        {
+            var duo = new Promotion { Id = Guid.NewGuid(), Name = "Latte and Special", TypeId = PromotionTypeIds.FixedBundle, IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = shop.UserId };
+            duo.FixedBundlePromotion = new FixedBundlePromotion { PromotionId = duo.Id, BundlePrice = 300m };
+            duo.FixedBundlePromotion.FixedBundlePromotionItems.Add(new FixedBundlePromotionItem { Id = Guid.NewGuid(), FixedBundlePromotionId = duo.Id, ProductId = shop.Latte, Quantity = 1 });
+            duo.FixedBundlePromotion.FixedBundlePromotionItems.Add(new FixedBundlePromotionItem { Id = Guid.NewGuid(), FixedBundlePromotionId = duo.Id, ProductId = shop.Special, Quantity = 1 });
+            seed.Promotions.Add(duo);
+            await seed.SaveChangesAsync();
+        }
+
+        async Task<int> BundlesAtAsync(Guid branch)
+        {
+            await using var db = In(shop, branch);
+            var bundles = await new GetPosBundlesHandler(db, TestRequest.As(shop.UserId, AppRoles.Cashier), TestFakes.Features)
+                .Handle(new GetPosBundlesQuery(), CancellationToken.None);
+            return bundles.FixedBundles.Count;
+        }
+
+        (await BundlesAtAsync(shop.Cebu)).ShouldBe(1);
+        (await BundlesAtAsync(shop.Makati)).ShouldBe(0);
     }
 }

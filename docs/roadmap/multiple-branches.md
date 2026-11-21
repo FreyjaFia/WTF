@@ -630,11 +630,42 @@ Main), and the UAT refresh plan.
 
 Decisions: (a) open and offline orders keep the price they captured; a completed order never changes; (b) the All branches view shows the shop price plus the per-branch table; (c) promotions and discounts apply on the branch price; (d) a per-parent add-on override beats the branch price; (e) offline review uses the branch price as of the sale (via the catalog change log); a change to another branch's price is not reported as a stale price; (f) recipe cost and margin screens still use the shop price. Checked: unit and database tests, Playwright `tests/management/branch-prices.spec.ts` (API and the three viewports 375/820/1440, screenshots viewed). The real `.\SQLEXPRESS` run of the script and `tools/dbsync.bat` are still to do on the laptop (scaffold entity files were matched by hand, from a cloud throwaway database).
 
-## Products per branch: recommendation (21 Nov 2026, not built)
+## Products per branch (built 21 Nov 2026)
 
-Products stay shop-wide and owned by Owner/Admin. Add an optional "Sold at" list per product (`ProductBranches`; no row
-means all branches). A branch manager may create branch-only products with a `products.write.branch` key. Put it under
-the `branches` plan feature. It touches the catalog, POS, offline catalog and permissions, so it is a phase of its own.
+Products stay shop-wide and owned by Owner/Admin. Each product has an optional "Sold at" list: no row means every branch
+(also branches opened later), rows mean only those branches, and a branch-only product is one row. It is part of the
+`branches` plan feature; a shop without it sells every product everywhere and ignores any rows.
+
+Built: table `ProductBranches` (`tools/sql/20270103_add_product_branches.sql`, `ProductId` + `BranchId`, unique, no
+backfill), `ProductAvailability` in WTF.Calculations (with the Angular mirror `product-availability.ts`),
+`ProductBranchLookup` (the one place that reads the rows and checks the plan). The POS catalog (and so the offline
+catalog), the add-ons in it and the public ordering page list only what the branch sells; the public submit refuses a
+product the link's branch does not sell. `GET/PUT /api/products/{id}/sold-at`; `POST /api/products` takes
+`soldAtBranchIds`. The product list filters by branch or "limited" (filters drawer, counts in the chips) and shows a chip
+on limited products; the editor has a Sold At card; the details page lists the branches. New key
+`products.write.branch` (Admin has it; custom roles can be given it), policy `ProductsWriteScoped` on the routes that
+change one product. A person limited to some branches never has shop-wide product power: with the key they create
+products for their own branches and change the ones limited to their branches already. Selling everywhere, products sold
+elsewhere, categories and add-on links of an add-on stay with Owner and anyone who works in every branch. Staging seed: a
+BGC-only pandesal, a Quezon City-only barako and a tumbler sold at Makati and BGC, with two orders.
+
+Questions and choices (decided with the recommendation):
+
+| Question | Chose |
+| --- | --- |
+| Rows mean "sold here" or "not sold here" (the plan had `IsAvailable`)? | Row existence means sold here, no `IsAvailable` column; fewer states, and "no row = all" stays true. A branch opened later does not get a limited product until someone ticks it |
+| Do open orders, held orders and offline sales of a product later limited stop working? | No. Only the menus (POS catalog, offline catalog, public page) change. Create, edit, sync and void never refuse a product for being not sold here, so a sale already made always saves. The offline review adds no note for it either |
+| Who counts as a branch manager? | Not a new role: any person limited to some branches who holds `products.write.branch`. Admin has the key |
+| Which products may a branch manager change? | Only products that have rows and every row is one of their branches. Products sold everywhere or partly elsewhere are read-only to them (details hide Edit, the API answers 403) |
+| Can a branch manager make a product sold everywhere? | No, only someone who works in every branch (the owner) |
+| New products start as | Owner: every branch unless branches are ticked. Branch manager: their active branch, or the branches they tick |
+| Names unique? | Product codes stay unique across the shop (already so); names are not enforced, as before |
+| Promotions | Not limited by branch in this cut. A promotion on a product a branch does not sell simply never applies there |
+| Kitchen, reports, orders | Unchanged: they read orders, which keep their products |
+| Add-ons | An add-on is a product, so it has "Sold at" too; the product-side list of add-ons in the POS drops the ones the branch does not sell |
+| Plan downgrade | Rows are kept but ignored without the `branches` feature. A limited Admin loses the key with the feature and can then only read products |
+| Add-on to products assignment (`POST /addons/{id}/products`) | Stays with `products.write` (shop-wide) because it changes shop products |
+| Not done | Price override per limited product is the existing branch price; scheduled availability and "sold out here" stay later ideas |
 
 Known limits of the per-branch work: hub group membership is fixed at connect; the Voids and Senior/PWD report "Order"
 columns still show `#N`; the recipe cost shows the shop cost in All branches mode.
