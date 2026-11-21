@@ -72,8 +72,7 @@ Goal: one owner, several locations, with their own stock, orders and staff, and 
   `AuditLog` (optional filter), and the cash/shift records when they exist.
 - **Shared across branches** (one catalog, edited once): products, categories, add-ons, promotions, customers, loyalty,
   images. **Per branch:** orders, inventory quantities, stock movements, order numbers, staff assignments, receipt header.
-- Optional later: per-branch price override or "not sold here" flag on a product (`ProductBranches`). Not in the first
-  cut; ask before building, because it changes how every price and the offline catalog are worked out.
+- Per-branch price override: built (21 Nov 2026), see [multiple-branches](multiple-branches.md). A "not sold here" flag is still not built.
 
 **Inventory.** `Items` stay shared as a definition (name, unit, SKU), but `CurrentQuantity` moves to `ItemBranchStock`
 (`ItemId`, `BranchId`, `CurrentQuantity`, warning and critical levels, `AllowNegativeStock`). Stock movements carry the
@@ -287,7 +286,7 @@ app always runs with a current tenant, even when there is only one. Keep this po
 
 **Open questions for the owner**
 
-- Is a branch allowed to have its own prices or its own menu, or is the catalog always the same everywhere?
+- Answered 21 Nov 2026: a branch may have its own price for a product or add-on (blank means the shop price). Its own menu ("not sold here") is still open.
 - Do branches share one cash drawer concept, or does each branch close its own day (assumed: each branch closes its own day)?
 - Should customers be shared across branches (assumed yes, with loyalty points usable at any branch)?
 - Should one login be able to work for two different shops (assumed no)?
