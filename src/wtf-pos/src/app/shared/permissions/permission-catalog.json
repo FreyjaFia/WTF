@@ -127,6 +127,16 @@
       ]
     },
     {
+      "key": "products.write.branch",
+      "area": "Menu",
+      "label": "Add and edit branch products",
+      "description": "Create products sold only at the branches you work in and change them. Products sold at other branches, or everywhere, stay with the shop-wide editors.",
+      "feature": "branches",
+      "requires": [
+        "products.read"
+      ]
+    },
+    {
       "key": "items.read",
       "area": "Inventory",
       "label": "View items",
@@ -405,6 +415,7 @@
       "customers.write",
       "products.read",
       "products.write",
+      "products.write.branch",
       "items.read",
       "items.write",
       "inventory.costs.read",
@@ -450,6 +461,7 @@
       "customers.write",
       "products.read",
       "products.write",
+      "products.write.branch",
       "items.read",
       "items.write",
       "inventory.costs.read",
@@ -547,6 +559,10 @@
     ],
     "ProductsWrite": [
       "products.write"
+    ],
+    "ProductsWriteScoped": [
+      "products.write",
+      "products.write.branch"
     ],
     "UsersRead": [
       "users.read"

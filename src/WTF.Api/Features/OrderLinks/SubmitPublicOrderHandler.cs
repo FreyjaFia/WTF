@@ -397,6 +397,12 @@ public class SubmitPublicOrderHandler(
             throw new InvalidOperationException(unavailable);
         }
 
+        var notSoldHere = await ProductBranchLookup.NotSoldAtAsync(db, tenantFeatures, linkBranchId, cancellationToken);
+        if (ids.Any(notSoldHere.Contains))
+        {
+            throw new InvalidOperationException(unavailable);
+        }
+
         // A main item must be something the shop sells on its own, never an add-on.
         if (parentIds.Any(id => products[id].IsAddOn))
         {

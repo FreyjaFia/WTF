@@ -207,7 +207,7 @@ public class CatalogHistoryTests
     [Fact]
     public async Task Create_RecordsTheStartingValues_AndACreatedRow()
     {
-        await new CreateProductHandler(TestDb.Create(_dbName), TestRequest.As(_user), TestFakes.Audit())
+        await new CreateProductHandler(TestDb.Create(_dbName), TestRequest.As(_user), TestFakes.Audit(), TestFakes.Features)
             .Handle(new CreateProductCommand { Name = "Latte", Code = "LAT", Price = 90m, Category = CatalogSeed.Drink }, default);
 
         await using var db = TestDb.Create(_dbName);

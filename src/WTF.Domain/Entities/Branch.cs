@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace WTF.Domain.Entities;
 
 public partial class Branch
@@ -60,6 +57,8 @@ public partial class Branch
     public virtual ICollection<ItemBranchStock> ItemBranchStocks { get; set; } = new List<ItemBranchStock>();
 
     public virtual ICollection<ProductBranchPrice> ProductBranchPrices { get; set; } = new List<ProductBranchPrice>();
+
+    public virtual ICollection<ProductBranch> ProductBranches { get; set; } = new List<ProductBranch>();
 
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

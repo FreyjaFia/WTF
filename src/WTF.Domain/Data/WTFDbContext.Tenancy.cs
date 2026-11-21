@@ -46,6 +46,8 @@ public partial class WTFDbContext
 
     public bool BranchFilterEnabled => _currentBranch.FilterEnabled;
 
+    public bool IsBranchLimited => _currentBranch.WriteCheckEnabled;
+
     public IReadOnlyCollection<Guid> VisibleBranchIds => _currentBranch.VisibleBranchIds;
 
     public IReadOnlyCollection<Guid> AllowedBranchIds => _currentBranch.AllowedBranchIds;

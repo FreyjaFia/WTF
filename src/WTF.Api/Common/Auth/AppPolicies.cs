@@ -10,6 +10,7 @@ public static class AppPolicies
     public const string BrandManage = "BrandManage";
     public const string ProductsRead = "ProductsRead";
     public const string ProductsWrite = "ProductsWrite";
+    public const string ProductsWriteScoped = "ProductsWriteScoped";
     public const string UsersRead = "UsersRead";
     public const string UsersWrite = "UsersWrite";
     public const string RolesRead = "RolesRead";

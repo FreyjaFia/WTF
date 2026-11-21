@@ -1,10 +1,14 @@
 using MediatR;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using WTF.Api.Common.Auth;
 using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Services;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -37,13 +41,17 @@ public record CreateProductCommand : IRequest<ProductDto>
     public bool IsSeniorPwdEligible { get; init; } = true;
 
     public int? SubCategory { get; init; }
+
+    public List<Guid>? SoldAtBranchIds { get; init; }
 }
 
-public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<CreateProductCommand, ProductDto>
+public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, ITenantFeatures tenantFeatures) : IRequestHandler<CreateProductCommand, ProductDto>
 {
     public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
-        var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        var user = httpContextAccessor.HttpContext!.User;
+        var userId = user.GetUserId();
+        var soldAt = await ResolveSoldAtAsync(request.SoldAtBranchIds, user, cancellationToken);
         var normalizedCode = ProductValidation.NormalizeCode(request.Code);
 
         await ProductValidation.EnsureValidCategoryAsync(db, request.Category, request.SubCategory, null, null, cancellationToken);
@@ -66,6 +74,13 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         };
 
         db.Products.Add(product);
+        db.ProductBranches.AddRange(soldAt.Select(branchId => new ProductBranch
+        {
+            ProductId = product.Id,
+            BranchId = branchId,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId
+        }));
         CatalogChangeRecorder.RecordProduct(db, product, userId);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -82,11 +97,39 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
                 product.SubCategoryId,
                 product.IsAddOn,
                 product.IsActive,
-                product.IsSeniorPwdEligible
+                product.IsSeniorPwdEligible,
+                SoldAtBranchIds = soldAt
             },
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return ProductMapping.ToDto(product, null, new List<ProductPriceHistoryDto>());
+        return ProductMapping.ToDto(product, null, new List<ProductPriceHistoryDto>(), soldAtBranchIds: soldAt);
+    }
+
+    // An empty answer means sold at every branch. A person limited to some branches always creates a branch product.
+    private async Task<List<Guid>> ResolveSoldAtAsync(List<Guid>? requested, ClaimsPrincipal user, CancellationToken cancellationToken)
+    {
+        var branchesOn = await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Branches, cancellationToken);
+        if (ProductWriteScope.IsShopWide(db, user))
+        {
+            var ids = branchesOn ? (requested ?? []).Distinct().ToList() : [];
+            if (ids.Count > 0)
+            {
+                await ProductSoldAtRules.EnsureValidAsync(db, ids, cancellationToken);
+            }
+
+            return ids;
+        }
+
+        if (!ProductWriteScope.HasBranchKey(user))
+        {
+            throw new ForbiddenActionException(ProductWriteScope.NotYoursMessage);
+        }
+
+        var branchIds = requested is { Count: > 0 }
+            ? requested.Distinct().ToList()
+            : db.ActiveBranchId is { } active ? [active] : [];
+        await ProductSoldAtRules.EnsureValidAsync(db, branchIds, cancellationToken);
+        return branchIds;
     }
 }

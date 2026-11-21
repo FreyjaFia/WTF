@@ -1,7 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.DTOs;
+using WTF.Api.Common.Orders;
+using WTF.Api.Features.Branches;
 using WTF.Api.Features.Products.DTOs;
+using WTF.Calculations.Catalog;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -15,7 +18,9 @@ public sealed record GetPagedProductsQuery(
     string? SortBy = null,
     string? SortDirection = null,
     int Page = 1,
-    int PageSize = 25) : IRequest<PagedResultDto<ProductDto>>;
+    int PageSize = 25,
+    Guid? SoldAtBranchId = null,
+    bool? LimitedOnly = null) : IRequest<PagedResultDto<ProductDto>>;
 
 public sealed class GetPagedProductsHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<GetPagedProductsQuery, PagedResultDto<ProductDto>>
@@ -60,7 +65,30 @@ public sealed class GetPagedProductsHandler(WTFDbContext db, IHttpContextAccesso
             facets[$"category:{count.CategoryId}"] = count.Count;
         }
 
-        var query = categories is null ? withStatus : withStatus.Where(p => categories.Contains(p.CategoryId));
+        var filtered = categories is null ? withStatus : withStatus.Where(p => categories.Contains(p.CategoryId));
+
+        // "Sold at" chips count with every filter except their own. A product with no branch rows is sold everywhere.
+        var soldAt = await ProductBranchLookup.SoldAtAsync(db, null, cancellationToken);
+        var visibleIds = await filtered.Select(p => p.Id).ToListAsync(cancellationToken);
+        facets["soldat:limited"] = visibleIds.Count(id => soldAt.ContainsKey(id));
+        var shopBranchIds = await BranchRules.AllOfShop(db).Where(b => b.IsActive).Select(b => b.Id).ToListAsync(cancellationToken);
+        foreach (var branchId in shopBranchIds)
+        {
+            facets[$"soldat:{branchId}"] = visibleIds.Count(id => ProductAvailability.IsSoldAt(soldAt.GetValueOrDefault(id) ?? [], branchId));
+        }
+
+        var query = filtered;
+        if (request.SoldAtBranchId is { } soldAtBranch)
+        {
+            query = query.Where(p => !db.ProductBranches.Any(x => x.ProductId == p.Id)
+                || db.ProductBranches.Any(x => x.ProductId == p.Id && x.BranchId == soldAtBranch));
+        }
+
+        if (request.LimitedOnly == true)
+        {
+            query = query.Where(p => db.ProductBranches.Any(x => x.ProductId == p.Id));
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
         if (totalCount == 0)
         {

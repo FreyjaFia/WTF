@@ -10,7 +10,7 @@ namespace WTF.Tests.Database;
 public class ProductDatabaseTests
 {
     private static CreateProductHandler Create(WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId), TestFakes.Audit());
+        new(db, TestRequest.As(userId), TestFakes.Audit(), TestFakes.Features);
 
     private static CreateProductCommand NewProduct(string code, string name = "Latte") => new()
     {

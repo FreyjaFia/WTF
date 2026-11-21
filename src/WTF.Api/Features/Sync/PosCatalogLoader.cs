@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Catalog;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
@@ -14,11 +15,12 @@ namespace WTF.Api.Features.Sync;
 internal static class PosCatalogLoader
 {
     public static async Task<List<ProductDto>> LoadProductsAsync(
-        WTFDbContext db, IHttpContextAccessor httpContextAccessor, Guid branchId, CancellationToken cancellationToken)
+        WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures, Guid branchId, CancellationToken cancellationToken)
     {
         var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, null, cancellationToken);
+        var notSoldHere = await ProductBranchLookup.NotSoldAtAsync(db, tenantFeatures, branchId, cancellationToken);
         var products = await db.Products
-            .Where(p => !p.IsAddOn && p.IsActive)
+            .Where(p => !p.IsAddOn && p.IsActive && !notSoldHere.Contains(p.Id))
             .Include(p => p.ProductImage)
                 .ThenInclude(pi => pi!.Image)
             .OrderBy(p => p.Name)
@@ -51,10 +53,11 @@ internal static class PosCatalogLoader
     }
 
     public static async Task<Dictionary<Guid, List<AddOnGroupDto>>> LoadAddOnsByProductIdAsync(
-        WTFDbContext db, IHttpContextAccessor httpContextAccessor,
+        WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures,
         List<ProductDto> products, Guid branchId, CancellationToken cancellationToken)
     {
         var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, null, cancellationToken);
+        var notSoldHere = await ProductBranchLookup.NotSoldAtAsync(db, tenantFeatures, branchId, cancellationToken);
         var productIds = products.Select(p => p.Id).ToList();
 
         var allAddOns = await db.ProductAddOns
@@ -64,7 +67,7 @@ internal static class PosCatalogLoader
                 .ThenInclude(a => a.ProductImage)
                     .ThenInclude(pi => pi!.Image)
             .Include(pa => pa.ProductAddOnPriceOverride)
-            .Where(pa => pa.AddOn.IsActive)
+            .Where(pa => pa.AddOn.IsActive && !notSoldHere.Contains(pa.AddOnId))
             .Select(pa => new
             {
                 pa.ProductId,

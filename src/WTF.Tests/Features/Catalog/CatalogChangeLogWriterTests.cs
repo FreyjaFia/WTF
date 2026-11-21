@@ -79,7 +79,7 @@ public class CatalogChangeLogWriterTests
 
     public static TheoryData<WriteCase> Cases() =>
     [
-        new("CreateProduct", async e => await new CreateProductHandler(e.Context(), e.Http(), TestFakes.Audit())
+        new("CreateProduct", async e => await new CreateProductHandler(e.Context(), e.Http(), TestFakes.Audit(), TestFakes.Features)
             .Handle(new CreateProductCommand { Name = "Latte", Code = "LAT", Price = 90m, Category = CatalogSeed.Drink }, default),
             CatalogEntityTypes.Product, nameof(Product.Price)),
 

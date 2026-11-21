@@ -35,9 +35,9 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        var products = await PosCatalogLoader.LoadProductsAsync(db, httpContextAccessor, access.Link.BranchId, cancellationToken);
+        var products = await PosCatalogLoader.LoadProductsAsync(db, httpContextAccessor, tenantFeatures, access.Link.BranchId, cancellationToken);
         var addOns = await PosCatalogLoader.LoadAddOnsByProductIdAsync(
-            db, httpContextAccessor, products, access.Link.BranchId, cancellationToken);
+            db, httpContextAccessor, tenantFeatures, products, access.Link.BranchId, cancellationToken);
 
         var deals = await LoadDealsAsync(products, cancellationToken);
 

@@ -5,7 +5,7 @@ namespace WTF.Api.Features.Products;
 
 internal static class ProductMapping
 {
-    public static ProductDto ToDto(Product product, string? imageUrl, List<ProductPriceHistoryDto> priceHistory, int addOnCount = 0, decimal? overridePrice = null)
+    public static ProductDto ToDto(Product product, string? imageUrl, List<ProductPriceHistoryDto> priceHistory, int addOnCount = 0, decimal? overridePrice = null, List<Guid>? soldAtBranchIds = null)
     {
         return new ProductDto(
             product.Id,
@@ -25,7 +25,8 @@ internal static class ProductMapping
             priceHistory,
             addOnCount,
             overridePrice,
-            product.IsSeniorPwdEligible
+            product.IsSeniorPwdEligible,
+            soldAtBranchIds is { Count: > 0 } ? soldAtBranchIds : null
         );
     }
 

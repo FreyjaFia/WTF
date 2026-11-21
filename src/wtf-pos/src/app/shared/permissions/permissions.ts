@@ -16,6 +16,7 @@ export const Permissions = {
   CustomersWrite: 'customers.write',
   ProductsRead: 'products.read',
   ProductsWrite: 'products.write',
+  ProductsWriteBranch: 'products.write.branch',
   ItemsRead: 'items.read',
   ItemsWrite: 'items.write',
   InventoryCostsRead: 'inventory.costs.read',

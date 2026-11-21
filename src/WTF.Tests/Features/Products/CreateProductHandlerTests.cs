@@ -13,7 +13,7 @@ public class CreateProductHandlerTests
     private readonly string _dbName = TestDb.NewName();
     private readonly IAuditService _audit = TestFakes.Audit();
 
-    private CreateProductHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_userId), _audit);
+    private CreateProductHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_userId), _audit, TestFakes.Features);
 
     [Fact]
     public async Task Handle_ValidProduct_IsSavedWithNormalizedCodeAndAudited()

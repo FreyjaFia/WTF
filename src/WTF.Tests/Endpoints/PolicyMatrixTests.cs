@@ -15,6 +15,7 @@ public class PolicyMatrixTests : IDisposable
     {
         [AppPolicies.ProductsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
         [AppPolicies.ProductsWrite] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.ProductsWriteScoped] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.UsersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
         [AppPolicies.UsersWrite] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.RolesRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],

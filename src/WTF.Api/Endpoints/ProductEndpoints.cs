@@ -6,6 +6,7 @@ using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Products;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Services;
+using WTF.Calculations.Subscriptions;
 
 namespace WTF.Api.Endpoints;
 
@@ -140,7 +141,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return Results.CreatedAtRoute("GetProductById", new { id = result.Id }, result);
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped);
 
         // PUT /api/products/{id} - Update product
         productGroup.MapPut("/{id:guid}",
@@ -154,7 +155,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // DELETE /api/products/{id} - Soft delete product
         productGroup.MapDelete("/{id:guid}",
@@ -163,7 +165,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(new DeleteProductCommand(id));
                 return result ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // POST /api/products/{id}/restore - Restore soft deleted product
         productGroup.MapPost("/{id:guid}/restore",
@@ -172,7 +175,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(new RestoreProductCommand(id));
                 return result ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // GET /api/products/{id}/price-history - Get price history for a product
         productGroup.MapGet("/{id:guid}/price-history",
@@ -204,7 +208,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result ? Results.Ok() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // PUT /api/products/{id}/addons/{addOnId}/default - Pre-select (or clear) an option of a required add-on type
         productGroup.MapPut("/{id:guid}/addons/{addOnId:guid}/default",
@@ -213,7 +218,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(new SetProductAddOnDefaultCommand { ProductId = id, AddOnId = addOnId, IsDefault = body.IsDefault });
                 return result ? Results.Ok() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // GET /api/products/{id}/branch-prices - The price each branch charges (blank means the shop price)
         productGroup.MapGet("/{id:guid}/branch-prices",
@@ -231,7 +237,28 @@ public static class ProductEndpoints
                 var result = await sender.Send(new SaveProductBranchPricesCommand(id, body));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
+
+        // GET /api/products/{id}/sold-at - The branches that sell the product (all of them unless it is limited)
+        productGroup.MapGet("/{id:guid}/sold-at",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductSoldAtQuery(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ProductsRead)
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Branches));
+
+        // PUT /api/products/{id}/sold-at - Sell the product at every branch, or only at the chosen ones
+        productGroup.MapPut("/{id:guid}/sold-at",
+            async (Guid id, ProductSoldAtInputDto body, ISender sender) =>
+            {
+                var result = await sender.Send(new SaveProductSoldAtCommand(id, body.IsAllBranches, body.BranchIds));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Branches));
 
         // GET /api/products/{id}/addon-price-overrides - Get add-on price overrides for product
         productGroup.MapGet("/{id:guid}/addon-price-overrides",
@@ -254,7 +281,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // PUT /api/products/{id}/addon-price-overrides/{addOnId} - Update add-on price override
         productGroup.MapPut("/{id:guid}/addon-price-overrides/{addOnId:guid}",
@@ -268,7 +296,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // DELETE /api/products/{id}/addon-price-overrides/{addOnId} - Delete add-on price override
         productGroup.MapDelete("/{id:guid}/addon-price-overrides/{addOnId:guid}",
@@ -277,7 +306,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(new DeleteProductAddOnPriceOverrideCommand(id, addOnId));
                 return result ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // GET /api/products/addons/{addOnId}/products - Get products that use this add-on (reverse lookup)
         productGroup.MapGet("/addons/{addOnId:guid}/products",
@@ -319,7 +349,8 @@ public static class ProductEndpoints
 
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite)
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"))
             .WithMetadata(new RequestSizeLimitAttribute(ImageUploads.RequestLimit))
             .DisableAntiforgery();
 
@@ -330,7 +361,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(new RemoveProductImageCommand(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
+            .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         return app;
     }

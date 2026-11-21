@@ -176,7 +176,7 @@ public class BranchPriceDatabaseTests
         async Task<PosCatalogDtoView> CatalogAsync(Guid branch)
         {
             await using var db = In(shop, branch);
-            var catalog = await new GetPosCatalogHandler(db, TestRequest.As(shop.UserId, AppRoles.Cashier)).Handle(new GetPosCatalogQuery(), CancellationToken.None);
+            var catalog = await new GetPosCatalogHandler(db, TestRequest.As(shop.UserId, AppRoles.Cashier), TestFakes.Features).Handle(new GetPosCatalogQuery(), CancellationToken.None);
             var add = catalog.AddOnsByProductId[shop.Latte].SelectMany(g => g.Options).ToDictionary(i => i.Id, i => i.Price);
             return new PosCatalogDtoView(catalog.Products.Single(p => p.Id == shop.Latte).Price, add[shop.OatMilk], add[shop.Syrup]);
         }

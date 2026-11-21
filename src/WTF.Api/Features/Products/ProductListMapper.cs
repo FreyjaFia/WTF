@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -16,6 +17,7 @@ internal static class ProductListMapper
         CancellationToken cancellationToken)
     {
         var productIds = products.Select(p => p.Id).ToList();
+        var soldAt = await ProductBranchLookup.SoldAtAsync(db, productIds, cancellationToken);
         var addOnCountByProductId = new Dictionary<Guid, int>();
         var linkedProductCountByAddOnId = new Dictionary<Guid, int>();
 
@@ -71,7 +73,7 @@ internal static class ProductListMapper
                 addOnCountByProductId.TryGetValue(p.Id, out count);
             }
 
-            return ProductMapping.ToDto(p, imageUrl, new List<ProductPriceHistoryDto>(), count);
+            return ProductMapping.ToDto(p, imageUrl, new List<ProductPriceHistoryDto>(), count, soldAtBranchIds: soldAt.GetValueOrDefault(p.Id));
         })];
     }
 }

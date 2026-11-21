@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace WTF.Domain.Entities;
+﻿namespace WTF.Domain.Entities;
 
 public partial class Tenant
 {
@@ -84,6 +81,8 @@ public partial class Tenant
     public virtual ICollection<ProductAddOn> ProductAddOns { get; set; } = new List<ProductAddOn>();
 
     public virtual ICollection<ProductBranchPrice> ProductBranchPrices { get; set; } = new List<ProductBranchPrice>();
+
+    public virtual ICollection<ProductBranch> ProductBranches { get; set; } = new List<ProductBranch>();
 
     public virtual ICollection<ProductCategory> ProductCategories { get; set; } = new List<ProductCategory>();
 

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
 
@@ -44,6 +45,8 @@ public class GetProductByIdHandler(WTFDbContext db, IHttpContextAccessor httpCon
             ))
             .ToListAsync(cancellationToken);
 
-        return ProductMapping.ToDto(product, imageUrl, priceHistory);
+        var soldAt = await ProductBranchLookup.SoldAtAsync(db, [product.Id], cancellationToken);
+
+        return ProductMapping.ToDto(product, imageUrl, priceHistory, soldAtBranchIds: soldAt.GetValueOrDefault(product.Id));
     }
 }

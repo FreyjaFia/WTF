@@ -20,6 +20,7 @@ public static class SystemRolePermissions
             "customers.write",
             "products.read",
             "products.write",
+            PermissionKeys.ProductsWriteBranch,
             "items.read",
             "items.write",
             "inventory.costs.read",

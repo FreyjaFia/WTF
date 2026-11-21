@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace WTF.Domain.Entities;
+﻿namespace WTF.Domain.Entities;
 
 public partial class Product
 {
@@ -62,6 +59,8 @@ public partial class Product
     public virtual ProductImage? ProductImage { get; set; }
 
     public virtual ICollection<ProductBranchPrice> ProductBranchPrices { get; set; } = new List<ProductBranchPrice>();
+
+    public virtual ICollection<ProductBranch> ProductBranches { get; set; } = new List<ProductBranch>();
 
     public virtual ICollection<ProductItemLink> ProductItemLinks { get; set; } = new List<ProductItemLink>();
 

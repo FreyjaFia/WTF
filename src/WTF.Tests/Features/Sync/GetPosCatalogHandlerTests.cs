@@ -71,7 +71,7 @@ public class GetPosCatalogHandlerTests
     }
 
     private Task<WTF.Api.Features.Sync.DTOs.PosCatalogDto> Run(Microsoft.AspNetCore.Http.IHttpContextAccessor? accessor = null) =>
-        new GetPosCatalogHandler(TestDb.Create(_db), accessor ?? TestRequest.None())
+        new GetPosCatalogHandler(TestDb.Create(_db), accessor ?? TestRequest.None(), TestFakes.Features)
             .Handle(new GetPosCatalogQuery(), CancellationToken.None);
 
     [Fact]

@@ -12,14 +12,14 @@ namespace WTF.Api.Features.Sync;
 
 public record GetPosCatalogQuery : IRequest<PosCatalogDto>;
 
-public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetPosCatalogQuery, PosCatalogDto>
+public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures) : IRequestHandler<GetPosCatalogQuery, PosCatalogDto>
 {
     public async Task<PosCatalogDto> Handle(GetPosCatalogQuery request, CancellationToken cancellationToken)
     {
         var branchId = await BranchPriceLookup.BranchForNewOrderAsync(db, null, cancellationToken);
-        var products = await PosCatalogLoader.LoadProductsAsync(db, httpContextAccessor, branchId, cancellationToken);
+        var products = await PosCatalogLoader.LoadProductsAsync(db, httpContextAccessor, tenantFeatures, branchId, cancellationToken);
         var addOnsByProductId = await PosCatalogLoader.LoadAddOnsByProductIdAsync(
-            db, httpContextAccessor, products, branchId, cancellationToken);
+            db, httpContextAccessor, tenantFeatures, products, branchId, cancellationToken);
         var customers = await LoadCustomersAsync(cancellationToken);
 
         var lookups = await CatalogLookupLoader.LoadAsync(db, cancellationToken);
