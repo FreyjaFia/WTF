@@ -44,6 +44,12 @@ public class SharedCasesTests
 
     private sealed record PercentCase(string Name, decimal Part, decimal Total, decimal Expected);
 
+    private sealed record OrderLabelCase(string Name, int OrderNumber, string? BranchCode, bool ShowBranch, string Expected);
+
+    private sealed record BranchItemCostCase(string Name, decimal? BranchCost, decimal? AverageCost, decimal? CostPrice, decimal? Expected);
+
+    private sealed record BranchLevelCase(string Name, decimal? BranchLevel, decimal? ShopLevel, decimal? Expected);
+
     private sealed record ScheduleCase(string Name, byte? DaysOfWeek, string? StartTime, string? EndTime, string Local, bool Expected);
 
     private sealed record ReceiptLineCase(
@@ -86,6 +92,9 @@ public class SharedCasesTests
         List<BestDiscountCase> BestDiscount,
         List<AverageCase> Average,
         List<PercentCase> PercentOfTotal,
+        List<OrderLabelCase> OrderLabels,
+        List<BranchItemCostCase> BranchItemCost,
+        List<BranchLevelCase> BranchLevel,
         List<CashCase> CashPayment,
         List<ScheduleCase> ScheduleOpen,
         List<AdjustmentCase> StockAdjustment,
@@ -231,6 +240,12 @@ public class SharedCasesTests
     public static IEnumerable<object[]> AverageCaseNames() => Loaded.Value.Average.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> PercentCaseNames() => Loaded.Value.PercentOfTotal.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> OrderLabelCaseNames() => Loaded.Value.OrderLabels.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> BranchItemCostCaseNames() => Loaded.Value.BranchItemCost.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> BranchLevelCaseNames() => Loaded.Value.BranchLevel.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> CashCaseNames() => Loaded.Value.CashPayment.Select(c => new object[] { c.Name });
 
@@ -624,6 +639,33 @@ public class SharedCasesTests
         var c = Loaded.Value.PercentOfTotal.Single(x => x.Name == name);
 
         Math.Round(SalesRules.PercentOfTotal(c.Part, c.Total), 4).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(OrderLabelCaseNames))]
+    public void OrderLabel_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.OrderLabels.Single(x => x.Name == name);
+
+        OrderLabels.Number(c.OrderNumber, c.BranchCode, c.ShowBranch).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(BranchItemCostCaseNames))]
+    public void BranchItemCost_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.BranchItemCost.Single(x => x.Name == name);
+
+        CostRules.BranchMovementCost(c.BranchCost, c.AverageCost, c.CostPrice).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(BranchLevelCaseNames))]
+    public void BranchLevel_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.BranchLevel.Single(x => x.Name == name);
+
+        BranchStockRules.Level(c.BranchLevel, c.ShopLevel).ShouldBe(c.Expected);
     }
 
     [Theory]

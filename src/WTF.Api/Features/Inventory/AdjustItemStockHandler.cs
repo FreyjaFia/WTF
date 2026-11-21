@@ -104,7 +104,7 @@ public class AdjustItemStockHandler(
             QuantityDelta = delta,
             QuantityBefore = applied.Before,
             QuantityAfter = applied.After,
-            UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+            UnitCost = (await BranchItemSettings.LoadAsync(db, item, branchId, cancellationToken)).UnitCost,
             Notes = notes is null ? reason : $"{reason}: {notes}",
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId

@@ -62,11 +62,11 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
     }
 
     private static readonly System.Linq.Expressions.Expression<Func<Item, bool>> IsCritical =
-        i => i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity);
+        i => i.ItemBranchStocks.Any(s => (s.CriticalQuantity ?? i.CriticalQuantity) != null && s.CurrentQuantity <= (s.CriticalQuantity ?? i.CriticalQuantity));
 
     private static readonly System.Linq.Expressions.Expression<Func<Item, bool>> IsWarning =
-        i => !(i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
-            && i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity);
+        i => !(i.ItemBranchStocks.Any(s => (s.CriticalQuantity ?? i.CriticalQuantity) != null && s.CurrentQuantity <= (s.CriticalQuantity ?? i.CriticalQuantity)))
+            && i.ItemBranchStocks.Any(s => (s.WarningQuantity ?? i.WarningQuantity) != null && s.CurrentQuantity <= (s.WarningQuantity ?? i.WarningQuantity));
 
     private static IQueryable<Item> ApplySearch(IQueryable<Item> query, string? searchTerm)
     {
@@ -103,13 +103,13 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
         var critical = chosen.Contains(Critical);
 
         return query.Where(i =>
-            (critical && i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
+            (critical && i.ItemBranchStocks.Any(s => (s.CriticalQuantity ?? i.CriticalQuantity) != null && s.CurrentQuantity <= (s.CriticalQuantity ?? i.CriticalQuantity)))
             || (warning
-                && !(i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
-                && i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity))
+                && !(i.ItemBranchStocks.Any(s => (s.CriticalQuantity ?? i.CriticalQuantity) != null && s.CurrentQuantity <= (s.CriticalQuantity ?? i.CriticalQuantity)))
+                && i.ItemBranchStocks.Any(s => (s.WarningQuantity ?? i.WarningQuantity) != null && s.CurrentQuantity <= (s.WarningQuantity ?? i.WarningQuantity)))
             || (ok
-                && !(i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity))
-                && !(i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity))));
+                && !(i.ItemBranchStocks.Any(s => (s.CriticalQuantity ?? i.CriticalQuantity) != null && s.CurrentQuantity <= (s.CriticalQuantity ?? i.CriticalQuantity)))
+                && !(i.ItemBranchStocks.Any(s => (s.WarningQuantity ?? i.WarningQuantity) != null && s.CurrentQuantity <= (s.WarningQuantity ?? i.WarningQuantity)))));
     }
 
     private static IQueryable<Item> ApplySort(IQueryable<Item> query, GetPagedItemsQuery request)
@@ -132,7 +132,7 @@ public sealed class GetPagedItemsHandler(WTFDbContext db)
 
     // Critical first, then warning, then ok, as the status column has always sorted.
     private static readonly System.Linq.Expressions.Expression<Func<Item, int>> StatusRank =
-        i => i.CriticalQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.CriticalQuantity) ? 0
-            : i.WarningQuantity != null && i.ItemBranchStocks.Any(s => s.CurrentQuantity <= i.WarningQuantity) ? 1
+        i => i.ItemBranchStocks.Any(s => (s.CriticalQuantity ?? i.CriticalQuantity) != null && s.CurrentQuantity <= (s.CriticalQuantity ?? i.CriticalQuantity)) ? 0
+            : i.ItemBranchStocks.Any(s => (s.WarningQuantity ?? i.WarningQuantity) != null && s.CurrentQuantity <= (s.WarningQuantity ?? i.WarningQuantity)) ? 1
             : 2;
 }

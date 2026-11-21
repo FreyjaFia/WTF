@@ -102,7 +102,7 @@ public class CreateStockTransferHandler(
         foreach (var line in lines.OrderBy(l => items[l.ItemId].Name))
         {
             var item = items[line.ItemId];
-            var cost = CostRules.MovementCost(item.AverageCost, item.CostPrice);
+            var cost = (await BranchItemSettings.LoadAsync(db, item, from.Id, cancellationToken)).UnitCost;
 
             var taken = await StockBalance.ApplyAsync(db, item.Id, from.Id, -line.Quantity, false, cancellationToken)
                 ?? throw new InvalidOperationException(await ShortMessageAsync(item, from, line.Quantity, cancellationToken));

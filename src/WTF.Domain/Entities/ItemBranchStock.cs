@@ -19,6 +19,14 @@ public partial class ItemBranchStock
 
     public DateTime UpdatedAt { get; set; }
 
+    public decimal? WarningQuantity { get; set; }
+
+    public decimal? CriticalQuantity { get; set; }
+
+    public decimal? ParLevel { get; set; }
+
+    public decimal? CostPrice { get; set; }
+
     public virtual Branch Branch { get; set; } = null!;
 
     public virtual Item Item { get; set; } = null!;

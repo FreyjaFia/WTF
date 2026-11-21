@@ -9,13 +9,13 @@ public class DashboardHub : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubNames.Groups.DashboardViewers(HubNames.Groups.TenantOf(Context.User)));
+        await BranchGroups.JoinAsync(this, HubNames.Groups.DashboardViewers, true);
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, HubNames.Groups.DashboardViewers(HubNames.Groups.TenantOf(Context.User)));
+        await BranchGroups.JoinAsync(this, HubNames.Groups.DashboardViewers, false);
         await base.OnDisconnectedAsync(exception);
     }
 }

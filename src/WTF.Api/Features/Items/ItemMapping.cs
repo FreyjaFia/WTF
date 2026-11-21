@@ -61,14 +61,23 @@ internal static class ItemMapping
             item.AverageCost,
             item.YieldPercent,
             CostRules.UsableCost(CostRules.MovementCost(item.AverageCost, item.CostPrice), item.YieldPercent),
-            [.. item.ItemBranchStocks
-                .OrderByDescending(s => s.Branch.IsMain)
-                .ThenBy(s => s.Branch.Name)
-                .Select(s => new ItemBranchStockDto(
-                    s.BranchId,
-                    s.Branch.Code,
-                    s.Branch.Name,
-                    s.CurrentQuantity,
-                    StockRules.StatusFor(s.CurrentQuantity, item.WarningQuantity, item.CriticalQuantity).ToString().ToLowerInvariant()))]);
+            [.. BranchStocks(item, item.ItemBranchStocks)]);
+    }
+
+    public static IEnumerable<ItemBranchStockDto> BranchStocks(Item item, IEnumerable<ItemBranchStock> stocks)
+    {
+        return stocks
+            .OrderByDescending(s => s.Branch.IsMain)
+            .ThenBy(s => s.Branch.Name)
+            .Select(s => new ItemBranchStockDto(
+                s.BranchId,
+                s.Branch.Code,
+                s.Branch.Name,
+                s.CurrentQuantity,
+                StockRules.StatusFor(s.CurrentQuantity, s.WarningQuantity ?? item.WarningQuantity, s.CriticalQuantity ?? item.CriticalQuantity).ToString().ToLowerInvariant(),
+                s.WarningQuantity,
+                s.CriticalQuantity,
+                s.ParLevel,
+                s.CostPrice));
     }
 }

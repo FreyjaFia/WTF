@@ -56,6 +56,8 @@ public class RouteTableTests : IDisposable
         "DELETE /api/items/{id:guid} => ItemsWrite",
         "GET /api/items/{id:guid} => ItemsRead",
         "PUT /api/items/{id:guid} => ItemsWrite",
+        "GET /api/items/{id:guid}/branch-settings => ItemsRead",
+        "PUT /api/items/{id:guid}/branch-settings => ItemsWrite",
         "PUT /api/items/{id:guid}/product-links => ItemsWrite",
         "POST /api/items/{id:guid}/restore => ItemsWrite",
         "POST /api/items/{id:guid}/stock => StockMovementsWrite",

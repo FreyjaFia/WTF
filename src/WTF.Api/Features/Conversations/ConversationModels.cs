@@ -127,6 +127,8 @@ public static class ConversationRules
 
     public static string OrderTitle(int orderNumber) => $"Order #{orderNumber}";
 
+    public static string OrderTitle(string orderLabel) => $"Order {orderLabel}";
+
     /// <summary>Chat is for orders placed through a customer link, and is open while they are waiting or accepted.</summary>
     public static bool IsChatOpen(Order order) =>
         order.Source == (byte)OrderSourceEnum.CustomerLink

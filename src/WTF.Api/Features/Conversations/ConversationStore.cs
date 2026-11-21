@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -10,6 +12,13 @@ internal static class ConversationStore
 {
     private const byte CustomerSender = (byte)MessageSender.Customer;
     private const byte StaffSender = (byte)MessageSender.Staff;
+
+    public static async Task<string> TitleAsync(WTFDbContext db, Order order, string stored, CancellationToken cancellationToken)
+    {
+        return await OrderLabelLookup.IsMultiBranchAsync(db, cancellationToken)
+            ? ConversationRules.OrderTitle(await OrderLabelLookup.LabelAsync(db, order, cancellationToken))
+            : stored;
+    }
 
     public static Task<Conversation?> FindForOrderAsync(WTFDbContext db, Guid orderId, CancellationToken cancellationToken) =>
         db.Conversations.FirstOrDefaultAsync(
@@ -224,7 +233,14 @@ internal static class ConversationStore
             query = query.Where(c => c.CustomerId == forCustomerId.Value);
         }
 
+        if (!forCustomerId.HasValue)
+        {
+            // Staff only see the chats of orders in the branches they may see.
+            query = query.Where(c => !db.BranchFilterEnabled || (c.Order != null && db.VisibleBranchIds.Contains(c.Order.BranchId)));
+        }
+
         var isCustomerView = forCustomerId.HasValue;
+        var multiBranch = await OrderLabelLookup.IsMultiBranchAsync(db, cancellationToken);
         var rows = await query
             .Select(c => new
             {
@@ -233,6 +249,7 @@ internal static class ConversationStore
                 c.Title,
                 c.LastMessageAt,
                 OrderNumber = c.Order != null ? (int?)c.Order.OrderNumber : null,
+                BranchCode = c.Order != null ? c.Order.Branch.Code : null,
                 CustomerName = c.Customer.FirstName + " " + c.Customer.LastName,
                 Unread = c.ConversationMessages.Count(m => m.SenderType == unreadFrom
                     && (isCustomerView ? m.ReadByCustomerAt == null : m.ReadByStaffAt == null)),
@@ -256,7 +273,7 @@ internal static class ConversationStore
                 r.Id,
                 r.OrderId,
                 r.OrderNumber,
-                r.Title,
+                multiBranch && r.OrderNumber.HasValue ? ConversationRules.OrderTitle(OrderLabels.Number(r.OrderNumber.Value, r.BranchCode, true)) : r.Title,
                 forCustomerId.HasValue ? null : r.CustomerName.Trim(),
                 r.Last == null ? string.Empty : ConversationRules.PreviewOf(r.Last.Body, r.Last.HasImage, r.Last.Removed),
                 r.Last == null ? string.Empty : ConversationRules.SenderName((MessageSender)r.Last.SenderType),

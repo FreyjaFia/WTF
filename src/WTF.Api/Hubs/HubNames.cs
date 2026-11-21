@@ -6,11 +6,11 @@ public static class HubNames
 {
     public static class Groups
     {
-        /// <summary>People who may open the dashboard, of one tenant. A null or empty tenant means the first tenant.</summary>
-        public static string DashboardViewers(Guid? tenantId) => TenantGroup(tenantId, "DashboardViewers");
+        /// <summary>People who may open the dashboard and can see one branch (the kitchen board and the order list refresh on it).</summary>
+        public static string DashboardViewers(Guid? tenantId, Guid branchId) => BranchGroup(tenantId, "DashboardViewers", branchId);
 
         /// <summary>Staff who can read orders: where chat messages are announced.</summary>
-        public static string StaffOrders(Guid? tenantId) => TenantGroup(tenantId, "StaffOrders");
+        public static string StaffOrders(Guid? tenantId, Guid branchId) => BranchGroup(tenantId, "StaffOrders", branchId);
 
         /// <summary>People who look after stock: told when an item's stock changes.</summary>
         public static string StockViewers(Guid? tenantId) => TenantGroup(tenantId, "StockViewers");
@@ -25,6 +25,8 @@ public static class HubNames
         {
             return Guid.TryParse(user?.FindFirst(TenantDefaults.ClaimType)?.Value, out var id) ? id : null;
         }
+
+        private static string BranchGroup(Guid? tenantId, string name, Guid branchId) => $"{TenantGroup(tenantId, name)}:b{branchId:N}";
 
         private static string TenantGroup(Guid? tenantId, string name)
         {

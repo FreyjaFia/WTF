@@ -50,7 +50,8 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
                 continue;
             }
 
-            var current = StockRules.StatusFor(stock.CurrentQuantity, item.WarningQuantity, item.CriticalQuantity);
+            var levels = BranchItemSettings.For(item, stock);
+            var current = StockRules.StatusFor(stock.CurrentQuantity, levels.WarningQuantity, levels.CriticalQuantity);
             var decision = StockAlertRules.Decide((StockStatus)stock.LastAlertStatus, current);
             if ((byte)decision.Remember == stock.LastAlertStatus)
             {
@@ -63,7 +64,7 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
                 continue;
             }
 
-            await NotifyAsync(item, stock.CurrentQuantity, branchId, branchLabel, current, cancellationToken);
+            await NotifyAsync(item, stock.CurrentQuantity, branchId, branchLabel, current, levels, cancellationToken);
         }
     }
 
@@ -110,7 +111,7 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
         return rows > 0;
     }
 
-    private async Task NotifyAsync(Item item, decimal quantity, Guid branchId, string? branchLabel, StockStatus status, CancellationToken cancellationToken)
+    private async Task NotifyAsync(Item item, decimal quantity, Guid branchId, string? branchLabel, StockStatus status, BranchItemSettings levels, CancellationToken cancellationToken)
     {
         var recipients = await ResolveRecipientsAsync(db, item.Id, branchId, cancellationToken);
         if (recipients.Count == 0)
@@ -118,7 +119,7 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
             return;
         }
 
-        var (title, body) = StockAlertMessages.For(item, quantity, status, branchLabel);
+        var (title, body) = StockAlertMessages.For(item, quantity, status, branchLabel, levels);
         await notifications.NotifyAsync(recipients, StockAlertMessages.Message(item, quantity, branchId, status, title, body), cancellationToken);
     }
 
@@ -180,7 +181,7 @@ public static class StockAlertKey
 
 public static class StockAlertMessages
 {
-    public static (string Title, string Body) For(Item item, decimal quantity, StockStatus status, string? branchName = null)
+    public static (string Title, string Body) For(Item item, decimal quantity, StockStatus status, string? branchName = null, BranchItemSettings? levels = null)
     {
         var unit = InventoryUnitLabels.Abbreviate(item.UnitName);
         var left = $"{Format(quantity)} {unit}";
@@ -188,8 +189,8 @@ public static class StockAlertMessages
 
         return status switch
         {
-            StockStatus.Warning => ($"Low stock: {item.Name}{where}", $"{left} left. The warning level is {Format(item.WarningQuantity ?? 0)} {unit}."),
-            StockStatus.Critical => ($"Critically low: {item.Name}{where}", $"{left} left. The critical level is {Format(item.CriticalQuantity ?? 0)} {unit}."),
+            StockStatus.Warning => ($"Low stock: {item.Name}{where}", $"{left} left. The warning level is {Format(levels?.WarningQuantity ?? item.WarningQuantity ?? 0)} {unit}."),
+            StockStatus.Critical => ($"Critically low: {item.Name}{where}", $"{left} left. The critical level is {Format(levels?.CriticalQuantity ?? item.CriticalQuantity ?? 0)} {unit}."),
             _ when quantity < 0 => ($"Below zero: {item.Name}{where}", $"{left}. Count it and correct the stock."),
             _ => ($"Out of stock: {item.Name}{where}", "None left.")
         };
@@ -205,9 +206,9 @@ public static class StockAlertMessages
             StockAlertKey.For(item.Id, branchId),
             $"{{\"status\":{(int)status},\"quantity\":{quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)},\"branchId\":\"{branchId}\"}}");
 
-    public static (string Title, string Body) Reminder(Item item, decimal quantity, StockStatus status, int day, string? branchName = null)
+    public static (string Title, string Body) Reminder(Item item, decimal quantity, StockStatus status, int day, string? branchName = null, BranchItemSettings? levels = null)
     {
-        var (_, body) = For(item, quantity, status, branchName);
+        var (_, body) = For(item, quantity, status, branchName, levels);
         var where = branchName is null ? string.Empty : $" ({branchName})";
         var title = status switch
         {

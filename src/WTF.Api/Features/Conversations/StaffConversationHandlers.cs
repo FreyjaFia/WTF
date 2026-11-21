@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -50,7 +51,7 @@ public class GetOrderConversationHandler(WTFDbContext db, IOptions<ChatRetention
         if (conversation == null)
         {
             return new OrderConversationDto(
-                null, order.Id, order.OrderNumber, ConversationRules.OrderTitle(order.OrderNumber),
+                null, order.Id, order.OrderNumber, ConversationRules.OrderTitle(await OrderLabelLookup.LabelAsync(db, order, cancellationToken)),
                 ConversationRules.IsChatOpen(order), ConversationRules.ClosedReason(order), 0, [], retention?.Value.DaysToShow);
         }
 
@@ -58,7 +59,7 @@ public class GetOrderConversationHandler(WTFDbContext db, IOptions<ChatRetention
             conversation.Id,
             order.Id,
             order.OrderNumber,
-            conversation.Title,
+            await ConversationStore.TitleAsync(db, order, conversation.Title, cancellationToken),
             ConversationRules.IsChatOpen(order),
             ConversationRules.ClosedReason(order),
             await ConversationStore.UnreadForStaffAsync(db, conversation.Id, cancellationToken),

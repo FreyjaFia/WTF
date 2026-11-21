@@ -137,7 +137,7 @@ public class RecordWasteHandler(
             QuantityDelta = -quantity,
             QuantityBefore = applied.Before,
             QuantityAfter = applied.After,
-            UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+            UnitCost = (await BranchItemSettings.LoadAsync(db, item, branchId, cancellationToken)).UnitCost,
             ReferenceType = StockMovementTypes.StockWasteReference,
             ReferenceId = wasteId,
             Notes = notes is null ? reason.Name : $"{reason.Name}: {notes}",
@@ -242,7 +242,8 @@ public class RecordWasteHandler(
     private async Task NotifyReviewersAsync(Item item, StockWaste waste, CancellationToken cancellationToken)
     {
         var recipients = await db.Users.AsNoTracking()
-            .Where(u => u.IsActive && ReviewerRoles.Contains(u.Role.Name))
+            .Where(u => u.IsActive && ReviewerRoles.Contains(u.Role.Name)
+                        && (u.BranchScope == 0 || u.UserBranches.Any(b => b.BranchId == waste.BranchId)))
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
         if (recipients.Count == 0)

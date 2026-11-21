@@ -571,9 +571,9 @@ public class CreateOrderHandler(
             : StockDeductionResult.None;
         var stockNotes = await StockShortfallReasons.SaveAsync(db, order, stock.Shortfalls, cancellationToken);
 
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId, order.BranchId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId, order.BranchId))
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
         // Staff without the dashboard permission watch the orders list through the orders hub.
         await conversationNotifier.OrderChangedAsync(order, null, cancellationToken);

@@ -72,14 +72,15 @@ public sealed class StockReminderService(
         var rows = await db.ItemBranchStocks
             .AsNoTracking()
             .Where(s => s.LastAlertStatus > 0 && s.Item.IsActive)
-            .Select(s => new { s.Item, s.BranchId, s.CurrentQuantity })
+            .Select(s => new { s.Item, s.BranchId, s.CurrentQuantity, Stock = s })
             .ToListAsync(cancellationToken);
 
         var lowItems = 0;
         var reminders = 0;
         foreach (var row in rows)
         {
-            var status = StockRules.StatusFor(row.CurrentQuantity, row.Item.WarningQuantity, row.Item.CriticalQuantity);
+            var levels = BranchItemSettings.For(row.Item, row.Stock);
+            var status = StockRules.StatusFor(row.CurrentQuantity, levels.WarningQuantity, levels.CriticalQuantity);
             if (status == StockStatus.Ok)
             {
                 continue;
@@ -87,7 +88,7 @@ public sealed class StockReminderService(
 
             lowItems++;
             var branchLabel = await StockBranchLabel.ForAsync(db, row.BranchId, cancellationToken);
-            reminders += await RemindAsync(row.Item, row.CurrentQuantity, row.BranchId, branchLabel, status, dayStartUtc, settings.DryRun, nowUtc.UtcDateTime, cancellationToken);
+            reminders += await RemindAsync(row.Item, row.CurrentQuantity, row.BranchId, branchLabel, status, levels, dayStartUtc, settings.DryRun, nowUtc.UtcDateTime, cancellationToken);
         }
 
         logger.LogInformation(
@@ -117,7 +118,7 @@ public sealed class StockReminderService(
         }
     }
 
-    private async Task<int> RemindAsync(Item item, decimal quantity, Guid branchId, string? branchLabel, StockStatus status, DateTime dayStartUtc, bool dryRun, DateTime now, CancellationToken cancellationToken)
+    private async Task<int> RemindAsync(Item item, decimal quantity, Guid branchId, string? branchLabel, StockStatus status, BranchItemSettings levels, DateTime dayStartUtc, bool dryRun, DateTime now, CancellationToken cancellationToken)
     {
         var recipients = await StockAlertService.ResolveRecipientsAsync(db, item.Id, branchId, cancellationToken);
         var announceByText = new Dictionary<(string Title, string Body), List<Guid>>();
@@ -144,8 +145,8 @@ public sealed class StockReminderService(
             }
 
             var (title, body) = latest is null
-                ? StockAlertMessages.For(item, quantity, status, branchLabel)
-                : StockAlertMessages.Reminder(item, quantity, status, latest.ReminderCount + 2, branchLabel);
+                ? StockAlertMessages.For(item, quantity, status, branchLabel, levels)
+                : StockAlertMessages.Reminder(item, quantity, status, latest.ReminderCount + 2, branchLabel, levels);
 
             if (latest is null)
             {

@@ -42,6 +42,8 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
         builder.Services.AddScoped<WTFDbContext>(_ => TestDb.Create(_db));
         builder.Services.AddSingleton(Substitute.For<IPushNotificationService>());
         builder.Services.AddSingleton(TestFakes.Features);
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<WTF.Api.Common.Tenancy.BranchScopeCache>();
         builder.Services.AddScoped<IConversationNotifier, ConversationNotifier>();
 
         _app = builder.Build();

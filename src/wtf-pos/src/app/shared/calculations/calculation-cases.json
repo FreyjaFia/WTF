@@ -1062,6 +1062,25 @@
       "expected": 0
     }
   ],
+  "orderLabels": [
+    { "name": "several branches pad the number", "orderNumber": 42, "branchCode": "MKT", "showBranch": true, "expected": "MKT-0042" },
+    { "name": "a long number is not cut", "orderNumber": 12345, "branchCode": "QC", "showBranch": true, "expected": "QC-12345" },
+    { "name": "one branch keeps the plain number", "orderNumber": 42, "branchCode": "MKT", "showBranch": false, "expected": "#42" },
+    { "name": "no branch code keeps the plain number", "orderNumber": 42, "branchCode": null, "showBranch": true, "expected": "#42" }
+  ],
+  "branchItemCost": [
+    { "name": "the branch cost wins", "branchCost": 12, "averageCost": 10, "costPrice": 9, "expected": 12 },
+    { "name": "no branch cost uses the average", "branchCost": null, "averageCost": 10, "costPrice": 9, "expected": 10 },
+    { "name": "no average uses the last cost entered", "branchCost": null, "averageCost": null, "costPrice": 9, "expected": 9 },
+    { "name": "a branch cost of zero is a cost, not a blank", "branchCost": 0, "averageCost": 10, "costPrice": 9, "expected": 0 },
+    { "name": "nothing known stays unknown", "branchCost": null, "averageCost": null, "costPrice": null, "expected": null }
+  ],
+  "branchLevel": [
+    { "name": "the branch level wins", "branchLevel": 5, "shopLevel": 20, "expected": 5 },
+    { "name": "no branch level uses the shop level", "branchLevel": null, "shopLevel": 20, "expected": 20 },
+    { "name": "a branch level of zero is a level", "branchLevel": 0, "shopLevel": 20, "expected": 0 },
+    { "name": "no level anywhere", "branchLevel": null, "shopLevel": null, "expected": null }
+  ],
   "percentOfTotal": [
     {
       "name": "a quarter",

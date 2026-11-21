@@ -102,7 +102,7 @@ public class EnumAndConstantConsistencyTests
     [Fact]
     public void HubNames_Values()
     {
-        HubNames.Groups.DashboardViewers(null).ShouldBe("t00000000000000000000000000000001:DashboardViewers");
+        HubNames.Groups.DashboardViewers(null, Guid.Empty).ShouldBe("t00000000000000000000000000000001:DashboardViewers:b00000000000000000000000000000000");
         HubNames.Events.DashboardUpdated.ShouldBe("DashboardUpdated");
         HubNames.Events.OrderUpdated.ShouldBe("OrderUpdated");
     }

@@ -213,11 +213,13 @@ public class TenantPhase2Tests
     [Fact]
     public void HubGroups_AreSeparatePerTenant_AndDefaultToTheFirstTenant()
     {
-        HubNames.Groups.DashboardViewers(TenantA).ShouldNotBe(HubNames.Groups.DashboardViewers(TenantB));
-        HubNames.Groups.StaffOrders(TenantA).ShouldNotBe(HubNames.Groups.StaffOrders(TenantB));
+        var branch = Guid.NewGuid();
+        HubNames.Groups.DashboardViewers(TenantA, branch).ShouldNotBe(HubNames.Groups.DashboardViewers(TenantB, branch));
+        HubNames.Groups.StaffOrders(TenantA, branch).ShouldNotBe(HubNames.Groups.StaffOrders(TenantB, branch));
+        HubNames.Groups.DashboardViewers(TenantA, branch).ShouldNotBe(HubNames.Groups.DashboardViewers(TenantA, Guid.NewGuid()));
         HubNames.Groups.StockViewers(TenantA).ShouldNotBe(HubNames.Groups.StockViewers(TenantB));
-        HubNames.Groups.DashboardViewers(null).ShouldBe(HubNames.Groups.DashboardViewers(Guid.Empty));
-        HubNames.Groups.DashboardViewers(null).ShouldBe(HubNames.Groups.DashboardViewers(TenantDefaults.DefaultTenantId));
+        HubNames.Groups.DashboardViewers(null, branch).ShouldBe(HubNames.Groups.DashboardViewers(Guid.Empty, branch));
+        HubNames.Groups.DashboardViewers(null, branch).ShouldBe(HubNames.Groups.DashboardViewers(TenantDefaults.DefaultTenantId, branch));
     }
 
     [Fact]

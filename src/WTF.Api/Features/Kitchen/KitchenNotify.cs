@@ -11,7 +11,7 @@ internal static class KitchenNotify
     public static async Task OrderChangedAsync(
         IHubContext<DashboardHub> dashboardHub, IConversationNotifier conversationNotifier, Order order, CancellationToken cancellationToken)
     {
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId, order.BranchId))
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
         await conversationNotifier.OrderChangedAsync(order, null, cancellationToken);
     }

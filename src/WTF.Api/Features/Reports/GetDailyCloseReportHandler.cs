@@ -82,7 +82,7 @@ public sealed class GetDailyCloseReportHandler(
         ]);
 
         // Cash for these sales is already in the drawer, but they are not sales until an Admin approves them.
-        var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, fromUtc, toExclusiveUtc, source, cancellationToken), DateTime.UtcNow);
+        var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, fromUtc, toExclusiveUtc, source, null, cancellationToken), DateTime.UtcNow);
         if (held.Count > 0)
         {
             rows.Add(new(SalesSection, HeldOrdersLabel, "In the drawer, not counted as sales until approved", held.Count, held.Amount));
@@ -139,6 +139,11 @@ public sealed class GetDailyCloseReportHandler(
             }));
         }
 
+        var multiBranch = await OrderLabelLookup.IsMultiBranchAsync(db, cancellationToken);
+        var branchCodes = multiBranch
+            ? await db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Id, b => b.Code, cancellationToken)
+            : [];
+
         rows.AddRange(orders
             .Where(o => SalesRules.IsVoided(o.StatusId))
             .OrderBy(o => o.OrderNumber)
@@ -150,7 +155,7 @@ public sealed class GetDailyCloseReportHandler(
                 var detail = string.Join(" | ", new[] { reason, by is null ? null : $"by {by}" }.Where(x => !string.IsNullOrWhiteSpace(x)));
                 return new DailyCloseReportRowDto(
                     VoidsSection,
-                    $"Order #{o.OrderNumber} ({kind})",
+                    $"Order {OrderLabels.Number(o.OrderNumber, branchCodes.GetValueOrDefault(o.BranchId), multiBranch)} ({kind})",
                     detail.Length == 0 ? null : detail,
                     1,
                     OrderMetrics.ComputeOrderTotal(o, overridePrices));

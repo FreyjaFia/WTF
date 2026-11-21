@@ -144,7 +144,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             var stock = await db.ItemBranchStocks
                 .AsNoTracking()
                 .Where(s => s.Item.IsActive)
-                .Select(s => new { s.CurrentQuantity, s.Item.WarningQuantity, s.Item.CriticalQuantity })
+                .Select(s => new { s.CurrentQuantity, WarningQuantity = s.WarningQuantity ?? s.Item.WarningQuantity, CriticalQuantity = s.CriticalQuantity ?? s.Item.CriticalQuantity })
                 .ToListAsync(cancellationToken);
             stockStatuses = [.. stock.Select(i => StockRules.StatusFor(i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity))];
         }
@@ -203,7 +203,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         var nowUtc = DateTime.UtcNow;
         var agedAfterDays = await HeldOrderAging.AgedAfterDaysAsync(db, cancellationToken);
-        var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, null, null, null, cancellationToken), nowUtc, agedAfterDays);
+        var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, null, null, null, null, cancellationToken), nowUtc, agedAfterDays);
 
         return new HeldOrdersInsightDto(
             held.Count,

@@ -59,20 +59,44 @@ public sealed class HeldOrderReminderService(
         }
 
         var agedAfterDays = await HeldOrderAging.AgedAfterDaysAsync(db, cancellationToken);
-        var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, null, null, null, cancellationToken), nowUtc.UtcDateTime, agedAfterDays);
+        var branches = await db.Branches.IgnoreQueryFilters([WTFDbContext.BranchFilterName]).AsNoTracking()
+            .Where(b => b.IsActive)
+            .Select(b => new { b.Id, b.Name })
+            .ToListAsync(cancellationToken);
+        var multiBranch = branches.Count > 1;
 
-        var notified = 0;
-        if (held.AgedCount > 0)
+        var agedOrders = 0;
+        var agedAmount = 0m;
+        var reminded = new HashSet<Guid>();
+        var cleared = false;
+        foreach (var branch in branches)
         {
+            var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, null, null, null, branch.Id, cancellationToken), nowUtc.UtcDateTime, agedAfterDays);
+            if (held.AgedCount == 0)
+            {
+                continue;
+            }
+
+            agedOrders += held.AgedCount;
+            agedAmount += held.AgedAmount;
+
+            // Only the deciders who work in that branch (or see every branch) hear about its orders.
             var recipients = await db.Users.AsNoTracking()
-                .Where(u => u.IsActive && DeciderRoles.Contains(u.Role.Name))
+                .Where(u => u.IsActive && DeciderRoles.Contains(u.Role.Name)
+                    && (u.BranchScope == 0 || u.UserBranches.Any(b => b.BranchId == branch.Id)))
                 .Select(u => u.Id)
                 .ToListAsync(cancellationToken);
 
-            if (!settings.DryRun && recipients.Count > 0)
+            if (settings.DryRun || recipients.Count == 0)
+            {
+                reminded.UnionWith(recipients);
+                continue;
+            }
+
+            if (!cleared)
             {
                 var yesterdays = await db.Notifications
-                    .Where(n => n.Kind == NotificationKinds.HeldOrderReview && n.ReadAt == null && recipients.Contains(n.UserId))
+                    .Where(n => n.Kind == NotificationKinds.HeldOrderReview && n.ReadAt == null)
                     .ToListAsync(cancellationToken);
                 foreach (var old in yesterdays)
                 {
@@ -80,22 +104,23 @@ public sealed class HeldOrderReminderService(
                 }
 
                 await db.SaveChangesAsync(cancellationToken);
-
-                await notifications.NotifyAsync(
-                    recipients,
-                    new NotificationMessage(
-                        NotificationKinds.HeldOrderReview,
-                        NotificationSeverity.Warning,
-                        "Offline orders waiting for review",
-                        HeldOrderRules.AgedInsightText(held.AgedCount, held.AgedAmount, agedAfterDays),
-                        "/orders/held?agedOnly=true"),
-                    cancellationToken);
+                cleared = true;
             }
 
-            notified = recipients.Count;
+            await notifications.NotifyAsync(
+                recipients,
+                new NotificationMessage(
+                    NotificationKinds.HeldOrderReview,
+                    NotificationSeverity.Warning,
+                    multiBranch ? $"Offline orders waiting for review ({branch.Name})" : "Offline orders waiting for review",
+                    HeldOrderRules.AgedInsightText(held.AgedCount, held.AgedAmount, agedAfterDays),
+                    "/orders/held?agedOnly=true"),
+                cancellationToken);
+            reminded.UnionWith(recipients);
         }
 
-        var result = new HeldOrderReminderResult(nowUtc, settings.DryRun, held.AgedCount, held.AgedAmount, notified, false);
+        var notified = reminded.Count;
+        var result = new HeldOrderReminderResult(nowUtc, settings.DryRun, agedOrders, agedAmount, notified, false);
         await reportStorage.SaveAsync(StatePath, JsonSerializer.SerializeToUtf8Bytes(result), "application/json", nowUtc, cancellationToken);
         return result;
     }

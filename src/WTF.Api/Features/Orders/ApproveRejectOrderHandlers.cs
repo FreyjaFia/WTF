@@ -191,9 +191,9 @@ internal static class OrderDecision
 
     public static async Task NotifyAsync(IHubContext<DashboardHub> hub, WTF.Domain.Entities.Order order, CancellationToken cancellationToken)
     {
-        await hub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId))
+        await hub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId, order.BranchId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
-        await hub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId))
+        await hub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId, order.BranchId))
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
     }
 }

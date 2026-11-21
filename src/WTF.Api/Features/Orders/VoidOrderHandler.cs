@@ -203,9 +203,9 @@ public class VoidOrderHandler(
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices);
 
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId, order.BranchId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId, order.BranchId))
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
 
         await pushNotifications.SendOrderStatusChangedAsync(

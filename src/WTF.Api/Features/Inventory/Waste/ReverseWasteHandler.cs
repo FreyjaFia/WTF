@@ -96,7 +96,7 @@ public class ReverseWasteHandler(
             QuantityDelta = waste.Quantity,
             QuantityBefore = applied.Before,
             QuantityAfter = applied.After,
-            UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+            UnitCost = (await BranchItemSettings.LoadAsync(db, item, branchId, cancellationToken)).UnitCost,
             ReferenceType = StockMovementTypes.StockWasteReference,
             ReferenceId = waste.Id,
             Notes = $"Waste reversed: {reason}",

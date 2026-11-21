@@ -143,7 +143,7 @@ public class NoteOnlyUnsyncedOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId, order.BranchId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
 
         return await UnsyncedOrderMapper.ToDetailAsync(db, row, cancellationToken);

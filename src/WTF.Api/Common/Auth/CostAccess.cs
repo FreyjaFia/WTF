@@ -68,6 +68,7 @@ public static class CostAccess
         CostPrice = null,
         AverageCost = null,
         UsableCost = null,
+        BranchStocks = item.BranchStocks is null ? null : [.. item.BranchStocks.Select(s => s with { CostPrice = null })],
         PriceHistory = [],
         RecentMovements = [.. item.RecentMovements.Select(Redact)]
     };

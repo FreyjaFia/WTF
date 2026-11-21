@@ -84,6 +84,8 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                 shortfalls.Add(new StockShortfallNote(item.Id, item.Name, InventoryUnitLabels.Abbreviate(item.UnitName), applied.Before, -net));
             }
 
+            var settings = await BranchItemSettings.LoadAsync(db, item, branchId, cancellationToken);
+
             var running = applied.Before;
             foreach (var change in itemChanges)
             {
@@ -98,7 +100,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                     QuantityDelta = change.Quantity,
                     QuantityBefore = running,
                     QuantityAfter = after,
-                    UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+                    UnitCost = settings.UnitCost,
                     ReferenceType = StockMovementTypes.OrderReference,
                     ReferenceId = orderId,
                     Notes = after < 0 && change.Quantity < 0 ? BelowZeroNote : null,
@@ -111,7 +113,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
 
             if (net < 0)
             {
-                var warning = WarningFor(item, applied.After);
+                var warning = WarningFor(item, settings, applied.After);
                 if (warning is not null)
                 {
                     warnings.Add(warning);
@@ -161,6 +163,8 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, net, true, cancellationToken)
                 ?? throw new InvalidOperationException($"The item {item.Name} was not found.");
 
+            var settings = await BranchItemSettings.LoadAsync(db, item, branchId, cancellationToken);
+
             var running = applied.Before;
             foreach (var change in itemChanges)
             {
@@ -175,7 +179,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                     QuantityDelta = change.Quantity,
                     QuantityBefore = running,
                     QuantityAfter = after,
-                    UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+                    UnitCost = settings.UnitCost,
                     ReferenceType = StockMovementTypes.OrderReference,
                     ReferenceId = orderId,
                     Notes = note,
@@ -243,6 +247,8 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             var applied = await StockBalance.ApplyAsync(db, item.Id, branchId, net, true, cancellationToken)
                 ?? throw new InvalidOperationException($"The item {item.Name} was not found.");
 
+            var settings = await BranchItemSettings.LoadAsync(db, item, branchId, cancellationToken);
+
             var running = applied.Before;
             foreach (var (change, type, note) in rows)
             {
@@ -257,7 +263,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                     QuantityDelta = change.Quantity,
                     QuantityBefore = running,
                     QuantityAfter = after,
-                    UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+                    UnitCost = settings.UnitCost,
                     ReferenceType = StockMovementTypes.OrderReference,
                     ReferenceId = orderId,
                     Notes = note,
@@ -424,14 +430,14 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                + $"{Format(Math.Max(0m, balance))} {InventoryUnitLabels.Abbreviate(item.UnitName)} in stock (short by {Format(shortBy)} {InventoryUnitLabels.Abbreviate(item.UnitName)}).";
     }
 
-    private static string? WarningFor(Item item, decimal after)
+    private static string? WarningFor(Item item, BranchItemSettings settings, decimal after)
     {
         if (after < 0m)
         {
             return $"{item.Name} is below zero: {Format(after)} {InventoryUnitLabels.Abbreviate(item.UnitName)}. Count it and correct the stock.";
         }
 
-        return StockRules.StatusFor(after, item.WarningQuantity, item.CriticalQuantity) == StockStatus.Ok
+        return StockRules.StatusFor(after, settings.WarningQuantity, settings.CriticalQuantity) == StockStatus.Ok
             ? null
             : $"{item.Name} is running low: {Format(after)} {InventoryUnitLabels.Abbreviate(item.UnitName)} left.";
     }

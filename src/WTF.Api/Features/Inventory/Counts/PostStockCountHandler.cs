@@ -85,7 +85,7 @@ public class PostStockCountHandler(
                 QuantityDelta = delta,
                 QuantityBefore = applied.Before,
                 QuantityAfter = applied.After,
-                UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+                UnitCost = (await BranchItemSettings.LoadAsync(db, item, count.BranchId, cancellationToken)).UnitCost,
                 ReferenceType = StockMovementTypes.StockCountReference,
                 ReferenceId = count.Id,
                 Notes = $"Count: {count.Name}",

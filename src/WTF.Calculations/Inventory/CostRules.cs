@@ -86,4 +86,8 @@ public static class CostRules
 
     // The cost a movement is recorded at: the average when there is one, otherwise the last cost entered.
     public static decimal? MovementCost(decimal? averageCost, decimal? costPrice) => averageCost ?? costPrice;
+
+    // A branch can set its own cost for an item; without one it uses the shop cost (the average, else the last cost entered).
+    public static decimal? BranchMovementCost(decimal? branchCost, decimal? averageCost, decimal? costPrice) =>
+        branchCost ?? MovementCost(averageCost, costPrice);
 }

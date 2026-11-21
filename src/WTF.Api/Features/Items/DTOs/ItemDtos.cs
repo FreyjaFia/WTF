@@ -27,7 +27,18 @@ public record ItemDto(
     decimal? UsableCost = null,
     List<ItemBranchStockDto>? BranchStocks = null);
 
-public record ItemBranchStockDto(Guid BranchId, string BranchCode, string BranchName, decimal Quantity, string Status);
+public record ItemBranchStockDto(
+    Guid BranchId,
+    string BranchCode,
+    string BranchName,
+    decimal Quantity,
+    string Status,
+    decimal? WarningQuantity = null,
+    decimal? CriticalQuantity = null,
+    decimal? ParLevel = null,
+    decimal? CostPrice = null);
+
+public record ItemBranchSettingInputDto(Guid BranchId, decimal? WarningQuantity, decimal? CriticalQuantity, decimal? ParLevel, decimal? CostPrice);
 
 public record StockMovementDto(
     Guid Id,

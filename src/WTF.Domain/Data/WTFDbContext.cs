@@ -292,6 +292,10 @@ public partial class WTFDbContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemBranchStock_Id");
             entity.Property(e => e.CurrentQuantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.CostPrice).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.CriticalQuantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.ParLevel).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.WarningQuantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ItemBranchStock_UpdatedAt");
 
             entity.HasOne(d => d.Branch).WithMany(p => p.ItemBranchStocks)

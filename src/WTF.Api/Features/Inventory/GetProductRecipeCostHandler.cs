@@ -42,11 +42,13 @@ public class GetProductRecipeCostHandler(WTFDbContext db) : IRequestHandler<GetP
             })
             .ToListAsync(cancellationToken);
 
+        var branchCosts = await BranchItemCosts.LoadAsync(db, links.Select(l => l.ItemId), cancellationToken);
+
         var lines = links
             .Select(l =>
             {
                 var effective = CostRules.EffectiveQuantity(l.QuantityPerSale, l.AllowancePercent);
-                var unitCost = CostRules.UsableCost(CostRules.MovementCost(l.AverageCost, l.CostPrice), l.YieldPercent);
+                var unitCost = CostRules.UsableCost(CostRules.BranchMovementCost(branchCosts.GetValueOrDefault(l.ItemId), l.AverageCost, l.CostPrice), l.YieldPercent);
                 return new RecipeCostLineDto(
                     l.Id,
                     l.ItemId,

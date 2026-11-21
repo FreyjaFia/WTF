@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Services;
 using WTF.Calculations.Subscriptions;
@@ -87,7 +88,7 @@ public class GetPublicOrderConversationHandler(WTFDbContext db, ITenantFeatures 
         if (conversation == null)
         {
             return new OrderConversationDto(
-                null, order.Id, order.OrderNumber, ConversationRules.OrderTitle(order.OrderNumber),
+                null, order.Id, order.OrderNumber, ConversationRules.OrderTitle(await OrderLabelLookup.LabelAsync(db, order, cancellationToken)),
                 ConversationRules.IsChatOpen(order), ConversationRules.ClosedReason(order), 0, [], retention?.Value.DaysToShow);
         }
 
@@ -95,7 +96,7 @@ public class GetPublicOrderConversationHandler(WTFDbContext db, ITenantFeatures 
             conversation.Id,
             order.Id,
             order.OrderNumber,
-            conversation.Title,
+            await ConversationStore.TitleAsync(db, order, conversation.Title, cancellationToken),
             ConversationRules.IsChatOpen(order),
             ConversationRules.ClosedReason(order),
             await ConversationStore.UnreadForCustomerAsync(db, conversation.Id, cancellationToken),

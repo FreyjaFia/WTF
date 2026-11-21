@@ -16,7 +16,16 @@ public sealed class GetStockStatusReportHandler(WTFDbContext db) : IRequestHandl
         var rows = await db.ItemBranchStocks
             .AsNoTracking()
             .Where(s => s.Item.IsActive)
-            .Select(s => new { s.Item, s.CurrentQuantity, BranchName = s.Branch.Name, s.Branch.IsMain })
+            .Select(s => new
+            {
+                s.Item,
+                s.CurrentQuantity,
+                BranchName = s.Branch.Name,
+                s.Branch.IsMain,
+                WarningQuantity = s.WarningQuantity ?? s.Item.WarningQuantity,
+                CriticalQuantity = s.CriticalQuantity ?? s.Item.CriticalQuantity,
+                BranchCost = s.CostPrice
+            })
             .ToListAsync(cancellationToken);
 
         return rows
@@ -26,7 +35,10 @@ public sealed class GetStockStatusReportHandler(WTFDbContext db) : IRequestHandl
                 r.CurrentQuantity,
                 r.BranchName,
                 r.IsMain,
-                Status = StockRules.StatusFor(r.CurrentQuantity, r.Item.WarningQuantity, r.Item.CriticalQuantity)
+                r.WarningQuantity,
+                r.CriticalQuantity,
+                UnitCost = CostRules.BranchMovementCost(r.BranchCost, r.Item.AverageCost, r.Item.CostPrice),
+                Status = StockRules.StatusFor(r.CurrentQuantity, r.WarningQuantity, r.CriticalQuantity)
             })
             .OrderByDescending(x => x.Status)
             .ThenBy(x => x.Item.Name)
@@ -37,11 +49,11 @@ public sealed class GetStockStatusReportHandler(WTFDbContext db) : IRequestHandl
                 x.Item.Name,
                 x.Item.UnitName,
                 x.CurrentQuantity,
-                x.Item.WarningQuantity,
-                x.Item.CriticalQuantity,
+                x.WarningQuantity,
+                x.CriticalQuantity,
                 StatusLabel(x.Status),
-                CostRules.MovementCost(x.Item.AverageCost, x.Item.CostPrice),
-                StockRules.StockValue(x.CurrentQuantity, CostRules.MovementCost(x.Item.AverageCost, x.Item.CostPrice)),
+                x.UnitCost,
+                StockRules.StockValue(x.CurrentQuantity, x.UnitCost),
                 x.BranchName))
             .ToList();
     }

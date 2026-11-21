@@ -12,9 +12,15 @@ internal static class HeldOrderFigures
         DateTime? fromUtc,
         DateTime? toExclusiveUtc,
         byte? source,
+        Guid? branchId,
         CancellationToken cancellationToken)
     {
         var query = db.Orders.AsNoTracking().Where(o => o.StatusId == (int)OrderStatusEnum.PendingReview);
+        if (branchId.HasValue)
+        {
+            query = query.Where(o => o.BranchId == branchId.Value);
+        }
+
 
         if (fromUtc.HasValue && toExclusiveUtc.HasValue)
         {

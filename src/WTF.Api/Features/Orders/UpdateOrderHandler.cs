@@ -632,9 +632,9 @@ public class UpdateOrderHandler(
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId, order.BranchId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId, order.BranchId))
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
 
         if (isOverride ||

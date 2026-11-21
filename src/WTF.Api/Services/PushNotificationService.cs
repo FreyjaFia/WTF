@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
+using WTF.Api.Features.Branches.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -70,12 +72,13 @@ public sealed class PushNotificationService(
 {
     private const string PlatformHuawei = "huawei";
 
-    public Task SendOrderCreatedAsync(
+    public async Task SendOrderCreatedAsync(
         Order order,
         decimal totalAmount,
         Guid actorUserId,
         CancellationToken cancellationToken)
     {
+        var label = await OrderLabelLookup.LabelAsync(db, order, cancellationToken);
         var data = new Dictionary<string, string>
         {
             ["orderId"] = order.Id.ToString(),
@@ -83,22 +86,23 @@ public sealed class PushNotificationService(
             ["path"] = $"/orders/editor/{order.Id}"
         };
 
-        return SendToOthersAsync(
+        await SendToOthersAsync(
             order,
             "New order created",
-            $"Order #{order.OrderNumber} • PHP {totalAmount:N2}",
+            $"Order {label} • PHP {totalAmount:N2}",
             data,
             actorUserId,
             cancellationToken);
     }
 
-    public Task SendLinkOrderCreatedAsync(
+    public async Task SendLinkOrderCreatedAsync(
         Order order,
         decimal totalAmount,
         string? customerName,
         FulfillmentTypeEnum? fulfillment,
         CancellationToken cancellationToken)
     {
+        var label = await OrderLabelLookup.LabelAsync(db, order, cancellationToken);
         var data = new Dictionary<string, string>
         {
             ["orderId"] = order.Id.ToString(),
@@ -107,7 +111,7 @@ public sealed class PushNotificationService(
             ["path"] = "/orders/list"
         };
 
-        var parts = new List<string> { $"Order #{order.OrderNumber}" };
+        var parts = new List<string> { $"Order {label}" };
         if (!string.IsNullOrWhiteSpace(customerName))
         {
             parts.Add(customerName.Trim());
@@ -120,7 +124,7 @@ public sealed class PushNotificationService(
 
         parts.Add($"PHP {totalAmount:N2}");
 
-        return SendToOthersAsync(
+        await SendToOthersAsync(
             order,
             "New online order",
             string.Join(" · ", parts),
@@ -129,12 +133,13 @@ public sealed class PushNotificationService(
             cancellationToken);
     }
 
-    public Task SendOrderMessageAsync(
+    public async Task SendOrderMessageAsync(
         Order order,
         string? customerName,
         string preview,
         CancellationToken cancellationToken)
     {
+        var label = await OrderLabelLookup.LabelAsync(db, order, cancellationToken);
         // A waiting order only has its details page; an accepted one is opened in the editor.
         var screen = order.StatusId == (int)OrderStatusEnum.PendingApproval ? "details" : "editor";
         var data = new Dictionary<string, string>
@@ -147,16 +152,16 @@ public sealed class PushNotificationService(
         };
 
         var who = string.IsNullOrWhiteSpace(customerName) ? "Customer" : customerName.Trim();
-        return SendToOthersAsync(
+        await SendToOthersAsync(
             order,
-            $"New message on order #{order.OrderNumber}",
+            $"New message on order {label}",
             $"{who}: {preview}",
             data,
             Guid.Empty,
             cancellationToken);
     }
 
-    public Task SendOrderStatusChangedAsync(
+    public async Task SendOrderStatusChangedAsync(
         Order order,
         decimal totalAmount,
         OrderStatusEnum newStatus,
@@ -164,6 +169,7 @@ public sealed class PushNotificationService(
         CancellationToken cancellationToken,
         bool isOverride = false)
     {
+        var label = await OrderLabelLookup.LabelAsync(db, order, cancellationToken);
         var statusLabel = isOverride
             ? "overridden"
             : newStatus switch
@@ -182,10 +188,10 @@ public sealed class PushNotificationService(
             ["path"] = $"/orders/details/{order.Id}"
         };
 
-        return SendToOthersAsync(
+        await SendToOthersAsync(
             order,
             $"Order {statusLabel}",
-            $"Order #{order.OrderNumber} • PHP {totalAmount:N2}",
+            $"Order {label} • PHP {totalAmount:N2}",
             data,
             actorUserId,
             cancellationToken);
@@ -240,10 +246,15 @@ public sealed class PushNotificationService(
             return;
         }
 
+        // A branch only tells the people who work in it (and those who see every branch).
+        var branchId = order.BranchId;
+        var allBranches = (byte)BranchScopeEnum.All;
+
         var tokens = await db.PushNotificationTokens
             .AsNoTracking()
             .Where(t => t.IsActive)
-            .Join(db.Users.Where(u => u.IsActive),
+            .Join(db.Users.Where(u => u.IsActive
+                    && (u.BranchScope == allBranches || db.UserBranches.Any(ub => ub.UserId == u.Id && ub.BranchId == branchId))),
                 token => token.UserId,
                 user => user.Id,
                 (token, user) => new { token, user.RoleId })

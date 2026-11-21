@@ -5,6 +5,7 @@ using WTF.Api.Common.DTOs;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Inventory.Waste;
 using WTF.Api.Features.Items;
+using WTF.Api.Features.Items.DTOs;
 
 namespace WTF.Api.Endpoints;
 
@@ -62,6 +63,27 @@ public static class ItemEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsRead)
             .WithName("GetItemById");
+
+        itemGroup.MapGet("/{id:guid}/branch-settings",
+            async (Guid id, ISender sender, ClaimsPrincipal user) =>
+            {
+                var item = await sender.Send(new GetItemByIdQuery(id));
+                return item is not null ? Results.Ok(CostAccess.ForUser(item, user).BranchStocks ?? []) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ItemsRead);
+
+        itemGroup.MapPut("/{id:guid}/branch-settings",
+            async (Guid id, List<ItemBranchSettingInputDto> body, ISender sender, ClaimsPrincipal user) =>
+            {
+                var result = await sender.Send(new SaveItemBranchSettingsCommand(id, body, !CostAccess.CanReadCosts(user)));
+                if (result is null)
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Ok(CostAccess.CanReadCosts(user) ? result : [.. result.Select(s => s with { CostPrice = null })]);
+            })
+            .RequireAuthorization(AppPolicies.ItemsWrite);
 
         itemGroup.MapPost("/",
             async (CreateItemCommand command, ISender sender, ClaimsPrincipal user) =>

@@ -110,6 +110,7 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
             .Where(p => productIds.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
+        var branchCosts = await BranchItemCosts.LoadAsync(db, required.Select(r => r.ItemId), cancellationToken);
         var costLines = new List<RecipePreviewLineDto>();
         var replaced = new List<string>();
         foreach (var requirement in required)
@@ -125,7 +126,7 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
                 continue;
             }
 
-            var unitCost = CostRules.UsableCost(CostRules.MovementCost(item.AverageCost, item.CostPrice), item.YieldPercent);
+            var unitCost = CostRules.UsableCost(CostRules.BranchMovementCost(branchCosts.GetValueOrDefault(item.Id), item.AverageCost, item.CostPrice), item.YieldPercent);
             costLines.Add(new RecipePreviewLineDto(
                 item.Id,
                 item.Name,
