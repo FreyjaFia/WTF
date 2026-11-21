@@ -660,7 +660,7 @@ Questions and choices (decided with the recommendation):
 | Can a branch manager make a product sold everywhere? | No, only someone who works in every branch (the owner) |
 | New products start as | Owner: every branch unless branches are ticked. Branch manager: their active branch, or the branches they tick |
 | Names unique? | Product codes stay unique across the shop (already so); names are not enforced, as before |
-| Promotions | Not limited by branch in this cut. A promotion on a product a branch does not sell simply never applies there |
+| Promotions | Promotions themselves are not limited by branch. A fixed bundle with a product or add-on the branch does not sell is hidden there; a mix and match keeps only the products the branch sells and is hidden when none is left. Single-product discounts simply never apply where the product is not sold |
 | Kitchen, reports, orders | Unchanged: they read orders, which keep their products |
 | Add-ons | An add-on is a product, so it has "Sold at" too; the product-side list of add-ons in the POS drops the ones the branch does not sell |
 | Plan downgrade | Rows are kept but ignored without the `branches` feature. A limited Admin loses the key with the feature and can then only read products |
