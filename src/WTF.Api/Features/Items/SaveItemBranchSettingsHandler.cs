@@ -49,10 +49,8 @@ public class SaveItemBranchSettingsHandler(
         }
 
         var requestedIds = request.Branches.Select(b => b.BranchId).ToList();
-        if (await BranchRules.AllOfShop(db).AnyAsync(b => requestedIds.Contains(b.Id) && !b.IsActive, cancellationToken))
-        {
-            throw new InvalidOperationException("A closed branch cannot be changed. Reopen it first.");
-        }
+        // A screen opened before a branch closed still lists it: that is fine while the values are unchanged.
+        var closedIds = (await BranchRules.AllOfShop(db).Where(b => requestedIds.Contains(b.Id) && !b.IsActive).Select(b => b.Id).ToListAsync(cancellationToken)).ToHashSet();
 
         if (request.Branches.Any(b => !db.MayWriteToBranch(b.BranchId)))
         {
@@ -85,6 +83,11 @@ public class SaveItemBranchSettingsHandler(
                 && row.CostPrice == cost)
             {
                 continue;
+            }
+
+            if (closedIds.Contains(input.BranchId))
+            {
+                throw new InvalidOperationException("A closed branch cannot be changed. Reopen it first.");
             }
 
             changes[input.BranchId.ToString()] = new

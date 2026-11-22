@@ -110,7 +110,7 @@ public class BranchGuardsDatabaseTests
     }
 
     [SqlFact]
-    public async Task ItemBranchSettings_RefuseAClosedBranch_AndKeepTheCostWithoutTheCostsKey()
+    public async Task ItemBranchSettings_RefuseChangingAClosedBranch_AndKeepTheCostWithoutTheCostsKey()
     {
         var shop = await OpenShopAsync();
         await using var _ = shop.Database;
@@ -139,6 +139,10 @@ public class BranchGuardsDatabaseTests
         await Should.ThrowAsync<InvalidOperationException>(() =>
             new SaveItemBranchSettingsHandler(db2, TestRequest.As(shop.UserId, AppRoles.Admin, "UTC"), TestFakes.Audit(), TestFakes.Alerts(db2))
                 .Handle(new SaveItemBranchSettingsCommand(shop.Milk, [new ItemBranchSettingInputDto(shop.Cebu, 5m, null, null, null)], false), CancellationToken.None));
+
+        var unchanged = await new SaveItemBranchSettingsHandler(db2, TestRequest.As(shop.UserId, AppRoles.Admin, "UTC"), TestFakes.Audit(), TestFakes.Alerts(db2))
+            .Handle(new SaveItemBranchSettingsCommand(shop.Milk, [new ItemBranchSettingInputDto(shop.Cebu, 100m, null, null, null)], false), CancellationToken.None);
+        unchanged.ShouldNotBeNull();
     }
 
     [SqlFact]
