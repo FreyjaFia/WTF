@@ -429,6 +429,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   );
   protected readonly canManageOrderActions = computed(() => this.authService.canWriteOrders());
 
+  protected readonly branchMenuMissing = computed(() => this.catalogCache.branchMenuMissing());
+
   protected readonly mustPickBranch = computed(
     () => this.branchService.isMultiBranch() && this.branchService.isAllSelected(),
   );

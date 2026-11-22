@@ -1,6 +1,8 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CartItemDto } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BranchService } from './branch.service';
 import { CartPersistenceService } from './cart-persistence.service';
 import { db } from './db';
 
@@ -10,6 +12,7 @@ describe('CartPersistenceService', () => {
   const get = vi.fn();
   const del = vi.fn();
   const count = vi.fn();
+  const activeId = signal<string | null>(null);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -17,6 +20,8 @@ describe('CartPersistenceService', () => {
     vi.spyOn(db.carts, 'get').mockImplementation(get);
     vi.spyOn(db.carts, 'delete').mockImplementation(del);
     vi.spyOn(db.carts, 'count').mockImplementation(count);
+    activeId.set(null);
+    TestBed.configureTestingModule({ providers: [{ provide: BranchService, useValue: { activeId } }] });
     service = TestBed.inject(CartPersistenceService);
   });
 
@@ -85,5 +90,40 @@ describe('CartPersistenceService', () => {
     count.mockResolvedValue(rows);
 
     await expect(service.hasCart()).resolves.toBe(expected);
+  });
+
+  describe('the branch a cart belongs to', () => {
+    const items = [{ productId: 'p1' }] as unknown as CartItemDto[];
+
+    it('saves the open branch with the cart', async () => {
+      activeId.set('b-main');
+
+      await service.save(items, null, '');
+
+      expect(put.mock.calls[0][0].branchId).toBe('b-main');
+    });
+
+    it('gives the cart back for the same branch', async () => {
+      activeId.set('b-main');
+      get.mockResolvedValue({ id: 1, items, branchId: 'b-main', savedAt: new Date().toISOString() });
+
+      expect(await service.load()).toBeDefined();
+      expect(del).not.toHaveBeenCalled();
+    });
+
+    it('clears a cart made in another branch instead of giving it back', async () => {
+      activeId.set('b-bgc');
+      get.mockResolvedValue({ id: 1, items, branchId: 'b-main', savedAt: new Date().toISOString() });
+
+      expect(await service.load()).toBeUndefined();
+      expect(del).toHaveBeenCalledWith(1);
+    });
+
+    it('keeps a cart saved before carts knew their branch', async () => {
+      activeId.set('b-main');
+      get.mockResolvedValue({ id: 1, items, savedAt: new Date().toISOString() });
+
+      expect(await service.load()).toBeDefined();
+    });
   });
 });

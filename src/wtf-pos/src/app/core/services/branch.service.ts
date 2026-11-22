@@ -31,9 +31,12 @@ export class BranchService {
 
   private readonly _mine = signal<MyBranchesDto | null>(readStoredMine());
   private readonly _activeId = signal<string | null>(readStored());
+  private readonly _menuBranchId = signal<string | null | undefined>(undefined);
 
   public readonly mine = this._mine.asReadonly();
   public readonly activeId = this._activeId.asReadonly();
+  // The branch whose menu is saved on this device (undefined: nothing saved yet). Set by the catalog cache.
+  public readonly menuBranchId = this._menuBranchId.asReadonly();
   public readonly branches = computed<MyBranchDto[]>(() => this._mine()?.branches ?? []);
   public readonly isMultiBranch = computed(() => this._mine()?.isMultiBranch ?? false);
   public readonly canSeeAll = computed(() => this._mine()?.canSeeAll ?? false);
@@ -71,6 +74,10 @@ export class BranchService {
     writeStored(id);
   }
 
+  public noteMenuBranch(id: string | null | undefined): void {
+    this._menuBranchId.set(id);
+  }
+
   public select(id: string): void {
     this._activeId.set(id);
     writeStored(id);
@@ -79,6 +86,7 @@ export class BranchService {
   public clear(): void {
     this._mine.set(null);
     this._activeId.set(null);
+    this._menuBranchId.set(undefined);
     writeStored(null);
     writeStoredMine(null);
   }

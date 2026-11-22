@@ -18,13 +18,19 @@
       class="dropdown-content menu bg-base-100 rounded-box z-50 mt-2 w-64 p-2 shadow max-sm:fixed max-sm:inset-x-4 max-sm:top-16 max-sm:w-auto"
       data-testid="branch-switcher-menu"
     >
+      @if (isOffline()) {
+        <li class="px-3 py-1 text-xs text-gray-500" data-testid="branch-offline-note">
+          Offline: only the branch saved on this device can be opened.
+        </li>
+      }
       @if (branchService.canSeeAll()) {
         <li>
           <button
             type="button"
-            class="app-menu-item"
+            class="app-menu-item disabled:cursor-not-allowed disabled:opacity-50"
             [class.font-bold]="branchService.isAllSelected()"
             data-testid="branch-option-all"
+            [disabled]="!canChoose(allBranches)"
             (click)="choose(allBranches)"
           >
             All branches
@@ -36,9 +42,10 @@
           <li>
             <button
               type="button"
-              class="app-menu-item"
+              class="app-menu-item disabled:cursor-not-allowed disabled:opacity-50"
               [class.font-bold]="branch.id === branchService.activeId()"
               [attr.data-testid]="'branch-option-' + branch.code"
+              [disabled]="!canChoose(branch.id)"
               (click)="choose(branch.id)"
             >
               <span class="truncate">{{ branch.name }}</span>

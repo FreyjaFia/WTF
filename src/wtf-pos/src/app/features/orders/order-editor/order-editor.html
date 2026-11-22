@@ -145,8 +145,15 @@
             @if (products().length === 0) {
               <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
                 <app-icon name="icon-cart" [class]="'mb-3 h-12 w-12'" />
-                <div class="text-lg font-semibold">No products found</div>
-                <div class="text-sm">Try adjusting your search or add a new product</div>
+                @if (branchMenuMissing()) {
+                  <div class="text-lg font-semibold">No menu for this branch yet</div>
+                  <div class="text-sm">
+                    The menu for this branch isn't on this device yet. Connect to the internet to load it.
+                  </div>
+                } @else {
+                  <div class="text-lg font-semibold">No products found</div>
+                  <div class="text-sm">Try adjusting your search or add a new product</div>
+                }
               </div>
             }
             @if (products().length > 0) {

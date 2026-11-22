@@ -385,6 +385,42 @@ describe('CatalogCacheService', () => {
       expect(stored?.branchId).toBe('b-bgc');
     });
 
+    it('does not show another branch\'s saved menu offline, and says the menu is missing', async () => {
+      online.set(false);
+      stored = cachedWith('b-main', prod('a', 160, 'Latte'));
+      TestBed.inject(BranchService).select('b-bgc');
+      const service = create();
+
+      await service.load();
+
+      expect(service.products()).toEqual([]);
+      expect(service.branchMenuMissing()).toBe(true);
+      expect(TestBed.inject(BranchService).menuBranchId()).toBe('b-main');
+    });
+
+    it('shows the saved menu offline when it is for the open branch', async () => {
+      online.set(false);
+      stored = cachedWith('b-bgc', prod('a', 175, 'Latte'));
+      TestBed.inject(BranchService).select('b-bgc');
+      const service = create();
+
+      await service.load();
+
+      expect(service.products().map((p) => p.id)).toEqual(['a']);
+      expect(service.branchMenuMissing()).toBe(false);
+    });
+
+    it('still shows a menu saved before branches existed', async () => {
+      online.set(false);
+      stored = { id: 1, products: [prod('a', 1)], customers: [], addOnsByProductId: {}, syncedAt: 'x' } as never;
+      TestBed.inject(BranchService).select('b-bgc');
+      const service = create();
+
+      await service.load();
+
+      expect(service.products()).toHaveLength(1);
+    });
+
     it('does not call another branch\'s price a price change', async () => {
       stored = cachedWith('b-main', prod('a', 160, 'Latte'));
       TestBed.inject(BranchService).select('b-bgc');

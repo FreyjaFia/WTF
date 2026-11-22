@@ -21,6 +21,8 @@ export interface PersistedCart {
   specialInstructions: string;
   items: CartItemDto[];
   seniorPwdPersons?: SeniorPwdPersonRequestDto[];
+  // The branch the cart was made in: another branch can sell other products at other prices. Missing: saved before branches.
+  branchId?: string | null;
   savedAt: string;
 }
 

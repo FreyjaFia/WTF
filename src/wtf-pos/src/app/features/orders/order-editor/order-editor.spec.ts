@@ -328,6 +328,7 @@ describe('OrderEditor', () => {
     getMixMatch: ReturnType<typeof vi.fn>;
     discountedPromotions: ReturnType<typeof vi.fn>;
     shopSettings: ReturnType<typeof signal<{ seniorPwdEnabled: boolean; vatRegistered: boolean }>>;
+    branchMenuMissing: ReturnType<typeof signal<boolean>>;
   };
   let modalStack: ModalStackService;
   let selectorOpen: ReturnType<typeof vi.spyOn>;
@@ -480,6 +481,7 @@ describe('OrderEditor', () => {
       getMixMatch: vi.fn().mockReturnValue(undefined),
       discountedPromotions: vi.fn().mockReturnValue([]),
       shopSettings: signal({ seniorPwdEnabled: false, vatRegistered: false }),
+      branchMenuMissing: signal(false),
     };
 
     queryParams$ = new BehaviorSubject<ParamMap>(convertToParamMap({}));
@@ -668,6 +670,16 @@ describe('OrderEditor', () => {
         { text: 'te', isMatch: false },
       ]);
       expect(t.getNameParts('Chips')).toEqual([{ text: 'Chips', isMatch: false }]);
+    });
+
+    it('says the menu for this branch is not on the device when only another branch\'s menu was saved', async () => {
+      catalog.products.set([]);
+      catalog.branchMenuMissing.set(true);
+      await start();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        "The menu for this branch isn't on this device yet",
+      );
     });
 
     describe('product cards', () => {

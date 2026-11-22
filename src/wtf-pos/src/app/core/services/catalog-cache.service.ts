@@ -19,7 +19,7 @@ import { AuthService } from './auth.service';
 import { BranchService } from './branch.service';
 import { CatalogLookupService } from './catalog-lookup.service';
 import { ConnectivityService } from './connectivity.service';
-import { db } from './db';
+import { CachedCatalog, db } from './db';
 import { ImageCacheService } from './image-cache.service';
 
 interface PosCatalogDto {
@@ -77,6 +77,9 @@ export class CatalogCacheService {
   private readonly _shopSettings = signal<PosShopSettingsDto>(NO_SHOP_SETTINGS);
   public readonly shopSettings = this._shopSettings.asReadonly();
 
+  private readonly _branchMenuMissing = signal(false);
+  public readonly branchMenuMissing = this._branchMenuMissing.asReadonly();
+
   private readonly _isLoading = signal(false);
   public readonly isLoading = this._isLoading.asReadonly();
 
@@ -108,6 +111,8 @@ export class CatalogCacheService {
 
   public reset(): void {
     this.loaded = false;
+    this.branchService.noteMenuBranch(undefined);
+    this._branchMenuMissing.set(false);
     this._shopSettings.set(NO_SHOP_SETTINGS);
     this._products.set([]);
     this._customers.set([]);
@@ -238,6 +243,9 @@ export class CatalogCacheService {
         syncedAt: catalog.syncedAt,
       });
 
+      this.branchService.noteMenuBranch(branchId);
+      this._branchMenuMissing.set(false);
+
       await this.imageCache.cacheImages(
         catalog.products,
         catalog.addOnsByProductId,
@@ -288,6 +296,16 @@ export class CatalogCacheService {
 
   private async loadFromCache(): Promise<void> {
     const cached = await db.catalog.get(CatalogCacheService.CATALOG_ROW_ID);
+    this.branchService.noteMenuBranch(cached ? (cached.branchId ?? null) : undefined);
+
+    if (cached && this.isForAnotherBranch(cached)) {
+      // Another branch can price and offer products differently, so its menu is never shown as this branch's.
+      this._branchMenuMissing.set(true);
+      this.clearMenu();
+      return;
+    }
+
+    this._branchMenuMissing.set(false);
 
     if (cached) {
       this._products.set(await this.imageCache.resolveProducts(cached.products));
@@ -306,6 +324,22 @@ export class CatalogCacheService {
     this._discountedPromotions.set([]);
     this._fixedBundles.set([]);
     this._mixMatchPromotions.set([]);
+  }
+
+  private isForAnotherBranch(cached: CachedCatalog): boolean {
+    const active = this.branchService.activeId();
+
+    return active !== null && cached.branchId !== undefined && cached.branchId !== active;
+  }
+
+  private clearMenu(): void {
+    this._products.set([]);
+    this._customers.set([]);
+    this._addOnsByProductId.set({});
+    this._bundlePromotions.set([]);
+    this._fixedBundles.set([]);
+    this._mixMatchPromotions.set([]);
+    this._discountedPromotions.set([]);
   }
 
   private backgroundRefresh(): void {
