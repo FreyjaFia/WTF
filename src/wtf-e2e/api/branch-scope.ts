@@ -90,30 +90,39 @@ export interface World {
   readonly scope: BranchScopeApi;
   readonly branchA: Branch;
   readonly branchB: Branch;
+  readonly branchC: Branch;
   readonly drinkA: Product;
   readonly drinkB: Product;
   readonly orderA: Order;
   readonly orderB: Order;
   readonly cashier: ScopedUser;
   readonly manager: ScopedUser;
+  readonly cashierB: ScopedUser;
 }
 
-// Two new branches, each with one order for its own drink, and a cashier and a manager who work in branch A only.
+// Three new branches; A and B each hold one order for their own drink (the Davao Mocha is sold only in B). The cashier works in A only, the manager in A and C,
+// and a second cashier in B only.
 export async function openWorld(api: Api): Promise<World> {
   const scope = new BranchScopeApi(api);
   const branchA = await api.branches.create(branchCode(), unique('Quezon Ave'));
   const branchB = await api.branches.create(branchCode(), unique('Makati Ayala'));
+  const branchC = await api.branches.create(branchCode(), unique('Pasig Ortigas'));
   const drinkA = await api.products.create({ name: unique('Cebu Latte'), price: 137 });
   const drinkB = await api.products.create({ name: unique('Davao Mocha'), price: 263 });
+  const limit = await api.client.call('owner', 'PUT', `products/${drinkB.id}/sold-at`, {
+    body: { isAllBranches: false, branchIds: [branchB.id] },
+  });
+  expect(limit.ok(), await limit.text()).toBeTruthy();
   const orderA = await scope.placeOrder(branchA.id, drinkA);
   const orderB = await scope.placeOrder(branchB.id, drinkB);
   const cashier = await scope.createUser('cashier', [branchA.id]);
-  const manager = await scope.createUser('manager', [branchA.id]);
-  return { scope, branchA, branchB, drinkA, drinkB, orderA, orderB, cashier, manager };
+  const manager = await scope.createUser('manager', [branchA.id, branchC.id]);
+  const cashierB = await scope.createUser('cashier', [branchB.id]);
+  return { scope, branchA, branchB, branchC, drinkA, drinkB, orderA, orderB, cashier, manager, cashierB };
 }
 
 export async function closeWorld(world: World | undefined): Promise<void> {
   if (world) {
-    await world.scope.cleanup([world.cashier, world.manager], [world.branchA, world.branchB]);
+    await world.scope.cleanup([world.cashier, world.manager, world.cashierB], [world.branchA, world.branchB, world.branchC]);
   }
 }
