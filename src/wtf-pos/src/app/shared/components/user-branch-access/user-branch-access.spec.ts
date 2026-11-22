@@ -86,4 +86,23 @@ describe('UserBranchAccessComponent', () => {
       defaultBranchId: null,
     });
   });
+
+  it('says it has unsaved changes only after something was changed, and clears that once saved', () => {
+    setup();
+    expect(fixture.componentInstance.isDirty()).toBe(false);
+
+    (el().querySelector('[data-testid="branch-access-BGC"]') as HTMLInputElement).click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isDirty()).toBe(true);
+
+    (el().querySelector('[data-testid="branch-access-BGC"]') as HTMLInputElement).click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isDirty()).toBe(false);
+
+    (el().querySelector('[data-testid="branch-access-BGC"]') as HTMLInputElement).click();
+    fixture.detectChanges();
+    saveButton().click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isDirty()).toBe(false);
+  });
 });

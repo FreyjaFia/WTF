@@ -20,6 +20,9 @@ export class UserBranchAccessComponent implements OnInit {
   protected readonly openBranches = computed(() => this.branchService.branches().filter((branch) => branch.isActive));
   protected readonly error = signal<string | null>(null);
 
+  private readonly savedState = signal<string | null>(null);
+  public readonly isDirty = computed(() => this.isLoaded() && this.currentState() !== this.savedState());
+
   public ngOnInit(): void {
     this.load();
   }
@@ -35,6 +38,7 @@ export class UserBranchAccessComponent implements OnInit {
         this.selectedIds.set(access.branchIds.filter((id) => !closed.has(id)));
         this.defaultId.set(access.defaultBranchId && !closed.has(access.defaultBranchId) ? access.defaultBranchId : null);
         this.isLoaded.set(true);
+        this.savedState.set(this.currentState());
       },
       error: (err: Error) => {
         this.loadFailed.set(true);
@@ -79,6 +83,7 @@ export class UserBranchAccessComponent implements OnInit {
       .subscribe({
         next: () => {
           this.isSaving.set(false);
+          this.savedState.set(this.currentState());
           this.alertService.success('Branch access saved.');
         },
         error: (err: Error) => {
@@ -86,5 +91,10 @@ export class UserBranchAccessComponent implements OnInit {
           this.error.set(err.message);
         },
       });
+  }
+
+  private currentState(): string {
+    const ids = this.isAll() ? [] : [...this.selectedIds()].sort();
+    return JSON.stringify({ all: this.isAll(), ids, defaultId: this.defaultId() });
   }
 }

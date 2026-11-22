@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -60,6 +60,8 @@ export class UserEditorComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly location = inject(Location);
   private readonly modalStack = inject(ModalStackService);
+
+  private readonly branchAccess = viewChild(UserBranchAccessComponent);
 
   // UI state signals
   protected readonly isEditMode = signal(false);
@@ -596,7 +598,7 @@ export class UserEditorComponent implements OnInit {
   }
 
   public canDeactivate(): boolean | Promise<boolean> {
-    if (this.skipGuard || !this.userForm.dirty) {
+    if (this.skipGuard || (!this.userForm.dirty && !this.branchAccess()?.isDirty())) {
       return true;
     }
 
