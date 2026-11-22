@@ -60,6 +60,14 @@ public static class OrderLinkAccess
             throw new ShopUnavailableException(brand.ShopName, brand.Phone);
         }
 
+        // A link belongs to one branch. Once that branch has closed, its page takes no orders, like a shop that cannot take them.
+        if (await db.Branches.IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+                .AnyAsync(b => b.Id == link.BranchId && !b.IsActive, cancellationToken))
+        {
+            var brand = await BrandDefaults.LoadAsync(db, link.TenantId, cancellationToken);
+            throw new ShopUnavailableException(brand.ShopName, brand.Phone);
+        }
+
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == link.TargetId.Value, cancellationToken);
         if (customer == null || !customer.IsActive || !customer.AllowOrderingLink)
         {
@@ -88,6 +96,7 @@ public static class OrderLinkAccess
     public static Task<bool> IsStillValidAsync(
         WTFDbContext db, Guid linkId, DateTime nowUtc, CancellationToken cancellationToken)
     {
+        var branches = db.Branches.IgnoreQueryFilters([WTFDbContext.BranchFilterName]);
         return db.ShortLinks
             .AsNoTracking()
             .Where(l => l.Id == linkId
@@ -95,6 +104,7 @@ public static class OrderLinkAccess
                         && l.RevokedAt == null
                         && (l.ExpiresAt == null || l.ExpiresAt > nowUtc))
             .AnyAsync(l => db.Customers.Any(c =>
-                c.Id == l.TargetId && c.IsActive && c.AllowOrderingLink), cancellationToken);
+                c.Id == l.TargetId && c.IsActive && c.AllowOrderingLink)
+                && !branches.Any(b => b.Id == l.BranchId && !b.IsActive), cancellationToken);
     }
 }
