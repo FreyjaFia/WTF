@@ -69,6 +69,9 @@ public class CloseBranchHandler(
         var assignments = await db.UserBranches.Where(u => u.BranchId == branch.Id).ToListAsync(cancellationToken);
         var assignedIds = assignments.Select(a => a.UserId).ToList();
         var users = await db.Users.Where(u => assignedIds.Contains(u.Id)).ToListAsync(cancellationToken);
+        var alreadyInTarget = target is null
+            ? []
+            : await db.UserBranches.Where(u => u.BranchId == target.Id && assignedIds.Contains(u.UserId)).Select(u => u.UserId).ToListAsync(cancellationToken);
 
         foreach (var assignment in assignments)
         {
@@ -81,7 +84,7 @@ public class CloseBranchHandler(
             }
 
             var needsTarget = check.StaffWithNoOtherBranch.Any(s => s.UserId == user.Id);
-            if (needsTarget && target is not null)
+            if (needsTarget && target is not null && !alreadyInTarget.Contains(user.Id))
             {
                 db.UserBranches.Add(new UserBranch { UserId = user.Id, BranchId = target.Id, CreatedAt = DateTime.UtcNow });
             }
@@ -229,8 +232,10 @@ internal static class BranchClosing
             .Select(u => new { u.UserId, u.User.FirstName, u.User.LastName, u.User.Username, u.User.BranchScope })
             .ToListAsync(cancellationToken);
         var staffIds = staff.Select(s => s.UserId).ToList();
+        // The branch filter hides the branches outside the one the person is working in, so the open branches are listed apart from it.
+        var openBranchIds = await BranchRules.AllOfShop(db).Where(b => b.IsActive && b.Id != id).Select(b => b.Id).ToListAsync(cancellationToken);
         var otherBranchUsers = await db.UserBranches.AsNoTracking()
-            .Where(u => staffIds.Contains(u.UserId) && u.BranchId != id && u.Branch.IsActive)
+            .Where(u => staffIds.Contains(u.UserId) && openBranchIds.Contains(u.BranchId))
             .Select(u => u.UserId)
             .Distinct()
             .ToListAsync(cancellationToken);

@@ -177,6 +177,40 @@ public class BranchHandlerDatabaseTests
     }
 
     [SqlFact]
+    public async Task Close_CountsTheOtherOpenBranchesOfAPerson_EvenWhenTheOwnerWorksInAnotherBranch()
+    {
+        var shop = await OpenShopAsync();
+        await using var _ = shop.Database;
+        var davao = await AddBranchAsync(shop, "Davao", "DVO");
+        var cebu = await AddBranchAsync(shop, "Cebu", "CEB");
+        var cashier = await SqlSeed.UserAsync(shop.Database, "cashier", (int)UserRoleEnum.Cashier);
+
+        await using (var seed = shop.Database.CreateContext())
+        {
+            var user = await seed.Users.SingleAsync(u => u.Id == cashier.Id);
+            user.BranchScope = (byte)BranchScopeEnum.Selected;
+            seed.UserBranches.AddRange(
+                new UserBranch { UserId = cashier.Id, BranchId = cebu, TenantId = Tenant, CreatedAt = DateTime.UtcNow },
+                new UserBranch { UserId = cashier.Id, BranchId = davao, TenantId = Tenant, CreatedAt = DateTime.UtcNow });
+            await seed.SaveChangesAsync();
+        }
+
+        var ownerInMain = new CurrentBranch();
+        ownerInMain.Resolve([shop.Main, davao, cebu], false, shop.Main, false);
+        await using var db = shop.Database.CreateContext(new FixedTenant(Tenant), ownerInMain);
+
+        var check = await new GetBranchCloseCheckHandler(db, ownerInMain).Handle(new GetBranchCloseCheckQuery(cebu), CancellationToken.None);
+        check!.StaffWithNoOtherBranch.ShouldBeEmpty();
+
+        var handler = new CloseBranchHandler(db, TestRequest.As(shop.OwnerId, AppRoles.Owner), TestFakes.Audit(), ownerInMain, new BranchScopeCache(TimeProvider.System));
+        var closed = await handler.Handle(new CloseBranchCommand(cebu, davao), CancellationToken.None);
+        closed!.IsActive.ShouldBeFalse();
+
+        await using var verify = shop.Database.CreateContext(new FixedTenant(Tenant));
+        (await verify.UserBranches.Where(u => u.UserId == cashier.Id).Select(u => u.BranchId).ToListAsync()).ShouldBe([davao]);
+    }
+
+    [SqlFact]
     public async Task MakeMain_SwapsTheFlag_AndKeepsExactlyOneMain()
     {
         var shop = await OpenShopAsync();
