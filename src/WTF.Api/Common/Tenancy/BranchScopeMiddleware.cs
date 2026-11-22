@@ -15,6 +15,7 @@ public sealed class BranchScopeMiddleware(RequestDelegate next)
     public const string NoBranchMessage = "Ask the owner to assign you to a branch.";
     public const string PickBranchMessage = "Pick a branch first.";
     public const string BranchNotAllowedMessage = "You cannot use that branch.";
+    public const string BadBranchHeaderMessage = "The branch you picked is not valid. Pick a branch again.";
 
     public async Task InvokeAsync(HttpContext context, BranchScopeCache cache, CurrentBranch currentBranch)
     {
@@ -68,6 +69,14 @@ public sealed class BranchScopeMiddleware(RequestDelegate next)
         }
 
         var ignoreHeader = context.Request.Path.Equals("/api/branches/mine", StringComparison.OrdinalIgnoreCase);
+
+        // A header that is not a branch id (garbage, or sent twice) must not quietly send the work to the default branch.
+        if (header.Length > 0 && !Guid.TryParse(header, out _) && !ignoreHeader && !exempt)
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsJsonAsync(new { message = BadBranchHeaderMessage });
+            return;
+        }
 
         Guid? active;
         if (Guid.TryParse(header, out var requested) && !ignoreHeader)

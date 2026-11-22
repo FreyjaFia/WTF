@@ -15,6 +15,7 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
     public const string RoleKeyClaim = "role_perm";
     public const string PlanFeatureClaim = "plan_feature";
     public const string PlanLoadedClaim = "plan_loaded";
+    public const string InactiveMessage = "Your account is no longer active.";
 
     public async Task InvokeAsync(HttpContext context, RolePermissionCache cache, ITenantFeatures tenantFeatures)
     {
@@ -25,6 +26,13 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
         {
             var db = context.RequestServices.GetRequiredService<WTFDbContext>();
             var access = await cache.GetAsync(db, userId, context.RequestAborted);
+            if (!access.IsActive && !context.Request.Path.StartsWithSegments("/api/auth/logout"))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsJsonAsync(new { message = InactiveMessage });
+                return;
+            }
+
             var tokenRole = user.FindFirst(ClaimTypes.Role)?.Value;
             var tokenIsCurrent = tokenRole is not null && access.KnownRoleNames.Contains(tokenRole);
 

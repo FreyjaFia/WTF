@@ -123,6 +123,25 @@ public class BranchScopeMiddlewareTests
         run.Status.ShouldBe(403);
     }
 
+    [Theory]
+    [InlineData("not-a-branch")]
+    [InlineData("aaaaaaaa-0000-0000-0000-000000000001,aaaaaaaa-0000-0000-0000-000000000002")]
+    [InlineData("all branches")]
+    public async Task ABranchHeaderThatIsNotABranchId_IsRefusedInsteadOfUsingTheDefaultBranch(string header)
+    {
+        var run = await SendAsync("POST", "/api/orders", BranchScopeEnum.All, [], header);
+
+        run.Reached.ShouldBeFalse();
+        run.Status.ShouldBe(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task ABadBranchHeader_IsStillIgnoredWhereTheHeaderIsNotUsed()
+    {
+        (await SendAsync("GET", "/api/branches/mine", BranchScopeEnum.All, [], "not-a-branch")).Reached.ShouldBeTrue();
+        (await SendAsync("POST", "/api/auth/logout", BranchScopeEnum.All, [], "not-a-branch")).Reached.ShouldBeTrue();
+    }
+
     [Fact]
     public async Task AllBranches_IsForReadingOnly()
     {
