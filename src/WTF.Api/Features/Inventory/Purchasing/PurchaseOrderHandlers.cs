@@ -135,11 +135,15 @@ internal static class PurchaseOrderRules
     {
         // Two orders created at the same moment would read the same highest number. The lock is held until the
         // surrounding transaction ends, so the second one waits and then sees the first one's number.
-        await db.Database.ExecuteSqlRawAsync(
-            "DECLARE @result int; EXEC @result = sp_getapplock @Resource = N'PurchaseOrderNumber', @LockMode = N'Exclusive', @LockOwner = N'Transaction', @LockTimeout = 15000; IF @result < 0 THROW 50000, N'Could not reserve a purchase order number.', 1;",
+        // Numbers are unique per shop across all its branches, so the lock is per shop and the highest number is read from every branch.
+        var resource = $"PurchaseOrderNumber:{db.StampTenantId}";
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"DECLARE @result int; EXEC @result = sp_getapplock @Resource = {resource}, @LockMode = N'Exclusive', @LockOwner = N'Transaction', @LockTimeout = 15000; IF @result < 0 THROW 50000, N'Could not reserve a purchase order number.', 1;",
             cancellationToken);
 
-        return (await db.PurchaseOrders.MaxAsync(o => (int?)o.PoNumber, cancellationToken) ?? 0) + 1;
+        var highest = await db.PurchaseOrders.IgnoreQueryFilters([WTFDbContext.BranchFilterName])
+            .MaxAsync(o => (int?)o.PoNumber, cancellationToken);
+        return (highest ?? 0) + 1;
     }
 
     public static PurchaseOrderLine ToLine(PurchaseOrderLineRequest line) => new()
