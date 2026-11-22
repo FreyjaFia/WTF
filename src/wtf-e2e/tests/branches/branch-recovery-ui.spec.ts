@@ -151,6 +151,23 @@ test.describe('the app recovers from a wrong saved branch @branches @security', 
     }
   }
 
+  test('a branch the browser remembers wrongly is not sent with the connection check, so the app does not look offline', async ({ api, newContext }) => {
+    const shop = world!;
+    const page = await openAs(api, newContext, shop.cashier, { storedBranch: shop.branchB.id });
+    const checkHeaders: Array<string | undefined> = [];
+    page.on('request', (request) => {
+      if (request.url().endsWith('/api/health')) {
+        checkHeaders.push(request.headers()['x-branch-id']);
+      }
+    });
+
+    await go(page, ROUTES.ordersList);
+    await expect(page.getByTestId('order-row')).toHaveCount(1);
+    await expect(page.getByText("You're offline")).toHaveCount(0);
+    expect(checkHeaders.length).toBeGreaterThan(0);
+    expect(checkHeaders.every((header) => header === undefined)).toBe(true);
+  });
+
   test('a manager who switches branch sees only that branch, and the saved branch follows the choice', async ({ api, newContext }) => {
     const shop = world!;
     const page = await openAs(api, newContext, shop.manager);

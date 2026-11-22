@@ -42,6 +42,14 @@ describe('branchInterceptor', () => {
     http.get('/api/orders').subscribe();
     expect(controller.expectOne('/api/orders').request.headers.get('X-Branch-Id')).toBe('all');
   });
+  it('does not send the saved branch on the connection check, so a stale branch cannot look like being offline', () => {
+    branches.select('stale');
+    http.get('/api/health').subscribe();
+    const checks = controller.match((r) => r.url.endsWith('/api/health'));
+    expect(checks.length).toBeGreaterThan(0);
+    expect(checks.every((r) => !r.request.headers.has('X-Branch-Id'))).toBe(true);
+  });
+
   it('does not send the saved branch when asking which branches are allowed', () => {
     branches.select('stale');
     http.get('/api/branches/mine').subscribe();

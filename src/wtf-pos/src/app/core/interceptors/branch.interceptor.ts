@@ -21,6 +21,10 @@ function isAuthRequest(url: string): boolean {
   return /\/api\/auth(\/|\?|$)/.test(url);
 }
 
+function isHealthRequest(url: string): boolean {
+  return /\/api\/health(\?|$)/.test(url);
+}
+
 function isBranchListRequest(url: string): boolean {
   return /\/api\/branches\/mine(\?|$)/.test(url);
 }
@@ -34,7 +38,7 @@ function isBranchNotAllowed(error: unknown): boolean {
 }
 
 export const branchInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!isApiRequest(req.url) || req.headers.has(HEADER) || isBranchListRequest(req.url)) {
+  if (!isApiRequest(req.url) || req.headers.has(HEADER) || isBranchListRequest(req.url) || isHealthRequest(req.url)) {
     return next(req);
   }
 
