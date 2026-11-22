@@ -9,6 +9,7 @@ import {
   AlertService,
   CatalogLookupService,
   AuthService,
+  BranchService,
   FileDownloadService,
   PlanStore,
   ReportsService,
@@ -123,6 +124,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly plans = inject(PlanStore);
+  private readonly branchService = inject(BranchService);
   private readonly sectionNav = inject(SectionNavService);
 
   protected readonly selectedType = signal<ReportType | null>(null);
@@ -239,6 +241,11 @@ export class ReportsComponent implements OnInit, OnDestroy {
     const type = this.selectedType();
     return type ? findReportDefinition(type) : null;
   });
+
+  // Which branch the numbers are for, so a printed or saved report is never mistaken for another branch's.
+  protected readonly branchLabel = computed(() =>
+    this.branchService.isMultiBranch() ? this.branchService.activeLabel() || null : null,
+  );
 
   protected readonly context = computed<ReportContext>(() => ({
     groupBy: this.reportFormValue().groupBy ?? 'Day',
@@ -747,7 +754,19 @@ export class ReportsComponent implements OnInit, OnDestroy {
     const range = definition.usesDateRange
       ? `${(form.fromDate ?? '').replaceAll('-', '')}-${(form.toDate ?? '').replaceAll('-', '')}`
       : new Date().toISOString().slice(0, 10).replaceAll('-', '');
-    return `WTF-${name}-${range}.${extension}`;
+    const branch = this.branchFilePart();
+
+    return `WTF-${name}${branch}-${range}.${extension}`;
+  }
+
+  private branchFilePart(): string {
+    if (!this.branchService.isMultiBranch()) {
+      return '';
+    }
+
+    const code = this.branchService.activeCode().replace(/[^A-Za-z0-9]/g, '');
+
+    return code ? `-${code}` : '';
   }
 
   private formatGeneratedAt(date: Date): string {

@@ -5,12 +5,14 @@ import { SubscriptionDto } from '@shared/models/subscription.models';
 import {
   AlertService,
   AuthService,
+  BranchService,
   FileDownloadService,
   PlanStore,
   ReportsService,
   UserService,
 } from '@core/services';
 import { MonthlyReportWorkbookStatusDto, ReportType } from '@shared/models';
+import { signal } from '@angular/core';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportRow } from './report-definitions';
@@ -91,6 +93,8 @@ describe('ReportsComponent', () => {
   let users: { getUsers: ReturnType<typeof vi.fn> };
   let queryReport: string | null;
   let canGenerate: boolean;
+  let multiBranch: ReturnType<typeof signal<boolean>>;
+  let branchStub: { isMultiBranch: () => boolean; activeLabel: () => string; activeCode: () => string };
   const blob = new Blob(['x']);
   const status = (over: Partial<MonthlyReportWorkbookStatusDto> = {}): MonthlyReportWorkbookStatusDto => ({
     year: 2026,
@@ -128,6 +132,12 @@ describe('ReportsComponent', () => {
     // Sunday 15 March 2026, local time.
     queryReport = null;
     canGenerate = true;
+    multiBranch = signal(false);
+    branchStub = {
+      isMultiBranch: multiBranch,
+      activeLabel: () => 'BGC Taguig',
+      activeCode: () => 'BGC',
+    };
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 2, 15, 12, 0, 0));
     reports = {
@@ -157,6 +167,7 @@ describe('ReportsComponent', () => {
         { provide: AlertService, useValue: alert },
         { provide: UserService, useValue: users },
         { provide: AuthService, useValue: { canGenerateReports: () => canGenerate } },
+        { provide: BranchService, useValue: branchStub },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: { get: () => queryReport } } },
@@ -657,6 +668,31 @@ describe('ReportsComponent', () => {
       expect(text).not.toContain('Cash,3');
       expect(text).toContain('Total,1,')
       expect(t.isDownloadingCsv()).toBe(false);
+    });
+
+    it('puts the branch in the file name in a shop with branches, and not in a one-branch shop', async () => {
+      multiBranch.set(true);
+      t.downloadPdf();
+      await settle();
+
+      expect(fileDownload.saveBlob.mock.calls[0][1]).toBe('WTF-Payment-Method-Breakdown-BGC-20260301-20260315.pdf');
+
+      multiBranch.set(false);
+      t.downloadPdf();
+      await settle();
+
+      expect(fileDownload.saveBlob.mock.calls[1][1]).toBe('WTF-Payment-Method-Breakdown-20260301-20260315.pdf');
+    });
+
+    it('shows which branch the report is for', () => {
+      expect(fixture.nativeElement.querySelector('[data-testid="report-branch"]')).toBeNull();
+
+      multiBranch.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="report-branch"]').textContent).toContain(
+        'Branch: BGC Taguig',
+      );
     });
 
     it('names a report without a range after today', async () => {

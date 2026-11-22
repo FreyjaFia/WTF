@@ -7,6 +7,9 @@
           <p class="text-xs text-gray-500 sm:text-sm">
             Preview and export historical sales analytics
           </p>
+          @if (branchLabel(); as branch) {
+            <app-badge class="mt-1" variant="info" data-testid="report-branch">Branch: {{ branch }}</app-badge>
+          }
         </div>
       </div>
     </div>
@@ -275,6 +278,9 @@
           <p class="text-xs wrap-break-word text-gray-500">
             {{ current.description }}
           </p>
+          @if (branchLabel(); as branch) {
+            <app-badge variant="info" data-testid="report-branch">Branch: {{ branch }}</app-badge>
+          }
         </div>
         <div class="flex shrink-0 items-center gap-1">
           <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
