@@ -22,6 +22,7 @@ import {
   SignalRService,
   StockLimitsService,
 } from '@core/services';
+import { BranchService } from '@core/services/branch.service';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { AddOnGroupDto, CartAddOnDto, CartItemDto, CustomerDto, DiscountedProductPromotionDto, OrderDto, FulfillmentTypeEnum, OrderSourceEnum, OrderStatusEnum, PaymentMethodEnum, ProductDto, PromotionListItemDto, PromotionTypeEnum } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
@@ -302,6 +303,8 @@ describe('OrderEditor', () => {
     load: ReturnType<typeof vi.fn>;
   };
   let canWrite: boolean;
+  let multiBranch: ReturnType<typeof signal<boolean>>;
+  let allSelected: ReturnType<typeof signal<boolean>>;
   let canApplySeniorPwd: boolean;
   let canOverride: boolean;
   let canCreateCustomer: boolean;
@@ -418,6 +421,8 @@ describe('OrderEditor', () => {
       stop: vi.fn(),
       load: vi.fn(() => of({ items: limitItems(), links: limitLinks(), asOf: '' })),
     };
+    multiBranch = signal(false);
+    allSelected = signal(false);
     canWrite = true;
     canApplySeniorPwd = true;
     canOverride = true;
@@ -537,6 +542,7 @@ describe('OrderEditor', () => {
         { provide: CatalogCacheService, useValue: catalog },
         { provide: ConnectivityService, useValue: { isOnline } },
         { provide: StockLimitsService, useValue: stockLimits },
+        { provide: BranchService, useValue: { isMultiBranch: multiBranch, isAllSelected: allSelected } },
       ],
     });
     router = TestBed.inject(Router);
@@ -2403,6 +2409,25 @@ describe('OrderEditor', () => {
       ]);
       t.onCustomerSelected('c1');
       t.orderSpecialInstructions.set('  fast  ');
+    });
+
+    it('does not save or check out while All branches is selected in a shop with branches', () => {
+      multiBranch.set(true);
+      allSelected.set(true);
+
+      t.onOrderSaved();
+      t.checkout();
+
+      expect(orderService['createOrder']).not.toHaveBeenCalled();
+      expect(alert['error']).toHaveBeenCalledWith('Pick a branch to sell from.');
+    });
+
+    it('still saves under All branches in a shop with one branch', () => {
+      allSelected.set(true);
+
+      t.onOrderSaved();
+
+      expect(orderService['createOrder']).toHaveBeenCalledTimes(1);
     });
 
     it('saves a pending order online with expanded bundle items', () => {

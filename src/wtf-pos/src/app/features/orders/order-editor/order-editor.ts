@@ -61,6 +61,7 @@ import {
   PromotionService,
   StockLimitsService,
 } from '@core/services';
+import { BranchService } from '@core/services/branch.service';
 import type { CustomerDropdownOption, ReceiptData } from '@shared/components';
 import {
   AddonSelectorComponent,
@@ -133,6 +134,8 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
 
 type CatalogScrollTab = number | 'bundles';
 
+const PICK_BRANCH_MESSAGE = 'Pick a branch to sell from.';
+
 @Component({
   selector: 'app-order-editor',
   imports: [
@@ -178,6 +181,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   private readonly connectivity = inject(ConnectivityService);
   private readonly stockLimits = inject(StockLimitsService);
   private readonly offlineOrder = inject(OfflineOrderService);
+  protected readonly branchService = inject(BranchService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly conversationInbox = inject(ConversationInboxService);
   private readonly destroyRef = inject(DestroyRef);
@@ -424,6 +428,10 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.authService.canCreateCustomerInOrder(this.isEditMode()),
   );
   protected readonly canManageOrderActions = computed(() => this.authService.canWriteOrders());
+
+  protected readonly mustPickBranch = computed(
+    () => this.branchService.isMultiBranch() && this.branchService.isAllSelected(),
+  );
 
   protected readonly isMarkingReady = signal(false);
 
@@ -2300,6 +2308,11 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.mustPickBranch()) {
+      this.alertService.error(PICK_BRANCH_MESSAGE);
+      return;
+    }
+
     if (!this.canManageOrderActions()) {
       this.alertService.errorUnauthorized();
       return;
@@ -2464,6 +2477,11 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected onOrderSaved(): void {
     this.activeOrderAction.set('save');
+    if (this.mustPickBranch()) {
+      this.alertService.error(PICK_BRANCH_MESSAGE);
+      return;
+    }
+
     if (!this.canManageOrderActions()) {
       this.alertService.errorUnauthorized();
       return;
@@ -2497,6 +2515,13 @@ export class OrderEditor implements OnInit, OnDestroy {
     tips?: number;
   }): void {
     this.activeOrderAction.set('checkout');
+
+    if (this.mustPickBranch()) {
+      this.checkoutModal().close();
+      this.alertService.error(PICK_BRANCH_MESSAGE);
+      return;
+    }
+
     if (!this.canManageOrderActions()) {
       this.checkoutModal().close();
       this.alertService.errorUnauthorized();
@@ -2606,9 +2631,13 @@ export class OrderEditor implements OnInit, OnDestroy {
         );
         this.router.navigateByUrl(AppRoutes.OrdersList);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         this.isSavingOrder.set(false);
-        this.alertService.error('Failed to save order offline.');
+        this.alertService.error(
+          error instanceof Error && error.message === OfflineOrderService.PICK_BRANCH_MESSAGE
+            ? error.message
+            : 'Failed to save order offline.',
+        );
       });
   }
 

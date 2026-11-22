@@ -10,7 +10,7 @@ import {
 import { firstValueFrom, timeout } from 'rxjs';
 import { db } from './db';
 import { SENIOR_PWD_ID_RETENTION_DAYS, isPastIdRetention } from './senior-pwd-retention';
-import { currentTenantId, tenantOfQueuedOrder } from './tenant-context';
+import { currentTenantId, currentUserId, tenantOfQueuedOrder } from './tenant-context';
 import type { PendingOrder, SyncOutcome, SyncResultEntry } from './db';
 
 @Injectable({ providedIn: 'root' })
@@ -29,6 +29,8 @@ export class OfflineOrderService {
     'The server took too long to answer. Press Sync Now to try again: an order that already went through is not saved twice.';
   public static readonly NO_RESULT_MESSAGE =
     'The server sent no result for this order. Press Sync Now to try again.';
+  public static readonly PICK_BRANCH_MESSAGE = 'Pick a branch to sell from.';
+  public static readonly NOT_YOUR_ORDER_MESSAGE = 'This order was made by another cashier. Only they can change or send it.';
 
   private readonly connectivity = inject(ConnectivityService);
   private readonly orderService = inject(OrderService);
@@ -78,8 +80,9 @@ export class OfflineOrderService {
       const reconnected = online && !this.wasOnline;
       this.wasOnline = online;
 
-      const hasWaiting = orders.some((order) => order.status === 'pending');
-      const hasFailed = orders.some((order) => order.status === 'failed');
+      const own = orders.filter((order) => this.isOwnOrder(order));
+      const hasWaiting = own.some((order) => order.status === 'pending');
+      const hasFailed = own.some((order) => order.status === 'failed');
 
       if (
         online &&
@@ -113,6 +116,12 @@ export class OfflineOrderService {
     customerName: string | null,
     previewTotal: number | null = null,
   ): Promise<string> {
+    const branchId = this.activeBranchForSale();
+
+    if (this.branchService.isMultiBranch() && !branchId) {
+      throw new Error(OfflineOrderService.PICK_BRANCH_MESSAGE);
+    }
+
     const today = this.getTodayString();
     this.localCounter++;
     const localId = `OFF-${today}-${String(this.localCounter).padStart(3, '0')}-${this.randomSuffix()}`;
@@ -127,7 +136,8 @@ export class OfflineOrderService {
     const pendingOrder: PendingOrder = {
       localId,
       tenantId: currentTenantId(),
-      branchId: this.activeBranchForSale(),
+      userId: currentUserId() ?? undefined,
+      branchId,
       command: stamped.command,
       cartSnapshot,
       previewTotal,
@@ -145,7 +155,17 @@ export class OfflineOrderService {
     return localId;
   }
 
+  public isOwnOrder(order: { userId?: string }): boolean {
+    return !order.userId || order.userId === currentUserId();
+  }
+
   public async remove(localId: string): Promise<void> {
+    const existing = await db.pendingOrders.where('localId').equals(localId).first();
+
+    if (existing && !this.isOwnOrder(existing)) {
+      throw new Error(OfflineOrderService.NOT_YOUR_ORDER_MESSAGE);
+    }
+
     await db.pendingOrders.where('localId').equals(localId).delete();
     await this.loadPendingOrders();
   }
@@ -169,6 +189,10 @@ export class OfflineOrderService {
 
     if (existing.status === 'syncing') {
       throw new Error(`Offline order ${localId} is syncing and cannot be changed.`);
+    }
+
+    if (!this.isOwnOrder(existing)) {
+      throw new Error(OfflineOrderService.NOT_YOUR_ORDER_MESSAGE);
     }
 
     const stamped = await this.stampCatalogTime(command);
@@ -229,10 +253,10 @@ export class OfflineOrderService {
     try {
       const tenantId = currentTenantId();
       // Orders queued for another shop wait on the device until that shop signs in again; they are never sent as this one.
+      // The same goes for another cashier of this shop: a sale is sent with the login of the person who made it.
       const orders = (
         await db.pendingOrders.where('status').anyOf(['pending', 'failed']).sortBy('createdAt')
-      ).filter((order) => tenantOfQueuedOrder(order) === tenantId);
-      await this.resolveStaleBranches(orders);
+      ).filter((order) => tenantOfQueuedOrder(order) === tenantId && this.isOwnOrder(order));
       const batches = this.groupByBranch(orders).flatMap((group) =>
         this.chunkOrders(group, OfflineOrderService.SYNC_BATCH_SIZE),
       );
@@ -568,6 +592,7 @@ export class OfflineOrderService {
     return {
       localId: order.localId,
       tenantId: currentTenantId(),
+      userId: currentUserId() ?? undefined,
       orderNumber,
       outcome,
       message,
@@ -587,7 +612,9 @@ export class OfflineOrderService {
       const stale = (await db.syncResults.toArray())
         .filter(
           (row) =>
-            tenantOfQueuedOrder(row) === tenantId && entries.some((entry) => entry.localId === row.localId),
+            tenantOfQueuedOrder(row) === tenantId &&
+            this.isOwnOrder(row) &&
+            entries.some((entry) => entry.localId === row.localId),
         )
         .map((row) => row.id!);
 
@@ -612,7 +639,9 @@ export class OfflineOrderService {
 
       const tenantId = currentTenantId();
       const current = rows
-        .filter((row) => !expired.includes(row.id!) && tenantOfQueuedOrder(row) === tenantId)
+        .filter(
+          (row) => !expired.includes(row.id!) && tenantOfQueuedOrder(row) === tenantId && this.isOwnOrder(row),
+        )
         .sort((a, b) => b.at.localeCompare(a.at) || b.id! - a.id!);
 
       this._syncResults.set(current);
@@ -668,34 +697,6 @@ export class OfflineOrderService {
     }
 
     return active;
-  }
-
-  // A queued order whose branch no longer exists (or is no longer allowed) is saved in the branch that is open instead of
-  // failing for good.
-  private async resolveStaleBranches(orders: PendingOrder[]): Promise<void> {
-    if (!orders.some((order) => order.branchId)) {
-      return;
-    }
-
-    if (this.branchService.mine() === null) {
-      try {
-        await firstValueFrom(this.branchService.recover());
-      } catch {
-        return;
-      }
-    }
-
-    const known = new Set(this.branchService.branches().map((branch) => branch.id));
-    if (known.size === 0) {
-      return;
-    }
-
-    for (const order of orders) {
-      if (order.branchId && !known.has(order.branchId)) {
-        order.branchId = null;
-        await (db.pendingOrders as import('dexie').Table).update(order.id!, { branchId: null });
-      }
-    }
   }
 
   private groupByBranch(orders: PendingOrder[]): PendingOrder[][] {

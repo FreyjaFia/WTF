@@ -461,7 +461,7 @@
             (touchstart)="startQuickPayHold()"
             (touchend)="cancelQuickPayHold()"
             (touchcancel)="cancelQuickPayHold()"
-            [disabled]="cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()"
+            [disabled]="cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy() || mustPickBranch()"
             aria-label="Hold to pay"
           >
             <app-icon name="icon-peso" [class]="'h-4.5 w-4.5'" [fill]="'currentColor'" />
@@ -1010,7 +1010,7 @@
                   class="app-btn app-btn-primary app-btn-lg pointer-events-auto w-full"
                   (click)="checkout()"
                   [disabled]="
-                    cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                    cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy() || mustPickBranch()
                   "
                 >
                   @if (isSavingOrder()) {
@@ -1034,14 +1034,14 @@
                     type="button"
                     class="app-btn app-btn-secondary app-btn-md pointer-events-auto flex-1"
                     [class.cursor-not-allowed]="
-                      cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                      cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy() || mustPickBranch()
                     "
                     [class.cursor-pointer]="
-                      !(cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy())
+                      !(cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy() || mustPickBranch())
                     "
                     (click)="onOrderSaved()"
                     [disabled]="
-                      cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                      cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy() || mustPickBranch()
                     "
                   >
                     @if (isSavingOrderDraft()) {
@@ -1115,6 +1115,12 @@
                     {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
                   </button>
                 }
+                @if (mustPickBranch()) {
+                  <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800" data-pick-branch>
+                    Pick a branch to sell from. All branches is for looking only: use the branch switcher
+                    to choose one.
+                  </p>
+                }
                 <button
                   type="button"
                   class="app-btn app-btn-primary app-btn-lg pointer-events-auto w-full"
@@ -1122,14 +1128,16 @@
                     cart().length === 0 ||
                     !canManageOrderActions() ||
                     isOrderRequestBusy() ||
-                    stockBlocksCheckout()
+                    stockBlocksCheckout() ||
+                    mustPickBranch()
                   "
                   [class.cursor-pointer]="
                     !(
                       cart().length === 0 ||
                       !canManageOrderActions() ||
                       isOrderRequestBusy() ||
-                      stockBlocksCheckout()
+                      stockBlocksCheckout() ||
+                      mustPickBranch()
                     )
                   "
                   (click)="checkout()"
@@ -1137,7 +1145,8 @@
                     cart().length === 0 ||
                     !canManageOrderActions() ||
                     isOrderRequestBusy() ||
-                    stockBlocksCheckout()
+                    stockBlocksCheckout() ||
+                    mustPickBranch()
                   "
                 >
                   @if (isCheckingOut()) {

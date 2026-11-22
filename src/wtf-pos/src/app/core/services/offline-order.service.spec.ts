@@ -268,17 +268,15 @@ describe('OfflineOrderService', () => {
   describe('the branch a sale was made in', () => {
     beforeEach(() => localStorage.setItem('token', 'tok'));
 
-    it('records the open branch on the queued order, and nothing for a one-branch shop or All branches', async () => {
+    it('records the open branch on the queued order, and nothing for a one-branch shop', async () => {
       const service = await create();
 
       await service.queue(command('single'), cart, null);
       multiBranch.set(true);
       activeBranch.set('bbbb');
       await service.queue(command('bgc'), cart, null);
-      activeBranch.set('all');
-      await service.queue(command('all'), cart, null);
 
-      expect(table.rows.map((r) => r.branchId ?? null)).toEqual([null, 'bbbb', null]);
+      expect(table.rows.map((r) => r.branchId ?? null)).toEqual([null, 'bbbb']);
     });
 
     it('shows only the open branch queue, everything under All branches, and branchless orders everywhere', async () => {
@@ -321,7 +319,7 @@ describe('OfflineOrderService', () => {
       ]);
     });
 
-    it('sends an order whose branch no longer exists to the open branch instead of failing it', async () => {
+    it('sends an order with the branch it was made in, even when that branch is not in the list any more', async () => {
       multiBranch.set(true);
       branchList.set([{ id: 'aaaa' }]);
       activeBranch.set('aaaa');
@@ -331,8 +329,89 @@ describe('OfflineOrderService', () => {
       await service.syncAll();
 
       expect(createBatch).toHaveBeenCalledTimes(1);
-      expect(createBatch.mock.calls[0][1]).toBeNull();
-      expect((createBatch.mock.calls[0][0] as { branchId?: string | null }[])[0].branchId).toBeNull();
+      expect(createBatch.mock.calls[0][1]).toBe('dddd');
+      expect((createBatch.mock.calls[0][0] as { branchId?: string | null }[])[0].branchId).toBe('dddd');
+    });
+
+    it('keeps an order that the server refused for its branch, with the reason, instead of moving it', async () => {
+      multiBranch.set(true);
+      branchList.set([{ id: 'aaaa' }]);
+      activeBranch.set('aaaa');
+      const service = await create([{ localId: 'gone', branchId: 'dddd', command: command('g') }]);
+      online.set(true);
+      createBatch.mockReturnValue(throwError(() => new Error('You cannot use that branch.')));
+
+      const done = service.syncAll();
+      await vi.runAllTimersAsync();
+      await done;
+
+      expect(table.rows[0].status).toBe('failed');
+      expect(table.rows[0].branchId).toBe('dddd');
+      expect(table.rows[0].errorMessage).toBe('You cannot use that branch.');
+    });
+
+    it('refuses to queue a sale under All branches or with no branch in a shop with branches', async () => {
+      const service = await create();
+      multiBranch.set(true);
+
+      activeBranch.set('all');
+      await expect(service.queue(command('all'), cart, null)).rejects.toThrow('Pick a branch to sell from.');
+
+      activeBranch.set(null);
+      await expect(service.queue(command('none'), cart, null)).rejects.toThrow('Pick a branch to sell from.');
+
+      expect(table.rows).toHaveLength(0);
+    });
+  });
+
+  describe('orders of another cashier', () => {
+    const userToken = (sub: string): string => {
+      const body = btoa(JSON.stringify({ sub })).replace(/=+$/, '');
+      return `x.${body}.y`;
+    };
+
+    beforeEach(() => localStorage.setItem('token', userToken('ana')));
+
+    it('marks a queued order with the person who made it', async () => {
+      const service = await create();
+
+      await service.queue(command(), cart, null);
+
+      expect(table.rows[0].userId).toBe('ana');
+    });
+
+    it('sends only the orders of the person signed in, and leaves the others alone', async () => {
+      const service = await create([
+        { localId: 'mine', userId: 'ana', command: command('m') },
+        { localId: 'theirs', userId: 'ben', command: command('t') },
+        { localId: 'older' },
+      ]);
+      online.set(true);
+
+      await service.syncAll();
+
+      const sent = createBatch.mock.calls.flatMap((c) => (c[0] as { note: string }[]).map((o) => o.note));
+      expect(sent.sort()).toEqual(['a', 'm']);
+      expect(table.rows.map((r) => r.localId)).toEqual(['theirs']);
+      expect(table.rows[0].status).toBe('pending');
+    });
+
+    it('does not let another cashier change or discard an order', async () => {
+      const service = await create([{ localId: 'theirs', userId: 'ben' }]);
+
+      await expect(service.update('theirs', command(), cart, null)).rejects.toThrow('another cashier');
+      await expect(service.remove('theirs')).rejects.toThrow('another cashier');
+
+      expect(table.rows).toHaveLength(1);
+      expect(service.isOwnOrder(table.rows[0])).toBe(false);
+    });
+
+    it('does not wait on or keep sending the orders of another cashier', async () => {
+      await create([{ localId: 'theirs', userId: 'ben' }]);
+      online.set(true);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(createBatch).not.toHaveBeenCalled();
     });
   });
 

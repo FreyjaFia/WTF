@@ -173,7 +173,7 @@ export class OrderList implements OnInit, OnDestroy {
       () => {
         const online = this.isOnline();
         const syncingOffline = this.isSyncingOffline();
-        const pendingCount = this.pendingOrders().length;
+        const pendingCount = this.pendingOrders().filter((order) => this.offlineOrderService.isOwnOrder(order)).length;
 
         if (online && !this.wasOnline) {
           if (pendingCount > 0) {
@@ -717,6 +717,13 @@ export class OrderList implements OnInit, OnDestroy {
   }
 
   protected editPendingOrder(localId: string): void {
+    const pending = this.pendingOrders().find((order) => order.localId === localId);
+
+    if (pending && !this.offlineOrderService.isOwnOrder(pending)) {
+      this.alertService.warning(OfflineOrderService.NOT_YOUR_ORDER_MESSAGE);
+      return;
+    }
+
     void this.router.navigate([AppRoutes.OrdersEditor], { queryParams: { offline: localId } });
   }
 

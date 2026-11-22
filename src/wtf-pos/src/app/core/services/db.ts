@@ -51,6 +51,8 @@ export interface PendingOrder {
   localId: string;
   // The shop the sale was made for: a queued order is only ever sent with that shop's login. None means the first shop.
   tenantId?: string;
+  // The person who made the sale: only they send, change or discard it. None (queued by an older app) means anyone of the shop.
+  userId?: string;
   // The branch the sale was made in. Empty means the order is not tied to one (a shop with one branch, or sold under All branches).
   branchId?: string | null;
   command: CreateOrderCommand;
@@ -73,6 +75,7 @@ export interface SyncResultEntry {
   id?: number;
   localId: string;
   tenantId?: string;
+  userId?: string;
   orderNumber: number | null;
   outcome: SyncOutcome;
   message: string;

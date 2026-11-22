@@ -352,6 +352,9 @@
               <div class="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div class="flex items-center gap-2">
                   <span class="text-sm font-semibold text-gray-900">{{ pending.localId }}</span>
+                  @if (!offlineOrderService.isOwnOrder(pending)) {
+                    <app-badge variant="default">Another cashier</app-badge>
+                  }
                   @if (pending.status === 'syncing') {
                     <app-badge variant="info">Syncing</app-badge>
                   } @else if (pending.status === 'failed') {

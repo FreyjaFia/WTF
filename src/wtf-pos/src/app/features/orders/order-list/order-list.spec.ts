@@ -119,6 +119,7 @@ describe('OrderList', () => {
   let canOverride: boolean;
   let alert: {
     error: ReturnType<typeof vi.fn>;
+    warning: ReturnType<typeof vi.fn>;
     success: ReturnType<typeof vi.fn>;
     getLoadErrorMessage: ReturnType<typeof vi.fn>;
   };
@@ -137,6 +138,7 @@ describe('OrderList', () => {
     clearSyncResults: ReturnType<typeof vi.fn>;
     syncAll: ReturnType<typeof vi.fn>;
     syncNow: ReturnType<typeof vi.fn>;
+    isOwnOrder: (order: { userId?: string }) => boolean;
   };
   let listState: { load: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
   let router: Router;
@@ -201,6 +203,7 @@ describe('OrderList', () => {
     };
     alert = {
       error: vi.fn(),
+      warning: vi.fn(),
       success: vi.fn(),
       getLoadErrorMessage: vi.fn((e: string) => `Failed ${e}`),
     };
@@ -219,6 +222,7 @@ describe('OrderList', () => {
       clearSyncResults: vi.fn(),
       syncAll: vi.fn(),
       syncNow: vi.fn(),
+      isOwnOrder: (order) => order.userId !== 'someone-else',
     };
     unread = {};
     inbox = { unreadFor: vi.fn((orderId: string) => unread[orderId] ?? 0) };
@@ -515,6 +519,49 @@ describe('OrderList', () => {
       pendingOrders.set([]);
       TestBed.tick();
       expect(orderService.getOrdersPaged).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not wait for sync on orders that another cashier made', () => {
+      isOnline.set(false);
+      pendingOrders.set([
+        {
+          localId: 'theirs',
+          userId: 'someone-else',
+          command: { status: OrderStatusEnum.Pending, items: [] },
+          cartSnapshot: [],
+          customerName: null,
+          createdAt: '',
+          status: 'pending',
+          retryCount: 0,
+        },
+      ]);
+      init();
+      orderService.getOrdersPaged.mockClear();
+      isOnline.set(true);
+      TestBed.tick();
+      expect(orderService.getOrdersPaged).toHaveBeenCalledTimes(1);
+    });
+
+    it('will not open an order that another cashier made', () => {
+      pendingOrders.set([
+        {
+          localId: 'theirs',
+          userId: 'someone-else',
+          command: { status: OrderStatusEnum.Pending, items: [] },
+          cartSnapshot: [],
+          customerName: null,
+          createdAt: '',
+          status: 'pending',
+          retryCount: 0,
+        },
+      ]);
+      init();
+      const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      t.editPendingOrder('theirs');
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(alert.warning).toHaveBeenCalled();
     });
 
     it('clears loading/refreshing when going offline', () => {
