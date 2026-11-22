@@ -47,7 +47,8 @@ public static class ProductWriteScope
 }
 
 // Put on the product routes that change one product. The product comes from the route; a missing product falls through to its 404.
-// Only a branch-limited person holding products.write.branch is checked here; everyone else is decided by the route policy.
+// A branch-limited person is checked here: products.write alone never reaches a product, only products.write.branch does, and
+// only for the products limited to their branches. A person who works in every branch is decided by the route policy.
 public sealed class ProductWriteScopeFilter(string routeKey = "id") : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -56,9 +57,14 @@ public sealed class ProductWriteScopeFilter(string routeKey = "id") : IEndpointF
         if (Guid.TryParse(http.GetRouteValue(routeKey)?.ToString(), out var productId))
         {
             var db = http.RequestServices.GetRequiredService<WTFDbContext>();
-            if (ProductWriteScope.IsShopWide(db, http.User) || !ProductWriteScope.HasBranchKey(http.User))
+            if (ProductWriteScope.IsShopWide(db, http.User))
             {
                 return await next(context);
+            }
+
+            if (!ProductWriteScope.HasBranchKey(http.User))
+            {
+                return Results.Json(new { message = ProductWriteScope.NotYoursMessage }, statusCode: StatusCodes.Status403Forbidden);
             }
 
             var exists = await db.Products.AsNoTracking().AnyAsync(p => p.Id == productId, http.RequestAborted);
