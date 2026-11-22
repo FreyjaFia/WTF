@@ -80,6 +80,17 @@ internal static class TestDb
         return new InMemoryWtfDbContext(options, tenant);
     }
 
+    public static WTFDbContext Create(string name, ICurrentTenant tenant, ICurrentBranch branch)
+    {
+        var options = new DbContextOptionsBuilder<WTFDbContext>()
+            .UseInMemoryDatabase(name)
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .EnableSensitiveDataLogging()
+            .Options;
+
+        return new InMemoryWtfDbContext(options, tenant, branch);
+    }
+
     public static async Task SaveAsync(string dbName, params object[] entities)
     {
         await using var db = Create(dbName);
@@ -96,6 +107,11 @@ internal static class TestDb
 
         public InMemoryWtfDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant tenant)
             : base(options, tenant)
+        {
+        }
+
+        public InMemoryWtfDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant tenant, ICurrentBranch branch)
+            : base(options, tenant, branch)
         {
         }
 

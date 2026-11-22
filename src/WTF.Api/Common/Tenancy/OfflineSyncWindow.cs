@@ -33,6 +33,17 @@ public static class OfflineSyncWindow
         return maxAge is { } age && effective < utcNow - age ? "The order time is too far in the past." : null;
     }
 
+    public static string? CheckCatalogTime(DateTime? catalogSyncedAt, DateTime? orderTime, DateTime utcNow)
+    {
+        if (catalogSyncedAt is not { } synced)
+        {
+            return null;
+        }
+
+        var soldAt = orderTime?.ToUniversalTime() ?? utcNow;
+        return synced.ToUniversalTime() > soldAt.Add(ClockSkew) ? "The catalog time cannot be after the order time." : null;
+    }
+
     public static string? CheckOnlineCreate(HttpContext? context, DateTime? claimedAt, DateTime utcNow)
     {
         return CheckClaimedTime(claimedAt, utcNow, ClockSkew) ?? Check(context, claimedAt, utcNow);
@@ -40,6 +51,20 @@ public static class OfflineSyncWindow
 
     public static string? Check(HttpContext? context, DateTime? claimedAt, DateTime utcNow)
     {
+        if (claimedAt is { } claimedTime)
+        {
+            var claimedUtc = claimedTime.ToUniversalTime();
+            if (claimedUtc > utcNow.Add(ClockSkew))
+            {
+                return "The order time cannot be in the future.";
+            }
+
+            if (claimedUtc < utcNow.AddDays(-MaxAgeDays))
+            {
+                return $"This order is older than {MaxAgeDays} days and can no longer be accepted.";
+            }
+        }
+
         if (context?.Items[CutoffKey] is not DateTime closedSince)
         {
             return null;

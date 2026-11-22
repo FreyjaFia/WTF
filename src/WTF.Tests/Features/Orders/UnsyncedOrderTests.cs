@@ -14,7 +14,7 @@ namespace WTF.Tests.Features.Orders;
 
 public class UnsyncedOrderTests
 {
-    private static readonly DateTime Now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Now = DateTime.UtcNow.AddHours(-2);
 
     private readonly Guid _cashierId = Guid.NewGuid();
     private readonly Guid _adminId = Guid.NewGuid();

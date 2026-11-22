@@ -14,7 +14,7 @@ namespace WTF.Tests.Features.Orders;
 
 public class OfflineJudgeAtSaleTests
 {
-    private static readonly DateTime Sold = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Sold = DateTime.UtcNow.AddHours(-2);
     private static readonly DateTime DeviceSynced = Sold.AddHours(-3);
 
     private readonly Guid _userId = Guid.NewGuid();

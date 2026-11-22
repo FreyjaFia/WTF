@@ -17,7 +17,7 @@ namespace WTF.Tests.Features.Orders;
 
 public class OfflineSyncTests
 {
-    private static readonly DateTime Now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Now = DateTime.UtcNow.AddHours(-2);
 
     private readonly Guid _userId = Guid.NewGuid();
     private readonly string _dbName = TestDb.NewName();
@@ -358,7 +358,7 @@ public class OfflineSyncTests
     public async Task Sync_TheCatalogTimeTheDeviceReported_IsSavedOnTheOrder()
     {
         var latte = await SeedProduct("Latte", 150m);
-        var syncedAt = new DateTime(2026, 6, 10, 9, 30, 0, DateTimeKind.Utc);
+        var syncedAt = Now.AddHours(-2.5);
 
         var result = await SyncOne(Order("OFF-22-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)) with { CatalogSyncedAt = syncedAt });
         var withoutIt = await SyncOne(Order("OFF-23-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)));

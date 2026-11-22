@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Orders.DTOs;
@@ -27,6 +28,12 @@ public class CreateOrderBatchHandler(WTFDbContext db, ISender sender, IHttpConte
             {
                 throw new InvalidOperationException(tooLate);
             }
+
+            var badCatalogTime = OfflineSyncWindow.CheckCatalogTime(order.CatalogSyncedAt, order.CreatedAt, now);
+            if (badCatalogTime is not null)
+            {
+                throw new InvalidOperationException(badCatalogTime);
+            }
         }
 
         using var gate = await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
@@ -36,7 +43,24 @@ public class CreateOrderBatchHandler(WTFDbContext db, ISender sender, IHttpConte
 
         foreach (var order in request.Orders)
         {
-            var result = await sender.Send(order with { GateHeld = true, HonorStock = true }, cancellationToken);
+            // A retry after a lost response carries the same key: answer with the order that was already saved.
+            var key = order.OfflineLocalId?.Trim();
+            if (!string.IsNullOrEmpty(key))
+            {
+                var savedId = await db.Orders.AsNoTracking()
+                    .Where(o => o.OfflineLocalId == key)
+                    .Select(o => (Guid?)o.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+                var saved = savedId is null ? null : await sender.Send(new GetOrderByIdQuery(savedId.Value), cancellationToken);
+                if (saved is not null)
+                {
+                    results.Add(saved);
+                    continue;
+                }
+            }
+
+            // The batch route never lets a device name the branch: the order goes to the branch the person is working in.
+            var result = await sender.Send(order with { BranchId = null, OfflineLocalId = string.IsNullOrEmpty(key) ? order.OfflineLocalId : key, GateHeld = true, HonorStock = true }, cancellationToken);
             results.Add(result);
         }
 

@@ -53,7 +53,19 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             return Failed(localId, tooLate);
         }
 
-        order = await DropUnknownBranchAsync(order, cancellationToken);
+        var badCatalogTime = OfflineSyncWindow.CheckCatalogTime(order.CatalogSyncedAt, order.CreatedAt, DateTime.UtcNow);
+        if (badCatalogTime is not null)
+        {
+            return Failed(localId, badCatalogTime);
+        }
+
+        var branch = await ResolveBranchAsync(order, cancellationToken);
+        if (branch.Refusal is not null)
+        {
+            return Failed(localId, branch.Refusal);
+        }
+
+        order = order with { BranchId = branch.BranchId };
 
         var alreadySaved = await FindSavedAsync(localId, cancellationToken);
         if (alreadySaved is not null)
@@ -73,6 +85,10 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             var findings = order.Status == OrderStatusEnum.Completed
                 ? await OfflineOrderReview.FindAsync(db, order, timeZone, policy, cancellationToken, tenantFeatures, httpContextAccessor)
                 : [];
+            if (branch.ClosedBranchName is { } closedName)
+            {
+                findings = [.. findings, OfflineReason.Note(OfflineReasonCodes.BranchClosed, $"Sold in {closedName}, which has closed since; the sale was kept in that branch.")];
+            }
 
             var saved = await sender.Send(
                 order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true, AuditNotesAsAutoApproved = policy.AutoApproveNotes, HonorQuotedPrices = CanHonorQuotes(order), HonorSeniorPwdQuotes = CanHonorSeniorPwd(order), SeniorPwdVatRegistered = order.SeniorPwdPersons.Count > 0 ? await OfflineOrderReview.SeniorPwdVatAtSaleAsync(db, order, cancellationToken) : null },
@@ -105,19 +121,35 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
         }
     }
 
-    // A device may name a branch that was deleted or never existed in this shop: the sale then goes to the open branch.
-    private async Task<CreateOrderCommand> DropUnknownBranchAsync(CreateOrderCommand order, CancellationToken cancellationToken)
+    // A device may name a branch that was deleted or never existed in this shop: the sale then goes to the open branch. A branch
+    // that has closed since is still the branch the sale happened in, so it stays there with a note. A branch the signed-in
+    // person may not use is refused rather than moved.
+    private async Task<ResolvedBranch> ResolveBranchAsync(CreateOrderCommand order, CancellationToken cancellationToken)
     {
         if (order.BranchId is not { } branchId)
         {
-            return order;
+            return new ResolvedBranch(null, null, null);
         }
 
-        var exists = await db.Branches
+        var branch = await db.Branches
             .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
-            .AnyAsync(b => b.Id == branchId && b.IsActive, cancellationToken);
-        return exists ? order : order with { BranchId = null };
+            .Where(b => b.Id == branchId)
+            .Select(b => new { b.Name, b.IsActive })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (branch is null)
+        {
+            return new ResolvedBranch(null, null, null);
+        }
+
+        if (!db.MayWriteToBranch(branchId))
+        {
+            return new ResolvedBranch(branchId, null, $"You cannot save a sale made in {branch.Name}; ask a manager of that branch to sync it.");
+        }
+
+        return new ResolvedBranch(branchId, branch.IsActive ? null : branch.Name, null);
     }
+
+    private sealed record ResolvedBranch(Guid? BranchId, string? ClosedBranchName, string? Refusal);
 
     private static bool CanHonorSeniorPwd(CreateOrderCommand order)
     {

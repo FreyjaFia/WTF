@@ -43,6 +43,7 @@ public static class OfflineReasonCodes
     public const string SeniorPwdOnPromotion = "SeniorPwdOnPromotion";
     public const string SeniorPwdIdRepeated = "SeniorPwdIdRepeated";
     public const string SeniorPwdPermissionLost = "SeniorPwdPermissionLost";
+    public const string BranchClosed = "BranchClosed";
 }
 
 internal static class OrderReviewReasons

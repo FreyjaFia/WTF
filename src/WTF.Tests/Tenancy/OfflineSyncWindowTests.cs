@@ -21,7 +21,7 @@ public class OfflineSyncWindowTests
 
     [Fact]
     public void OpenShop_AcceptsAnything() =>
-        OfflineSyncWindow.Check(new DefaultHttpContext(), Now.AddDays(-30), Now).ShouldBeNull();
+        OfflineSyncWindow.Check(new DefaultHttpContext(), Now.AddDays(-3), Now).ShouldBeNull();
 
     [Fact]
     public void OrderMadeBeforeTheCutOff_IsAccepted() =>
@@ -50,4 +50,31 @@ public class OfflineSyncWindowTests
     [Fact]
     public void FutureClaimIsCappedAtNow() =>
         OfflineSyncWindow.Check(Closed(Now.AddHours(-1)), Now.AddDays(5), Now).ShouldNotBeNull();
+
+    [Fact]
+    public void OpenShop_StillRefusesAnOrderOlderThanSevenDays() =>
+        OfflineSyncWindow.Check(new DefaultHttpContext(), Now.AddDays(-30), Now).ShouldNotBeNull();
+
+    [Fact]
+    public void OpenShop_RefusesAnOrderTimedInTheFuture() =>
+        OfflineSyncWindow.Check(new DefaultHttpContext(), Now.AddHours(1), Now).ShouldNotBeNull();
+
+    [Fact]
+    public void OpenShop_AcceptsAClockThatIsAFewMinutesAhead() =>
+        OfflineSyncWindow.Check(new DefaultHttpContext(), Now.AddMinutes(4), Now).ShouldBeNull();
+
+    [Fact]
+    public void CatalogTimeAfterTheOrderTime_IsRefused() =>
+        OfflineSyncWindow.CheckCatalogTime(Now.AddHours(-1), Now.AddHours(-3), Now).ShouldNotBeNull();
+
+    [Fact]
+    public void CatalogTimeBeforeTheOrderTime_IsAccepted() =>
+        OfflineSyncWindow.CheckCatalogTime(Now.AddHours(-3), Now.AddHours(-1), Now).ShouldBeNull();
+
+    [Fact]
+    public void CatalogTimeWithoutAnOrderTime_IsComparedWithNow()
+    {
+        OfflineSyncWindow.CheckCatalogTime(Now.AddHours(-1), null, Now).ShouldBeNull();
+        OfflineSyncWindow.CheckCatalogTime(Now.AddHours(1), null, Now).ShouldNotBeNull();
+    }
 }
