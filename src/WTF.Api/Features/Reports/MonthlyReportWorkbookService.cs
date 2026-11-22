@@ -1,12 +1,17 @@
 using ClosedXML.Excel;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using WTF.Api.Common.Time;
 using WTF.Api.Endpoints;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
 using WTF.Api.Services;
+using WTF.Domain.Data;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Features.Reports;
 
@@ -44,7 +49,9 @@ public interface IMonthlyReportWorkbookService
 public sealed class MonthlyReportWorkbookService(
     ISender sender,
     IHttpContextAccessor httpContextAccessor,
-    IReportFileStorage storage) : IMonthlyReportWorkbookService
+    IReportFileStorage storage,
+    WTFDbContext db,
+    ICurrentBranch currentBranch) : IMonthlyReportWorkbookService
 {
     private sealed record WorksheetSummaryItem(string Label, string Value);
 
@@ -202,7 +209,7 @@ public sealed class MonthlyReportWorkbookService(
         var workbookBytes = stream.ToArray();
 
         var fileName = BuildFileName(year, month, source);
-        var relativePath = BuildRelativePath(year, month, source);
+        var relativePath = BuildRelativePath(year, month, source, await BranchScopeKeyAsync(cancellationToken));
         await storage.SaveAsync(
             relativePath,
             workbookBytes,
@@ -221,7 +228,7 @@ public sealed class MonthlyReportWorkbookService(
     {
         ValidateMonth(year, month);
         var fileName = BuildFileName(year, month, source);
-        var relativePath = BuildRelativePath(year, month, source);
+        var relativePath = BuildRelativePath(year, month, source, await BranchScopeKeyAsync(cancellationToken));
         var fileInfo = await storage.GetInfoAsync(relativePath, cancellationToken);
 
         return new MonthlyReportWorkbookStatusDto(
@@ -241,7 +248,7 @@ public sealed class MonthlyReportWorkbookService(
     {
         ValidateMonth(year, month);
         var fileName = BuildFileName(year, month, source);
-        var relativePath = BuildRelativePath(year, month, source);
+        var relativePath = BuildRelativePath(year, month, source, await BranchScopeKeyAsync(cancellationToken));
         var bytes = await storage.ReadAllBytesAsync(relativePath, cancellationToken);
         if (bytes is null)
         {
@@ -422,15 +429,34 @@ public sealed class MonthlyReportWorkbookService(
         worksheet.Columns(1, headers.Count).AdjustToContents();
     }
 
+    private async Task<string> BranchScopeKeyAsync(CancellationToken cancellationToken)
+    {
+        if (!currentBranch.FilterEnabled)
+        {
+            return "";
+        }
+
+        var visible = currentBranch.VisibleBranchIds.OrderBy(id => id).ToList();
+        var shopBranchIds = await db.Branches.IgnoreQueryFilters([WTFDbContext.BranchFilterName]).Select(b => b.Id).ToListAsync(cancellationToken);
+        if (shopBranchIds.All(visible.Contains))
+        {
+            return "";
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(",", visible)));
+        return "b" + Convert.ToHexString(hash)[..10].ToLowerInvariant();
+    }
+
     private static string BuildFileName(int year, int month, OrderSourceEnum? source)
     {
         var name = string.Format(CultureInfo.InvariantCulture, FileNameFormat, year, month);
         return source is null ? name : name.Replace(".xlsx", $"-{source}.xlsx", StringComparison.Ordinal);
     }
 
-    private static string BuildRelativePath(int year, int month, OrderSourceEnum? source)
+    private static string BuildRelativePath(int year, int month, OrderSourceEnum? source, string branchScopeKey)
     {
         var folder = $"{ReportsFolder}/{year:0000}-{month:00}";
-        return $"{folder}/{BuildFileName(year, month, source)}";
+        var name = BuildFileName(year, month, source);
+        return branchScopeKey.Length == 0 ? $"{folder}/{name}" : $"{folder}/{name.Replace(".xlsx", $"-{branchScopeKey}.xlsx", StringComparison.Ordinal)}";
     }
 }

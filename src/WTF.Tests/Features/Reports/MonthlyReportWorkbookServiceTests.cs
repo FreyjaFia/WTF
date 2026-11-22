@@ -105,7 +105,7 @@ public class MonthlyReportWorkbookServiceTests
         Wire<GetMenuEngineeringReportQuery, MenuEngineeringReportRowDto>(_menu, q => (q.FromDate, q.ToDate));
         Wire<GetStockStatusReportQuery, StockStatusReportRowDto>(_stock, _ => (null, null));
 
-        return new MonthlyReportWorkbookService(_sender, accessor, _storage);
+        return new MonthlyReportWorkbookService(_sender, accessor, _storage, TestDb.Create(), WTF.Domain.Tenancy.NoBranch.Instance);
     }
 
     private static XLWorkbook Open(byte[] bytes) => new(new MemoryStream(bytes));
