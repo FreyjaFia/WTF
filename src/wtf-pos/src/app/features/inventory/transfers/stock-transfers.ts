@@ -1,6 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorMessages } from '@core/messages';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@core/services';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, isPageSizeOption } from '@shared/calculations/pagination';
 import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { PaginationComponent } from '@shared/components/pagination/pagination';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { ItemDto, StockTransferSummaryDto } from '@shared/models';
@@ -24,6 +25,7 @@ type TransferSortColumn = 'from' | 'to' | 'items' | 'created';
 @Component({
   selector: 'app-stock-transfers',
   imports: [
+    ConfirmDialogComponent,
     ConnectionErrorComponent,
     DatePipe,
     DecimalPipe,
@@ -59,6 +61,7 @@ export class StockTransfersComponent implements OnInit {
   protected readonly connectionFailed = signal(false);
   protected readonly isFormOpen = signal(false);
   protected readonly isSaving = signal(false);
+  protected readonly showDiscardModal = signal(false);
   protected readonly items = signal<ItemDto[]>([]);
   protected readonly destinations = computed(() =>
     this.branchService.branches().filter((b) => b.isActive && b.id !== this.branchService.activeId()),
@@ -99,24 +102,49 @@ export class StockTransfersComponent implements OnInit {
     }
 
     this.inventory.getInventoryItems({ isActive: true }).subscribe({
-      next: (items) => this.items.set(items),
+      next: (items) => {
+        this.items.set(items);
+        this.lines.controls.forEach((line) => line.controls.quantity.updateValueAndValidity());
+      },
       error: (err: Error) => this.alertService.error(err.message),
     });
   }
 
+  protected cancelForm(): void {
+    if (this.form.dirty) {
+      this.showDiscardModal.set(true);
+      return;
+    }
+
+    this.closeForm();
+  }
+
+  protected confirmDiscard(): void {
+    this.showDiscardModal.set(false);
+    this.closeForm();
+  }
+
+  protected keepEditing(): void {
+    this.showDiscardModal.set(false);
+  }
+
   protected closeForm(): void {
+    this.showDiscardModal.set(false);
     this.isFormOpen.set(false);
     this.form.reset();
     this.lines.clear();
   }
 
   protected addLine(): void {
-    this.lines.push(
-      new FormGroup({
-        itemId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-        quantity: new FormControl<number | null>(null, [Validators.required, Validators.min(0.001)]),
-      }),
-    );
+    const itemId = new FormControl('', { nonNullable: true, validators: [Validators.required] });
+    const quantity = new FormControl<number | null>(null, [
+      Validators.required,
+      Validators.min(0.001),
+      (control: AbstractControl): ValidationErrors | null => this.exceedsAvailable(itemId.value, control.value),
+    ]);
+
+    itemId.valueChanges.subscribe(() => quantity.updateValueAndValidity());
+    this.lines.push(new FormGroup({ itemId, quantity }));
   }
 
   protected removeLine(index: number): void {
@@ -179,6 +207,12 @@ export class StockTransfersComponent implements OnInit {
           this.alertService.error(err.message);
         },
       });
+  }
+
+  private exceedsAvailable(itemId: string, quantity: number | null): ValidationErrors | null {
+    const available = this.availableOf(itemId);
+
+    return available !== null && typeof quantity === 'number' && quantity > available ? { exceeds: { available } } : null;
   }
 
   private reloadFromFirstPage(): void {

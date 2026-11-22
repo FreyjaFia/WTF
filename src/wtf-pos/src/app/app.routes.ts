@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { platformGuard } from '@core/guards/platform.guard';
+import { multiBranchGuard } from '@core/guards/multi-branch.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 import { Dashboard } from '@features/dashboard/dashboard';
@@ -261,7 +262,7 @@ export const routes: Routes = [
           {
             path: 'transfers',
             component: StockTransfersComponent,
-            canActivate: [roleGuard],
+            canActivate: [roleGuard, multiBranchGuard],
             data: { permission: Permissions.StockRead },
           },
           {

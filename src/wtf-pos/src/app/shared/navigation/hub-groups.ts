@@ -1,4 +1,4 @@
-import { AuthService, BranchService, StockAttentionService, StockWasteService } from '@core/services';
+import { AuthService, BranchService, PlanStore, StockAttentionService, StockWasteService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 export interface HubCard {
@@ -29,6 +29,7 @@ export function inventoryGroups(
   attention: StockAttentionService,
   stockWaste: StockWasteService,
   branches?: BranchService,
+  plans?: PlanStore,
 ): HubGroup[] {
   return [
     {
@@ -83,7 +84,10 @@ export function inventoryGroups(
           icon: 'icon-inventory',
           description: 'Move stock between your branches.',
           route: AppRoutes.InventoryTransfers,
-          canShow: () => auth.canReadStockMovements() && (branches?.isMultiBranch() ?? false),
+          canShow: () =>
+            auth.canReadStockMovements() &&
+            (branches?.isMultiBranch() ?? false) &&
+            (plans?.hasFeature('branches') ?? true),
         },
         {
           id: 'waste',

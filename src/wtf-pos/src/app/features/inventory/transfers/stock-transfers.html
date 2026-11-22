@@ -76,6 +76,11 @@
                 [class.input-error]="line.controls.quantity.touched && line.controls.quantity.invalid"
               />
             </div>
+            @if (line.controls.quantity.touched && line.controls.quantity.errors?.['exceeds']; as exceeds) {
+              <p class="text-error col-span-12 text-sm" role="alert" data-testid="transfer-exceeds">
+                Only {{ exceeds.available | number: '1.0-3' }} {{ unitOf(line.controls.itemId.value) }} available here.
+              </p>
+            }
             <div class="col-span-3 flex justify-end sm:col-span-1">
               <button
                 type="button"
@@ -108,7 +113,7 @@
         />
       </div>
       <div class="flex justify-end gap-2">
-        <button type="button" class="app-btn app-btn-secondary app-btn-md" [disabled]="isSaving()" (click)="closeForm()">
+        <button type="button" class="app-btn app-btn-secondary app-btn-md" [disabled]="isSaving()" (click)="cancelForm()">
           Cancel
         </button>
         <button type="submit" class="app-btn app-btn-primary app-btn-md" data-testid="submit-transfer" [disabled]="isSaving()">
@@ -116,6 +121,21 @@
         </button>
       </div>
     </form>
+  }
+
+  @if (showDiscardModal()) {
+    <app-confirm-dialog
+      variant="warning"
+      icon="icon-back"
+      heading="Discard Changes?"
+      confirmLabel="Discard"
+      cancelLabel="Keep Editing"
+      confirmPlacement="secondary"
+      (confirmed)="confirmDiscard()"
+      (cancelled)="keepEditing()"
+    >
+      You have unsaved changes that will be lost if you close this form.
+    </app-confirm-dialog>
   }
 
   @if (isLoading()) {

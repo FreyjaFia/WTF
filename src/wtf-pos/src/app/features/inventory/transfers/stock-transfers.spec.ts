@@ -39,10 +39,15 @@ interface Vm {
   addLine: () => void;
   removeLine: (index: number) => void;
   submit: () => void;
+  cancelForm: () => void;
+  confirmDiscard: () => void;
+  keepEditing: () => void;
+  isFormOpen: () => boolean;
+  showDiscardModal: () => boolean;
 }
 
 describe('StockTransfersComponent', () => {
-  function setup(options: { active?: string; canWrite?: boolean } = {}) {
+  function setup(options: { active?: string; canWrite?: boolean; items?: object[] } = {}) {
     const service = {
       getTransfersPaged: vi.fn().mockReturnValue(of(paged([row()]))),
       createTransfer: vi.fn().mockReturnValue(of({ summary: row(), lines: [] })),
@@ -61,7 +66,7 @@ describe('StockTransfersComponent', () => {
       providers: [
         provideRouter([]),
         { provide: StockTransferService, useValue: service },
-        { provide: InventoryService, useValue: { getInventoryItems: vi.fn().mockReturnValue(of([])) } },
+        { provide: InventoryService, useValue: { getInventoryItems: vi.fn().mockReturnValue(of(options.items ?? [])) } },
         { provide: AlertService, useValue: { error: vi.fn(), success: vi.fn() } },
         { provide: AuthService, useValue: { canWriteStockMovements: () => options.canWrite ?? true } },
         { provide: BranchService, useValue: branches },
@@ -115,5 +120,96 @@ describe('StockTransfersComponent', () => {
     vm.submit();
 
     expect(service.createTransfer).not.toHaveBeenCalled();
+  });
+
+  describe('asking before the form is thrown away', () => {
+    it('closes at once when nothing was typed', () => {
+      const { vm } = setup();
+      vm.openForm();
+
+      vm.cancelForm();
+
+      expect(vm.isFormOpen()).toBe(false);
+      expect(vm.showDiscardModal()).toBe(false);
+    });
+
+    it('asks "Discard Changes?" when something was typed, and keeps the form on Keep Editing', () => {
+      const { vm, fixture } = setup();
+      vm.openForm();
+      fixture.detectChanges();
+      const notes = fixture.nativeElement.querySelector('#transfer-notes') as HTMLInputElement;
+      notes.value = 'Weekend rush';
+      notes.dispatchEvent(new Event('input'));
+
+      vm.cancelForm();
+      fixture.detectChanges();
+
+      expect(vm.showDiscardModal()).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('Discard Changes?');
+      expect(vm.isFormOpen()).toBe(true);
+
+      vm.keepEditing();
+      expect(vm.showDiscardModal()).toBe(false);
+      expect(vm.isFormOpen()).toBe(true);
+    });
+
+    it('closes the form once the person confirms the discard', () => {
+      const { vm, fixture } = setup();
+      vm.openForm();
+      fixture.detectChanges();
+      const notes = fixture.nativeElement.querySelector('#transfer-notes') as HTMLInputElement;
+      notes.value = 'Weekend rush';
+      notes.dispatchEvent(new Event('input'));
+      vm.cancelForm();
+
+      vm.confirmDiscard();
+
+      expect(vm.isFormOpen()).toBe(false);
+      expect(vm.showDiscardModal()).toBe(false);
+    });
+  });
+
+  describe('the quantity against what is available here', () => {
+    const items = [{ id: 'i1', name: 'Arabica beans', unitName: 'kg', currentQuantity: 10 }];
+
+    it('does not send more than the branch has, and says how much there is', () => {
+      const { vm, service, fixture } = setup({ items });
+      vm.openForm();
+      vm.form.patchValue({ toBranchId: 'b2' });
+      vm.lines.at(0).patchValue({ itemId: 'i1', quantity: 12 });
+
+      vm.submit();
+      fixture.detectChanges();
+
+      expect(service.createTransfer).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('[data-testid="transfer-exceeds"]').textContent).toContain(
+        'Only 10 kg available',
+      );
+    });
+
+    it('sends exactly what the branch has', () => {
+      const { vm, service } = setup({ items });
+      vm.openForm();
+      vm.form.patchValue({ toBranchId: 'b2' });
+      vm.lines.at(0).patchValue({ itemId: 'i1', quantity: 10 });
+
+      vm.submit();
+
+      expect(service.createTransfer).toHaveBeenCalledTimes(1);
+    });
+
+    it('checks the quantity again when another item is chosen', () => {
+      const { vm, service } = setup({
+        items: [...items, { id: 'i2', name: 'Oat milk', unitName: 'L', currentQuantity: 50 }],
+      });
+      vm.openForm();
+      vm.form.patchValue({ toBranchId: 'b2' });
+      vm.lines.at(0).patchValue({ itemId: 'i2', quantity: 30 });
+      vm.lines.at(0).patchValue({ itemId: 'i1' });
+
+      vm.submit();
+
+      expect(service.createTransfer).not.toHaveBeenCalled();
+    });
   });
 });

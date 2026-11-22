@@ -1,7 +1,7 @@
 import { Component, computed, DestroyRef, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { AuthService, BranchService, StockAttentionService, StockWasteService } from '@core/services';
+import { AuthService, BranchService, PlanStore, StockAttentionService, StockWasteService } from '@core/services';
 import { IconComponent } from '@shared/components';
 import { SectionSwitcherComponent } from '@shared/components/section-switcher/section-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -20,11 +20,12 @@ export class InventoryComponent {
   private readonly attention = inject(StockAttentionService);
   private readonly stockWaste = inject(StockWasteService);
   private readonly branches = inject(BranchService);
+  private readonly plans = inject(PlanStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly hubRoute = AppRoutes.InventoryRoot;
   protected readonly switcherGroups = computed(() =>
-    visibleGroups(inventoryGroups(this.authService, this.attention, this.stockWaste, this.branches)),
+    visibleGroups(inventoryGroups(this.authService, this.attention, this.stockWaste, this.branches, this.plans)),
   );
 
   private readonly currentUrl = toSignal(

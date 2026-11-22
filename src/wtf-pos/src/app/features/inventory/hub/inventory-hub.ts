@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components';
-import { AuthService, BranchService, StockAttentionService, StockWasteService } from '@core/services';
+import { AuthService, BranchService, PlanStore, StockAttentionService, StockWasteService } from '@core/services';
 import { HubGroup, visibleGroups, inventoryGroups } from '@shared/navigation/hub-groups';
 
 @Component({
@@ -15,8 +15,9 @@ export class InventoryHubComponent {
   private readonly attention = inject(StockAttentionService);
   private readonly stockWaste = inject(StockWasteService);
   private readonly branches = inject(BranchService);
+  private readonly plans = inject(PlanStore);
 
   protected readonly groups = computed<HubGroup[]>(() =>
-    visibleGroups(inventoryGroups(this.authService, this.attention, this.stockWaste, this.branches)),
+    visibleGroups(inventoryGroups(this.authService, this.attention, this.stockWaste, this.branches, this.plans)),
   );
 }
