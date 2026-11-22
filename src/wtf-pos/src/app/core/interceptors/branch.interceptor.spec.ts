@@ -77,4 +77,35 @@ describe('branchInterceptor', () => {
     controller.expectOne('/api/orders').flush({ message: 'Nope' }, { status: 403, statusText: 'Forbidden' });
     expect(status).toBe(403);
   });
+
+  it('does not send a write again after the branch is refused', () => {
+    branches.select('b-1');
+    let status = 0;
+    http.post('/api/orders', {}).subscribe({ error: (e) => (status = e.status) });
+    controller
+      .expectOne('/api/orders')
+      .flush({ message: 'You cannot use that branch.' }, { status: 403, statusText: 'Forbidden' });
+    controller.expectOne((r) => r.url.endsWith('/api/branches/mine')).flush({
+      branches: [{ id: 'b-main', name: 'Main', isActive: true, isMain: true }],
+      defaultBranchId: 'b-main',
+      canSeeAll: false,
+      isMultiBranch: false,
+    });
+    controller.expectNone('/api/orders');
+    expect(status).toBe(403);
+  });
+
+  it('refuses a write under All branches without sending it', () => {
+    branches.select('all');
+    let message = '';
+    http.post('/api/orders', {}).subscribe({ error: (e) => (message = e.error.message) });
+    controller.expectNone('/api/orders');
+    expect(message).toBe('Pick a branch first.');
+  });
+
+  it('still sends sign-in calls under All branches', () => {
+    branches.select('all');
+    http.post('/api/auth/login', {}).subscribe();
+    controller.expectOne('/api/auth/login');
+  });
 });
