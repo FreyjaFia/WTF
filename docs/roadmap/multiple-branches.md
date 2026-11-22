@@ -669,3 +669,36 @@ Questions and choices (decided with the recommendation):
 
 Known limits of the per-branch work: hub group membership is fixed at connect; the Voids and Senior/PWD report "Order"
 columns still show `#N`; the recipe cost shows the shop cost in All branches mode.
+
+## Branch hardening (22 Nov 2026)
+
+Fixes from the release review. Where an older section says otherwise, this one wins.
+
+- **Monthly workbook.** The file is kept per branch choice: the key is a hash of the branches in view, and there is none when every
+  branch of the shop is in view (so the nightly file and an All-branches file are the same one). A branch-limited person never
+  downloads or overwrites the shop-wide file.
+- **Batch and sync.** `POST /api/orders/batch` ignores any branch the device names and saves in the active branch; a retried
+  queue number answers with the saved order. `/sync` keeps a sale in a branch that closed since (with a `BranchClosed` note),
+  refuses a branch the person may not use (no silent move), and falls back to the active branch only when the branch does not
+  exist in the shop. An order time more than 5 minutes ahead or older than 7 days is refused even while the subscription is
+  active, and a catalog time after the order time is refused.
+- **Price tolerance never softens a sale quoted below the price at sale.** The review stores the price difference as quoted minus
+  price at sale; only a quote at or above it can become a Note.
+- **People are scoped.** A limited person lists, opens (404 otherwise), edits, resets and deactivates only people who work in
+  one of their branches; All-scope people are out of reach. People they add are limited to the branch they work in. Kitchen
+  starts limited like Cashier and Stock Manager, and moving an All-scope person to one of those roles limits them to their last
+  branch. A limited Admin keeps only the keys a limited person may hold, so the other direction (Cashier to Admin) is left as it is.
+- **Plan gate.** Branch prices follow the branches plan feature (endpoints and the price lookup). Finished orders keep the prices
+  they were saved with.
+- **Product edits.** A limited person with `products.write` but not `products.write.branch` is refused on every scoped product route.
+- **Closed branch.** Its customer ordering link answers like a shop that cannot take orders (503 with the shop's contact). The
+  close check counts waiting-review orders once, counts stock below zero and stock of inactive items, and sees a person's other
+  open branches whichever branch the owner works in.
+- **Transfers.** The destination must be one of the sender's own branches (403 otherwise; before, any open branch of the shop was
+  allowed). The receiving branch is checked for stock alerts too. This changes the earlier "may send to any branch" exception.
+- **Request guards.** An `X-Branch-Id` that is not a branch id (garbage, or sent twice) answers 400 outside `/api/branches/mine`,
+  `/api/auth` and the hubs. A deactivated user's token answers 401 (logout still works). The staff hubs close when the token expires.
+- **Purchase orders.** Numbers run across all branches of a shop and the lock is per shop.
+- **Misc.** Adding a branch, making one main and reopening one need a person who works in every branch. Branch stock settings
+  refuse a closed branch and keep the cost without `inventory.costs.write`. A push token of another shop is not taken over (409).
+- **Staging seed.** `bgcmgr` (Mika Dizon, Admin limited to BGC) shows the limited-manager view; Kitchen staff are limited to one branch.

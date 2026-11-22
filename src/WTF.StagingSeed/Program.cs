@@ -29,6 +29,7 @@ using WTF.Domain.Tenancy;
 
 const string PlatformUsername = "platformadmin";
 const string OwnerUsername = "admin";
+const string BranchManagerUsername = "bgcmgr";
 var starterTenantId = new Guid("00000000-0000-0000-0000-0000000000a2");
 
 var connectionString = Environment.GetEnvironmentVariable("STAGING_SQL");
@@ -119,6 +120,7 @@ async Task SeedMainShopAsync()
         ("stockmgr", "Nora", "Villanueva", UserRoleEnum.StockManager),
         ("itemmgr", "Paolo", "Cruz", UserRoleEnum.ItemManager),
         ("kitchen", "Rico", "Mendoza", UserRoleEnum.Kitchen),
+        (BranchManagerUsername, "Mika", "Dizon", UserRoleEnum.Admin),
     };
 
     foreach (var (username, first, last, role) in accounts)
@@ -1692,7 +1694,8 @@ async Task EnsureBranchesAsync(WTFDbContext db, Guid tenantId, (string Name, str
     await db.SaveChangesAsync();
 }
 
-// Cashiers and stock managers work in one branch each, spread across the branches in turn; everyone else sees all of them.
+// Cashiers, stock managers and kitchen staff work in one branch each, spread across the branches in turn; the BGC branch manager
+// is an Admin limited to BGC; everyone else sees all of them.
 async Task AssignBranchesAsync(WTFDbContext db, Guid tenantId)
 {
     var branches = await db.Branches.IgnoreQueryFilters()
@@ -1712,8 +1715,11 @@ async Task AssignBranchesAsync(WTFDbContext db, Guid tenantId)
     var turn = 0;
     foreach (var user in users)
     {
-        var single = user.RoleId is (int)UserRoleEnum.Cashier or (int)UserRoleEnum.StockManager;
-        var branch = single ? branches[turn++ % branches.Count] : main;
+        var isBranchManager = user.Username == BranchManagerUsername;
+        var single = isBranchManager || user.RoleId is (int)UserRoleEnum.Cashier or (int)UserRoleEnum.StockManager or (int)UserRoleEnum.Kitchen;
+        var branch = isBranchManager
+            ? branches.FirstOrDefault(b => b.Code == "BGC") ?? branches[^1]
+            : single ? branches[turn++ % branches.Count] : main;
         user.DefaultBranchId = branch.Id;
         user.BranchScope = (byte)(single ? BranchScopeEnum.Selected : BranchScopeEnum.All);
         if (single)

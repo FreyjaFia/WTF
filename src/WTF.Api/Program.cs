@@ -471,9 +471,9 @@ app.UseMiddleware<PermissionClaimsMiddleware>();
 app.UseMiddleware<BranchScopeMiddleware>();
 app.UseAuthorization();
 
-app.MapHub<DashboardHub>("/hubs/dashboard");
-app.MapHub<StaffOrderHub>("/hubs/staff-orders");
-app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<DashboardHub>("/hubs/dashboard", options => options.CloseOnAuthenticationExpiration = true);
+app.MapHub<StaffOrderHub>("/hubs/staff-orders", options => options.CloseOnAuthenticationExpiration = true);
+app.MapHub<NotificationHub>("/hubs/notifications", options => options.CloseOnAuthenticationExpiration = true);
 app.MapHub<CustomerOrderHub>("/hubs/customer-orders");
 
 app.MapAppEndpoints();
