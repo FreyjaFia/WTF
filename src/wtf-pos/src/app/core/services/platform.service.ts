@@ -22,6 +22,9 @@ import {
 } from '@shared/models/subscription.models';
 import { environment } from '@environments/environment.development';
 import { Observable, map } from 'rxjs';
+import { db } from './db';
+import { announceLocalDataWiped } from './local-data-events';
+import { saveDeviceTenantId, saveDeviceUserId, tenantIdFromToken, userIdFromToken } from './tenant-context';
 
 interface LoginResponse {
   accessToken: string;
@@ -187,9 +190,12 @@ export class PlatformService {
       readOnly: dto.readOnly,
     };
 
+    this.wipeLocalShopData();
     localStorage.setItem('token', dto.accessToken);
     localStorage.removeItem('refreshToken');
     localStorage.setItem(PlatformService.IMPERSONATION_KEY, JSON.stringify(info));
+    saveDeviceTenantId(tenantIdFromToken(dto.accessToken));
+    saveDeviceUserId(userIdFromToken(dto.accessToken));
   }
 
   public openShopApp(): void {
@@ -224,6 +230,22 @@ export class PlatformService {
     localStorage.removeItem(PlatformService.IMPERSONATION_KEY);
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    this.wipeLocalShopData();
+  }
+
+  // The shop being looked at (and its branch, cart and menu) must never carry over to the next session on this device.
+  // Orders waiting to sync stay queued under their own shop and person.
+  private wipeLocalShopData(): void {
+    for (const key of ['wtf_active_branch', 'wtf_my_branches', 'wtf_me_cache']) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Storage can be blocked; nothing was saved there then.
+      }
+    }
+
+    void Promise.all([db.carts.clear(), db.catalog.clear(), db.images.clear()]).catch(() => undefined);
+    announceLocalDataWiped();
   }
 
   public static messageOf(error: unknown, fallback: string): string {

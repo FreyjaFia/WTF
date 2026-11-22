@@ -1,6 +1,8 @@
 import { environment } from '@environments/environment.development';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { capture, setupHttpService } from '../../testing/service-testing';
+import { db } from './db';
+import { localDataWiped$ } from './local-data-events';
 import { PlatformService } from './platform.service';
 
 function tokenExpiringIn(seconds: number): string {
@@ -111,5 +113,62 @@ describe('PlatformService', () => {
 
     expect(service.getImpersonation()).toBeNull();
     expect(localStorage.getItem('token')).toBeNull();
+  });
+
+  describe('local shop data around a sign-in as a shop', () => {
+    const shopToken = (): string => {
+      const payload = btoa(JSON.stringify({ sub: 'Owner-1', tenant_id: 'BBBBBBBB-0000-0000-0000-000000000002' }));
+
+      return `h.${payload}.s`;
+    };
+    const dto = {
+      accessToken: '',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      username: 'owner',
+      tenantName: 'Brew Bar',
+      readOnly: true,
+    };
+
+    beforeEach(() => {
+      vi.spyOn(db.carts, 'clear').mockResolvedValue(undefined as never);
+      vi.spyOn(db.catalog, 'clear').mockResolvedValue(undefined as never);
+      vi.spyOn(db.images, 'clear').mockResolvedValue(undefined as never);
+      localStorage.setItem('wtf_active_branch', '11111111-1111-4111-8111-111111111111');
+      localStorage.setItem('wtf_my_branches', '{}');
+      localStorage.setItem('wtf_me_cache', '{}');
+    });
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('forgets the branch, cart, menu and profile of the last session when it starts', () => {
+      const { service } = setupHttpService(PlatformService);
+      const wiped = vi.fn();
+      const subscription = localDataWiped$.subscribe(wiped);
+
+      service.startImpersonation({ ...dto, accessToken: shopToken() });
+      subscription.unsubscribe();
+
+      expect(localStorage.getItem('wtf_active_branch')).toBeNull();
+      expect(localStorage.getItem('wtf_my_branches')).toBeNull();
+      expect(localStorage.getItem('wtf_me_cache')).toBeNull();
+      expect(db.carts.clear).toHaveBeenCalled();
+      expect(db.catalog.clear).toHaveBeenCalled();
+      expect(wiped).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem('wtf-device-tenant')).toBe('bbbbbbbb-0000-0000-0000-000000000002');
+      expect(localStorage.getItem('wtf-device-user')).toBe('owner-1');
+    });
+
+    it('forgets what the shop left on the device when it ends', () => {
+      const { service } = setupHttpService(PlatformService);
+      service.startImpersonation({ ...dto, accessToken: shopToken() });
+      localStorage.setItem('wtf_active_branch', '22222222-2222-4222-8222-222222222222');
+      vi.mocked(db.carts.clear).mockClear();
+
+      service.endImpersonation();
+
+      expect(localStorage.getItem('wtf_active_branch')).toBeNull();
+      expect(db.carts.clear).toHaveBeenCalled();
+      expect(localStorage.getItem('token')).toBeNull();
+    });
   });
 });
