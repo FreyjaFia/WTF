@@ -41,7 +41,7 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
 
         user.Id = Guid.NewGuid();
         db.Users.Add(user);
-        await BranchAssignment.AssignNewUserAsync(db, user, currentBranch?.ActiveBranchId, cancellationToken);
+        await BranchAssignment.AssignNewUserAsync(db, user, currentBranch?.ActiveBranchId, cancellationToken, forceSelected: db.IsBranchLimited);
         await db.SaveChangesAsync(cancellationToken);
         permissionCache.Forget();
         branchScopeCache?.Forget();

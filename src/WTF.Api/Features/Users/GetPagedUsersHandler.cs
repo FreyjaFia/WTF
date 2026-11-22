@@ -23,7 +23,7 @@ public sealed class GetPagedUsersHandler(WTFDbContext db, IHttpContextAccessor h
     public async Task<PagedResultDto<UserDto>> Handle(GetPagedUsersQuery request, CancellationToken cancellationToken)
     {
         var paging = PagingRequest.From(request.Page, request.PageSize, 25);
-        var searched = ApplySearch(db.Users.AsQueryable(), request.SearchTerm);
+        var searched = ApplySearch(UserBranchVisibility.VisibleTo(db, httpContextAccessor.HttpContext!.User.GetUserId()), request.SearchTerm);
         var roleIds = request.RoleIds is { Length: > 0 } ? request.RoleIds : null;
 
         var withRoles = roleIds is null ? searched : searched.Where(u => roleIds.Contains(u.RoleId));

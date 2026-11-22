@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Branches;
 using WTF.Api.Features.Users.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -13,11 +15,11 @@ namespace WTF.Api.Features.Users;
 
 public record UpdateUserCommand(Guid Id, string FirstName, string LastName, string Username, string? Password, int RoleId) : IRequest<UserDto?>;
 
-public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache) : IRequestHandler<UpdateUserCommand, UserDto?>
+public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache, BranchScopeCache? branchScopeCache = null) : IRequestHandler<UpdateUserCommand, UserDto?>
 {
     public async Task<UserDto?> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
+        var user = await UserBranchVisibility.VisibleTo(db, httpContextAccessor.HttpContext!.User.GetUserId()).FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
         if (user == null)
         {
             return null;
@@ -52,6 +54,7 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
 
             role = await UserRoleGuard.EnsureAssignableAsync(db, httpContextAccessor.HttpContext!.User, request.RoleId, cancellationToken);
             await UserRoleGuard.EnsureNotLastOwnerAsync(db, user, cancellationToken);
+            await BranchAssignment.RescopeForRoleChangeAsync(db, user, role.Id, cancellationToken);
         }
         else
         {
@@ -80,6 +83,7 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
 
         await db.SaveChangesAsync(cancellationToken);
         permissionCache.Forget();
+        branchScopeCache?.Forget();
 
         await auditService.LogAsync(
             action: AuditAction.UserUpdated,

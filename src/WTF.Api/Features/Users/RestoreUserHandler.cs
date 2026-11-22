@@ -14,7 +14,7 @@ public class RestoreUserHandler(WTFDbContext db, IHttpContextAccessor httpContex
 {
     public async Task<bool> Handle(RestoreUserCommand request, CancellationToken cancellationToken)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
+        var user = await UserBranchVisibility.VisibleTo(db, httpContextAccessor.HttpContext!.User.GetUserId()).FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
         if (user == null)
         {
             return false;

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Users;
 using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
@@ -63,7 +64,7 @@ public static class UserEndpoints
                     return Results.BadRequest("ID mismatch");
                 }
 
-                var targetUser = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                var targetUser = await UserBranchVisibility.VisibleTo(db, httpContext.User.GetUserId()).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
                 if (targetUser == null)
                 {
                     return Results.NotFound();
@@ -86,7 +87,7 @@ public static class UserEndpoints
         userGroup.MapDelete("/{id:guid}",
             async (Guid id, ISender sender, WTFDbContext db, HttpContext httpContext) =>
             {
-                var targetUser = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                var targetUser = await UserBranchVisibility.VisibleTo(db, httpContext.User.GetUserId()).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
                 if (targetUser == null)
                 {
                     return Results.NotFound();
@@ -108,7 +109,7 @@ public static class UserEndpoints
         userGroup.MapPost("/{id:guid}/restore",
             async (Guid id, ISender sender, WTFDbContext db, HttpContext httpContext) =>
             {
-                var targetUser = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                var targetUser = await UserBranchVisibility.VisibleTo(db, httpContext.User.GetUserId()).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
                 if (targetUser == null)
                 {
                     return Results.NotFound();
@@ -135,7 +136,7 @@ public static class UserEndpoints
                     return Results.BadRequest("No file uploaded");
                 }
 
-                var targetUser = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                var targetUser = await UserBranchVisibility.VisibleTo(db, httpContext.User.GetUserId()).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
                 if (targetUser == null)
                 {
                     return Results.NotFound();
@@ -164,7 +165,7 @@ public static class UserEndpoints
         userGroup.MapDelete("/{id:guid}/images",
             async (Guid id, ISender sender, WTFDbContext db, HttpContext httpContext) =>
             {
-                var targetUser = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                var targetUser = await UserBranchVisibility.VisibleTo(db, httpContext.User.GetUserId()).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
                 if (targetUser == null)
                 {
                     return Results.NotFound();

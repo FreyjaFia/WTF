@@ -12,7 +12,7 @@ public class GetUserByIdHandler(WTFDbContext db, IHttpContextAccessor httpContex
 {
     public async Task<UserDto?> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
     {
-        var user = await db.Users
+        var user = await UserBranchVisibility.VisibleTo(db, httpContextAccessor.HttpContext!.User.GetUserId())
             .Include(u => u.Role)
             .Include(u => u.UserImage)
                 .ThenInclude(ui => ui!.Image)

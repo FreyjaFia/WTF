@@ -16,7 +16,7 @@ public class GetUsersHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
 {
     public async Task<List<UserDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Users.AsQueryable();
+        var query = UserBranchVisibility.VisibleTo(db, httpContextAccessor.HttpContext!.User.GetUserId());
 
         if (request.IsActive.HasValue)
         {
