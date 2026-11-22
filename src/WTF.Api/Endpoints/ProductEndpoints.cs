@@ -228,7 +228,8 @@ public static class ProductEndpoints
                 var result = await sender.Send(new GetProductBranchPricesQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ProductsRead);
+            .RequireAuthorization(AppPolicies.ProductsRead)
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Branches));
 
         // PUT /api/products/{id}/branch-prices - Set or clear the price of some branches
         productGroup.MapPut("/{id:guid}/branch-prices",
@@ -238,6 +239,7 @@ public static class ProductEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.ProductsWriteScoped)
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Branches))
             .AddEndpointFilter(new ProductWriteScopeFilter("id"));
 
         // GET /api/products/{id}/sold-at - The branches that sell the product (all of them unless it is limited)

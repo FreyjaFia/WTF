@@ -84,7 +84,7 @@ internal static class OfflineOrderReview
             .Select(p => new ReviewedProduct(p.Id, p.Name, p.Price, p.IsActive, p.IsSeniorPwdEligible))
             .ToListAsync(cancellationToken);
         var branchId = await BranchPriceLookup.BranchForNewOrderAsync(db, command.BranchId, cancellationToken);
-        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, productIds, cancellationToken);
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, tenantFeatures, branchId, productIds, cancellationToken);
         var products = new Dictionary<Guid, ReviewedProduct>();
         foreach (var p in current)
         {

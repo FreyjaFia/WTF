@@ -340,7 +340,7 @@ public class CreateOrderHandler(
 
         // Prices are the branch's own where it sets one. A sale from the register keeps the quoted price instead.
         var orderBranchPrices = await BranchPriceLookup.ForBranchAsync(
-            db, await BranchPriceLookup.BranchForNewOrderAsync(db, request.BranchId, cancellationToken), null, cancellationToken);
+            db, tenantFeatures, await BranchPriceLookup.BranchForNewOrderAsync(db, request.BranchId, cancellationToken), null, cancellationToken);
         decimal ListPriceOf(Product p) => BranchPriceLookup.PriceFor(orderBranchPrices, p.Id, p.Price);
 
         // Add order items with parent-child relationships

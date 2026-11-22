@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -25,7 +27,24 @@ public static class BranchPriceLookup
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    // Branch prices count only while the plan holds the branches feature, like the rest of the branch rules. A finished order is
+    // priced from what it was saved with (StampAsync), so a plan change never moves an old total.
     public static async Task<Dictionary<Guid, decimal>> ForBranchAsync(
+        WTFDbContext db,
+        ITenantFeatures tenantFeatures,
+        Guid branchId,
+        IReadOnlyCollection<Guid>? productIds,
+        CancellationToken cancellationToken)
+    {
+        if (branchId == Guid.Empty || !await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Branches, cancellationToken))
+        {
+            return [];
+        }
+
+        return await LoadAsync(db, branchId, productIds, cancellationToken);
+    }
+
+    private static async Task<Dictionary<Guid, decimal>> LoadAsync(
         WTFDbContext db,
         Guid branchId,
         IReadOnlyCollection<Guid>? productIds,
@@ -50,7 +69,7 @@ public static class BranchPriceLookup
     {
         foreach (var group in orders.Where(o => o.BranchPrices is null).GroupBy(o => o.BranchId))
         {
-            var prices = await ForBranchAsync(db, group.Key, null, cancellationToken);
+            var prices = await LoadAsync(db, group.Key, null, cancellationToken);
             foreach (var order in group)
             {
                 order.BranchPrices = prices;

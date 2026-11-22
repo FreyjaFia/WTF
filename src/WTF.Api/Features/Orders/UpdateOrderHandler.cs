@@ -249,7 +249,7 @@ public class UpdateOrderHandler(
         }
 
         // Prices are the branch's own where it sets one. An order keeps the branch it was made in.
-        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, order.BranchId, null, cancellationToken);
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, tenantFeatures, order.BranchId, null, cancellationToken);
         decimal ListPriceOf(Product p) => BranchPriceLookup.PriceFor(branchPrices, p.Id, p.Price);
 
         var pricedItems = new List<(

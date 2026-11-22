@@ -409,7 +409,7 @@ public class SubmitPublicOrderHandler(
             throw new InvalidOperationException(unavailable);
         }
 
-        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, linkBranchId, ids, cancellationToken);
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, tenantFeatures, linkBranchId, ids, cancellationToken);
         decimal PriceOf(Guid productId) => BranchPriceLookup.PriceFor(branchPrices, productId, products[productId].Price);
 
         var overrides = addOnIds.Count == 0

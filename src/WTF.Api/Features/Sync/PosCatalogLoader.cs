@@ -17,7 +17,7 @@ internal static class PosCatalogLoader
     public static async Task<List<ProductDto>> LoadProductsAsync(
         WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures, Guid branchId, CancellationToken cancellationToken)
     {
-        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, null, cancellationToken);
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, tenantFeatures, branchId, null, cancellationToken);
         var notSoldHere = await ProductBranchLookup.NotSoldAtAsync(db, tenantFeatures, branchId, cancellationToken);
         var products = await db.Products
             .Where(p => !p.IsAddOn && p.IsActive && !notSoldHere.Contains(p.Id))
@@ -56,7 +56,7 @@ internal static class PosCatalogLoader
         WTFDbContext db, IHttpContextAccessor httpContextAccessor, ITenantFeatures tenantFeatures,
         List<ProductDto> products, Guid branchId, CancellationToken cancellationToken)
     {
-        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, branchId, null, cancellationToken);
+        var branchPrices = await BranchPriceLookup.ForBranchAsync(db, tenantFeatures, branchId, null, cancellationToken);
         var notSoldHere = await ProductBranchLookup.NotSoldAtAsync(db, tenantFeatures, branchId, cancellationToken);
         var productIds = products.Select(p => p.Id).ToList();
 
