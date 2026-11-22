@@ -51,6 +51,14 @@ public class OfflineSyncPolicyRulesTests
         OfflineSyncPolicyRules.StaysHold("AddOnPriceChanged", true, (decimal)difference, policy).ShouldBe(staysHold);
     }
 
+    [Theory]
+    [InlineData("PriceChanged")]
+    [InlineData("AddOnPriceChanged")]
+    public void Tolerance_NeverSoftensAPriceQuotedBelowThePriceAtSale(string code)
+    {
+        OfflineSyncPolicyRules.StaysHold(code, true, -0.01m, Policy(50m)).ShouldBeTrue();
+    }
+
     [Fact]
     public void Tolerance_OnlyAppliesToPriceCodes()
     {

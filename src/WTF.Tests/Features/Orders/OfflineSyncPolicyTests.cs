@@ -16,7 +16,7 @@ namespace WTF.Tests.Features.Orders;
 
 public class OfflineSyncPolicyTests
 {
-    private static readonly DateTime Sold = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Sold = DateTime.UtcNow.AddHours(-2);
     private static readonly Guid OtherTenant = Guid.Parse("00000000-0000-0000-0000-0000000000b2");
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -49,7 +49,7 @@ public class OfflineSyncPolicyTests
     [Fact]
     public async Task Tolerance5_TurnsAThreePesoDifferenceIntoANote_AndSavesAtTheQuotedPrice()
     {
-        var latte = await SeedProductAsync("Latte", 153m);
+        var latte = await SeedProductAsync("Latte", 147m);
         await SavePolicyAsync(p => p.PriceTolerance = 5m);
 
         var result = await SyncAsync(Order("P-3", Line(latte, 150m)));
@@ -59,6 +59,18 @@ public class OfflineSyncPolicyTests
         reason.Code.ShouldBe(OfflineReasonCodes.PriceChanged);
         reason.Severity.ShouldBe("Note");
         (await OrderTotalAsync(result.OrderId!.Value)).ShouldBe(150m);
+    }
+
+    [Fact]
+    public async Task Tolerance5_NeverSoftensASaleQuotedBelowThePriceAtSale()
+    {
+        var latte = await SeedProductAsync("Latte", 153m);
+        await SavePolicyAsync(p => p.PriceTolerance = 5m);
+
+        var result = await SyncAsync(Order("P-3b", Line(latte, 150m)));
+
+        result.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        result.ReasonDetails!.Single().Severity.ShouldBe("Hold");
     }
 
     [Fact]
@@ -77,7 +89,7 @@ public class OfflineSyncPolicyTests
     public async Task Tolerance_AppliesToAnAddOnPrice()
     {
         var latte = await SeedProductAsync("Latte", 150m);
-        var oat = await SeedProductAsync("Oat Milk", 33m, addOn: true);
+        var oat = await SeedProductAsync("Oat Milk", 27m, addOn: true);
         await SavePolicyAsync(p => p.PriceTolerance = 5m);
 
         var result = await SyncAsync(Order("P-5", Line(latte, 150m, (oat, 30m))));
@@ -154,7 +166,7 @@ public class OfflineSyncPolicyTests
     [Fact]
     public async Task AutoApproveOn_AuditsASaleSavedWithNotes_AndNotACleanSaleOrAHeldOne()
     {
-        var latte = await SeedProductAsync("Latte", 153m);
+        var latte = await SeedProductAsync("Latte", 147m);
         var mocha = await SeedProductAsync("Mocha", 150m);
         var tea = await SeedProductAsync("Tea", 190m);
         await SavePolicyAsync(p =>

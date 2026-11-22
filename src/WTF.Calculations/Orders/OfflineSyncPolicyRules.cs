@@ -54,6 +54,7 @@ public static class OfflineSyncPolicyRules
     // A finding can only get softer through the policy, never harder: a Note stays a Note. A Senior/PWD finding is a tax
     // record and ignores the policy, and a code outside the configurable list (a promotion that now covers only part of a
     // line, for example) keeps the severity the review gave it.
+    // The price difference is the quoted price minus the price at sale: a sale quoted below it is a loss and is never softened.
     public static bool StaysHold(string code, bool isHold, decimal? unitPriceDifference, OfflineSyncPolicySnapshot policy)
     {
         if (!isHold || IsSeniorPwdCode(code) || !IsConfigurable(code))
@@ -61,7 +62,7 @@ public static class OfflineSyncPolicyRules
             return isHold;
         }
 
-        if (PriceCodes.Contains(code) && unitPriceDifference.HasValue && IsWithinTolerance(unitPriceDifference.Value, policy.PriceTolerance))
+        if (PriceCodes.Contains(code) && unitPriceDifference is >= 0m && IsWithinTolerance(unitPriceDifference.Value, policy.PriceTolerance))
         {
             return false;
         }

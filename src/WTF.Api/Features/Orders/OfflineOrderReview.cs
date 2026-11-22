@@ -397,7 +397,7 @@ internal static class OfflineOrderReview
                             lineIndex,
                             $"{current:0.00}",
                             $"{item.QuotedPrice.Value:0.00}",
-                            Math.Abs(current - item.QuotedPrice.Value)));
+                            item.QuotedPrice.Value - current));
                     }
                 }
             }
@@ -421,7 +421,7 @@ internal static class OfflineOrderReview
                         lineIndex,
                         $"{currentAddOn:0.00}",
                         $"{addOn.QuotedPrice.Value:0.00}",
-                        Math.Abs(currentAddOn - addOn.QuotedPrice.Value)));
+                        addOn.QuotedPrice.Value - currentAddOn));
                 }
             }
         }
