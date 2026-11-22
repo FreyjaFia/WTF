@@ -118,8 +118,11 @@ test.describe('stock levels and cost by branch @inventory @branches', () => {
         await expect(card).toBeVisible();
         await expect(page.getByTestId(`branch-warning-${branch.code}`)).toHaveAttribute('placeholder', '500');
         await expect(page.getByTestId('branch-settings-save')).toBeDisabled();
-        await card.scrollIntoViewIfNeeded();
-        await card.screenshot({ path: `${SHOTS}/item-before-${viewport.width}.png` });
+        // The item reloads after a save and the card can be replaced mid-action, so try again until it settles.
+        await expect(async () => {
+          await card.scrollIntoViewIfNeeded();
+          await card.screenshot({ path: `${SHOTS}/item-before-${viewport.width}.png` });
+        }).toPass();
 
         await page.getByTestId(`branch-warning-${branch.code}`).fill('1000');
         await page.getByTestId(`branch-critical-${branch.code}`).fill('400');
@@ -129,8 +132,11 @@ test.describe('stock levels and cost by branch @inventory @branches', () => {
         await expect(page.getByTestId('branch-settings-save')).toHaveText('Save');
         await expect(page.getByTestId('branch-settings-save')).toBeDisabled();
         await expect(page.getByTestId(`branch-warning-${branch.code}`)).toHaveValue('1000');
-        await card.scrollIntoViewIfNeeded();
-        await card.screenshot({ path: `${SHOTS}/item-saved-${viewport.width}.png` });
+        // The item reloads after a save and the card can be replaced mid-action, so try again until it settles.
+        await expect(async () => {
+          await card.scrollIntoViewIfNeeded();
+          await card.screenshot({ path: `${SHOTS}/item-saved-${viewport.width}.png` });
+        }).toPass();
         expect.soft(overflowProblem(await measureOverflow(page)), `${viewport.name}: item overflow`).toBeNull();
 
         const saved = (await (await api.client.call('owner', 'GET', `items/${item.id}`, { headers: { 'X-Branch-Id': 'all' } })).json()) as { branchStocks: BranchStock[] };

@@ -13,6 +13,13 @@ export class OrderListPage {
   public async openAwaiting(): Promise<void> {
     await go(this.page, ROUTES.awaitingOrders);
     await this.page.getByRole('heading', { name: 'Awaiting approval', exact: true }).waitFor();
+    // The shared test shop collects many waiting orders, so show the most rows per page.
+    const sizes = this.page.getByLabel('Rows per page');
+    await sizes.first().waitFor({ timeout: 5000 }).catch(() => undefined);
+    if (await sizes.count()) {
+      const options = await sizes.locator('option').allTextContents();
+      await sizes.selectOption(String(Math.max(...options.map(Number))));
+    }
   }
 
   public awaiting(orderNumber: number): Locator {

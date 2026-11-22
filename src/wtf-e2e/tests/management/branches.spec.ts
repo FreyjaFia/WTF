@@ -103,7 +103,14 @@ test.describe('Branches @management @branches', () => {
       await page.getByTestId(`branch-row-${code}`).getByRole('button', { name: 'Close' }).click();
       await expect(page.getByTestId('close-branch-check')).toContainText('0 open orders');
       await page.getByRole('button', { name: 'Close Branch' }).last().click();
-      await expect(page.getByTestId(`branch-row-${code}`)).toContainText('Closed');
+      await expect(page.getByTestId('close-branch-check')).toHaveCount(0);
+      // A closed branch sorts after the open ones, so with many branches in the shop it moves to a later page.
+      const closedRow = page.getByTestId(`branch-row-${code}`);
+      const next = page.getByTestId('pagination').getByRole('button', { name: 'Next' });
+      for (let step = 0; step < 20 && (await closedRow.count()) === 0 && (await next.isEnabled()); step++) {
+        await next.click();
+      }
+      await expect(closedRow).toContainText('Closed');
 
       const branches = await api.branches.list();
       expect(branches.find((b) => b.code === code)?.isActive).toBe(false);
