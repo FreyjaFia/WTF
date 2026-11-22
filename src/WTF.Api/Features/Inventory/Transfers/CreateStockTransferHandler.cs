@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using WTF.Api.Common.Auth;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Items;
@@ -54,6 +55,11 @@ public class CreateStockTransferHandler(
             throw new InvalidOperationException($"{to.Name} is closed, so it cannot receive stock.");
         }
 
+        if (!db.MayWriteToBranch(to.Id))
+        {
+            throw new ForbiddenActionException($"You do not work in {to.Name}, so you cannot send stock there.");
+        }
+
         var notes = ItemValidation.NormalizeOptional(request.Notes);
         var lines = request.Lines
             .GroupBy(l => l.ItemId)
@@ -81,7 +87,6 @@ public class CreateStockTransferHandler(
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var now = DateTime.UtcNow;
-        db.AllowWritesTo(to.Id);
 
         await using var transaction = db.Database.CurrentTransaction is null
             ? await db.Database.BeginTransactionAsync(cancellationToken)
@@ -151,6 +156,7 @@ public class CreateStockTransferHandler(
 
         await db.SaveChangesAsync(cancellationToken);
         await stockAlerts.EvaluateAsync(itemIds, from.Id, cancellationToken);
+        await stockAlerts.EvaluateAsync(itemIds, to.Id, cancellationToken);
 
         if (transaction is not null)
         {

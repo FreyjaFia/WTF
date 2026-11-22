@@ -183,7 +183,7 @@ public class BranchStockDatabaseTests
         await using var _ = shop.Database;
 
         StockTransferDto result;
-        await using (var db = AsLimited(shop, shop.Makati))
+        await using (var db = AsLimited(shop, shop.Makati, shop.Makati, shop.Cebu))
         {
             result = await Transfer(db, shop.UserId).Handle(Send(shop.Cebu, shop.Milk, 250.5m), CancellationToken.None);
         }
@@ -212,7 +212,7 @@ public class BranchStockDatabaseTests
         var shop = await OpenShopAsync();
         await using var _ = shop.Database;
 
-        await using (var db = AsLimited(shop, shop.Cebu))
+        await using (var db = AsLimited(shop, shop.Cebu, shop.Makati, shop.Cebu))
         {
             var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
                 Transfer(db, shop.UserId).Handle(Send(shop.Makati, shop.Milk, 400m), CancellationToken.None));
@@ -251,19 +251,15 @@ public class BranchStockDatabaseTests
     }
 
     [SqlFact]
-    public async Task ALimitedPerson_CanSendToAnotherBranch_ButNeverReadsItsStockOrChangesItAnyOtherWay()
+    public async Task ALimitedPerson_CanSendBetweenTwoOfTheirBranches_ButNeverReadsOrChangesAnotherBranchOtherwise()
     {
         var shop = await OpenShopAsync();
         await using var _ = shop.Database;
 
-        await using (var db = AsLimited(shop, shop.Makati))
+        await using (var db = AsLimited(shop, shop.Makati, shop.Makati, shop.Cebu))
         {
             await Transfer(db, shop.UserId).Handle(Send(shop.Cebu, shop.Milk, 100m), CancellationToken.None);
-
-            (await db.ItemBranchStocks.Select(s => s.BranchId).ToListAsync()).ShouldBe([shop.Makati]);
-            (await db.StockMovements.Select(m => m.BranchId).Distinct().ToListAsync()).ShouldBe([shop.Makati]);
             (await db.StockTransfers.CountAsync()).ShouldBe(1);
-
         }
 
         await using (var fresh = AsLimited(shop, shop.Makati))
@@ -273,9 +269,27 @@ public class BranchStockDatabaseTests
         }
 
         await using var cebu = AsLimited(shop, shop.Cebu);
-        (await cebu.StockTransfers.CountAsync()).ShouldBe(1);
         (await cebu.StockMovements.Select(m => m.MovementType).ToListAsync()).ShouldBe(["TransferIn"]);
+        (await QuantityAsync(shop, shop.Makati)).ShouldBe(900m);
         (await QuantityAsync(shop, shop.Cebu)).ShouldBe(400m);
+    }
+
+    [SqlFact]
+    public async Task ALimitedPerson_CannotSendStockToABranchTheyDoNotWorkIn()
+    {
+        var shop = await OpenShopAsync();
+        await using var _ = shop.Database;
+
+        await using (var db = AsLimited(shop, shop.Makati))
+        {
+            await Should.ThrowAsync<ForbiddenActionException>(() =>
+                Transfer(db, shop.UserId).Handle(Send(shop.Cebu, shop.Milk, 100m), CancellationToken.None));
+        }
+
+        await using var check = shop.Database.CreateContext();
+        (await check.StockTransfers.CountAsync()).ShouldBe(0);
+        (await QuantityAsync(shop, shop.Makati)).ShouldBe(1000m);
+        (await QuantityAsync(shop, shop.Cebu)).ShouldBe(300m);
     }
 
     [SqlFact]

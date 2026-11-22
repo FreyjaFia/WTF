@@ -267,7 +267,7 @@ public class BranchPriceDatabaseTests
         (await Save(db, shop.UserId).Handle(new SaveProductBranchPricesCommand(Guid.NewGuid(), []), CancellationToken.None)).ShouldBeNull();
     }
 
-    private static readonly DateTime Sold = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Sold = DateTime.UtcNow.AddHours(-4);
 
     private static async Task<OfflineSyncResultDto> SyncSaleAsync(Shop shop, decimal quoted, DateTime? deviceSynced)
     {
