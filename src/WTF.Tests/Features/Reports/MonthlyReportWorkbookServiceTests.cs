@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using WTF.Api.Endpoints;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
-using WTF.Api.Features.Reports;
 using WTF.Api.Services;
 using WTF.Tests.Infrastructure;
 

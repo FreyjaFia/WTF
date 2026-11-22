@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Products;
-using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;

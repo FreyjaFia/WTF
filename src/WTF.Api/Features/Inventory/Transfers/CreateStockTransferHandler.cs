@@ -6,7 +6,6 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Items;
 using WTF.Api.Services;
-using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 

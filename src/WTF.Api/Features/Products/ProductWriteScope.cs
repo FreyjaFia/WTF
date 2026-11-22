@@ -57,12 +57,12 @@ public sealed class ProductWriteScopeFilter(string routeKey = "id") : IEndpointF
         if (Guid.TryParse(http.GetRouteValue(routeKey)?.ToString(), out var productId))
         {
             var db = http.RequestServices.GetRequiredService<WTFDbContext>();
-            if (ProductWriteScope.IsShopWide(db, http.User))
+            if (ProductWriteScope.IsShopWide(db, http.User) || (!db.IsBranchLimited && !ProductWriteScope.HasBranchKey(http.User)))
             {
                 return await next(context);
             }
 
-            if (!ProductWriteScope.HasBranchKey(http.User))
+            if (db.IsBranchLimited && !ProductWriteScope.HasBranchKey(http.User))
             {
                 return Results.Json(new { message = ProductWriteScope.NotYoursMessage }, statusCode: StatusCodes.Status403Forbidden);
             }

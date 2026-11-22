@@ -6,7 +6,6 @@ using WTF.Api.Features.Branches;
 using WTF.Api.Features.Items;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
 using WTF.Tests.Database;

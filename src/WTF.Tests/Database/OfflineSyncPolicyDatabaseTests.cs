@@ -76,8 +76,8 @@ public class OfflineSyncPolicyDatabaseTests
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         var user = await SqlSeed.UserAsync(database);
-        var near = await SqlSeed.ProductAsync(database, user.Id, "Near", 153m);
-        var far = await SqlSeed.ProductAsync(database, user.Id, "Far", 156m);
+        var near = await SqlSeed.ProductAsync(database, user.Id, "Near", 147m);
+        var far = await SqlSeed.ProductAsync(database, user.Id, "Far", 144m);
         await using (var setup = database.CreateContext(new Shop(TenantDefaults.DefaultTenantId)))
         {
             setup.OfflineSyncPolicies.Add(new OfflineSyncPolicy
