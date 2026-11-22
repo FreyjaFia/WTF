@@ -108,9 +108,10 @@ test.describe('selling without a connection and syncing later @orders @offline',
 
     await readyToSellOffline(editor, drink.name);
     await page.context().setOffline(true);
+    // The product goes while the register is offline and still has it, so the sale is made after the product was removed.
+    await api.products.remove(drink.id);
     await editor.addProduct(drink.name);
     await editor.payCash(100);
-    await api.products.remove(drink.id);
     await page.context().setOffline(false);
 
     await expect
