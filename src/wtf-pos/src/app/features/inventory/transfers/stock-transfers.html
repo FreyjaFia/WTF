@@ -35,7 +35,7 @@
         <select
           id="transfer-to"
           formControlName="toBranchId"
-          class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+          class="select w-full border-transparent bg-gray-50 transition-all duration-200 ease-out focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
           data-testid="transfer-to"
         >
           <option value="" disabled>Choose a branch</option>
@@ -109,7 +109,7 @@
           type="text"
           formControlName="notes"
           maxlength="500"
-          class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+          class="input w-full border-transparent bg-gray-50 transition-all duration-200 ease-out focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
         />
       </div>
       <div class="flex justify-end gap-2">
@@ -168,7 +168,7 @@
           </div>
         }
 
-        <ul class="space-y-2.5 transition-opacity" [class.opacity-60]="isReloading()" [class.pointer-events-none]="isReloading()" data-testid="transfer-list">
+        <ul class="space-y-2.5 transition-opacity duration-200 ease-out" [class.opacity-60]="isReloading()" [class.pointer-events-none]="isReloading()" data-testid="transfer-list">
           @for (row of rows(); track row.id) {
             <li class="relative overflow-hidden rounded-xl bg-surface shadow" data-testid="transfer-row">
               <span class="absolute inset-y-0 left-0 w-1.5 bg-brand" aria-hidden="true"></span>

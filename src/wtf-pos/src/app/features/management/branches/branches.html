@@ -94,7 +94,7 @@
           <ul class="space-y-2 lg:space-y-3" data-testid="branch-list">
             @for (branch of pager.rows(); track branch.id; let last = $last) {
               <li
-                class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 ease-out focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
                 [class.opacity-70]="!branch.isActive"
                 [attr.data-testid]="'branch-row-' + branch.code"
               >
