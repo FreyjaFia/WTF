@@ -43,6 +43,7 @@ export class BranchesComponent implements OnInit, OnDestroy {
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isSaving = signal(false);
+  protected readonly showDiscardModal = signal(false);
   protected readonly dialog = signal<BranchDialog | null>(null);
   protected readonly selected = signal<BranchDto | null>(null);
   protected readonly closeCheck = signal<BranchCloseCheckDto | null>(null);
@@ -165,11 +166,35 @@ export class BranchesComponent implements OnInit, OnDestroy {
     this.moveStaffTo.set((event.target as HTMLSelectElement).value || null);
   }
 
+  protected cancelDialog(): void {
+    if (this.isSaving()) {
+      return;
+    }
+
+    if (this.dialog() === 'edit' && this.form.dirty) {
+      this.showDiscardModal.set(true);
+      return;
+    }
+
+    this.closeDialog();
+  }
+
+  protected confirmDiscard(): void {
+    this.showDiscardModal.set(false);
+    this.form.markAsPristine();
+    this.closeDialog();
+  }
+
+  protected keepEditing(): void {
+    this.showDiscardModal.set(false);
+  }
+
   protected closeDialog(): void {
     if (this.isSaving()) {
       return;
     }
 
+    this.showDiscardModal.set(false);
     this.dialog.set(null);
     this.selected.set(null);
     this.closeCheck.set(null);
@@ -249,7 +274,7 @@ export class BranchesComponent implements OnInit, OnDestroy {
     this.formError.set(null);
     this.dialog.set(kind);
     this.removeFromStack();
-    this.modalStackId = this.modalStack.push(() => this.closeDialog());
+    this.modalStackId = this.modalStack.push(() => this.cancelDialog());
   }
 
   private removeFromStack(): void {

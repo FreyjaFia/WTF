@@ -222,7 +222,7 @@
     busyLabel="Saving..."
     [isBusy]="isSaving()"
     (confirmed)="saveBranch()"
-    (cancelled)="closeDialog()"
+    (cancelled)="cancelDialog()"
   >
     The code is the short prefix on this branch's order numbers.
     <div dialogExtra class="mt-4 space-y-3 text-left" [formGroup]="form">
@@ -274,6 +274,21 @@
         <p class="text-sm text-red-600" role="alert">{{ formError() }}</p>
       }
     </div>
+  </app-confirm-dialog>
+}
+
+@if (showDiscardModal()) {
+  <app-confirm-dialog
+    variant="warning"
+    icon="icon-back"
+    heading="Discard Changes?"
+    confirmLabel="Discard"
+    cancelLabel="Keep Editing"
+    confirmPlacement="secondary"
+    (confirmed)="confirmDiscard()"
+    (cancelled)="keepEditing()"
+  >
+    You have unsaved changes that will be lost if you close this.
   </app-confirm-dialog>
 }
 
