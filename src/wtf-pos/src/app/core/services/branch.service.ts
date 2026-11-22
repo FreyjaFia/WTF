@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpErrorMessages } from '@core/messages';
+import { AuthService } from '@core/services/auth.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
@@ -15,16 +16,20 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { extractHttpErrorMessage } from './http-error-message';
+import { currentTenantId, currentUserId } from './tenant-context';
 
 const STORAGE_KEY = 'wtf_active_branch';
+const MINE_STORAGE_KEY = 'wtf_my_branches';
+const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable({ providedIn: 'root' })
 export class BranchService {
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
+  private readonly auth = inject(AuthService);
   private readonly baseUrl = `${environment.apiUrl}/branches`;
 
-  private readonly _mine = signal<MyBranchesDto | null>(null);
+  private readonly _mine = signal<MyBranchesDto | null>(readStoredMine());
   private readonly _activeId = signal<string | null>(readStored());
 
   public readonly mine = this._mine.asReadonly();
@@ -42,6 +47,10 @@ export class BranchService {
   public readonly activeLabel = computed(() =>
     this.isAllSelected() ? 'All branches' : (this.activeBranch()?.name ?? ''),
   );
+
+  constructor() {
+    this.auth.localDataCleared$.subscribe(() => this.clear());
+  }
 
   public loadMine(): void {
     this.http.get<MyBranchesDto>(`${this.baseUrl}/mine`).subscribe({
@@ -70,6 +79,7 @@ export class BranchService {
     this._mine.set(null);
     this._activeId.set(null);
     writeStored(null);
+    writeStoredMine(null);
   }
 
   public getBranches(): Observable<BranchDto[]> {
@@ -144,16 +154,18 @@ export class BranchService {
   private apply(mine: MyBranchesDto): void {
     this._mine.set(mine);
 
+    writeStoredMine(mine);
+
     const stored = this._activeId();
-    const allowed = new Set(mine.branches.map((b) => b.id));
+    const usable = new Set(mine.branches.filter((b) => b.isActive).map((b) => b.id));
     const storedStillValid =
-      stored !== null && ((stored === ALL_BRANCHES && mine.canSeeAll) || allowed.has(stored));
+      stored !== null && ((stored === ALL_BRANCHES && mine.canSeeAll) || usable.has(stored));
     if (storedStillValid) {
       return;
     }
 
     const fallback =
-      mine.defaultBranchId && allowed.has(mine.defaultBranchId)
+      mine.defaultBranchId && usable.has(mine.defaultBranchId)
         ? mine.defaultBranchId
         : (mine.branches.find((b) => b.isActive)?.id ?? null);
     this._activeId.set(fallback);
@@ -173,9 +185,40 @@ export class BranchService {
 
 function readStored(): string | null {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    const value = localStorage.getItem(STORAGE_KEY);
+
+    // The value goes into a request header, so anything but "all" or a branch id is thrown away.
+    return value === ALL_BRANCHES || (value !== null && GUID_PATTERN.test(value)) ? value : null;
   } catch {
     return null;
+  }
+}
+
+function mineOwner(): string {
+  return `${currentTenantId()}|${currentUserId() ?? ''}`;
+}
+
+function readStoredMine(): MyBranchesDto | null {
+  try {
+    const raw = localStorage.getItem(MINE_STORAGE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as { owner?: string; mine?: MyBranchesDto }) : null;
+
+    // Kept so a device that starts offline still knows the branches; it belongs to the person it was fetched for.
+    return parsed?.owner === mineOwner() && Array.isArray(parsed.mine?.branches) ? parsed.mine : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredMine(mine: MyBranchesDto | null): void {
+  try {
+    if (mine === null) {
+      localStorage.removeItem(MINE_STORAGE_KEY);
+    } else {
+      localStorage.setItem(MINE_STORAGE_KEY, JSON.stringify({ owner: mineOwner(), mine }));
+    }
+  } catch {
+    // Storage can be blocked; the list is then fetched again.
   }
 }
 

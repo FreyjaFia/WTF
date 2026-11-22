@@ -261,6 +261,60 @@ describe('AuthService session', () => {
       expect(clearCatalog).not.toHaveBeenCalled();
     });
 
+    it('clears the cart, menu and profile when another person of the same shop signs in', () => {
+      const clearCatalog = vi.spyOn(db.catalog, 'clear').mockResolvedValue(undefined as never);
+      const clearImages = vi.spyOn(db.images, 'clear').mockResolvedValue(undefined as never);
+      const auth = create();
+      const cleared = vi.fn();
+      auth.localDataCleared$.subscribe(cleared);
+      localStorage.setItem('wtf-device-tenant', 'bbbbbbbb-0000-0000-0000-000000000002');
+      localStorage.setItem('wtf-device-user', 'user-1');
+      localStorage.setItem('wtf_me_cache', '{"name":"Previous"}');
+      const access = makeToken({
+        exp: nowSeconds() + 3600,
+        role: AppRoles.Cashier,
+        sub: 'user-2',
+        tenant_id: 'bbbbbbbb-0000-0000-0000-000000000002',
+      });
+
+      capture(auth.login('al', 'pw'));
+      http.expectOne(`${base}/login`).flush({ accessToken: access, refreshToken: 'r1' });
+
+      expect(db.carts.clear).toHaveBeenCalled();
+      expect(clearCatalog).toHaveBeenCalled();
+      expect(clearImages).not.toHaveBeenCalled();
+      expect(cleared).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem('wtf_me_cache')).toBeNull();
+      expect(localStorage.getItem('wtf-device-user')).toBe('user-2');
+    });
+
+    it('keeps the cart when the same person signs in again', () => {
+      const clearCatalog = vi.spyOn(db.catalog, 'clear').mockResolvedValue(undefined as never);
+      const auth = create();
+      localStorage.setItem('wtf-device-tenant', 'bbbbbbbb-0000-0000-0000-000000000002');
+      localStorage.setItem('wtf-device-user', 'user-1');
+      const access = makeToken({
+        exp: nowSeconds() + 3600,
+        role: AppRoles.Cashier,
+        sub: 'user-1',
+        tenant_id: 'bbbbbbbb-0000-0000-0000-000000000002',
+      });
+
+      capture(auth.login('al', 'pw'));
+      http.expectOne(`${base}/login`).flush({ accessToken: access, refreshToken: 'r1' });
+
+      expect(clearCatalog).not.toHaveBeenCalled();
+    });
+
+    it('removes the cached profile when signing out', () => {
+      const auth = create(tokenFor(AppRoles.Cashier));
+      localStorage.setItem('wtf_me_cache', '{"name":"Ana"}');
+
+      auth.logout();
+
+      expect(localStorage.getItem('wtf_me_cache')).toBeNull();
+    });
+
     it('returns false when the response has no access token', () => {
       const auth = create();
       const result = capture(auth.login('al', 'pw'));

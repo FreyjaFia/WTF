@@ -18,9 +18,12 @@ import { db } from './db';
 import { PlanStore } from './plan-store';
 import {
   currentTenantId,
+  currentUserId,
   DEFAULT_TENANT_ID,
   readDeviceTenantId,
+  readDeviceUserId,
   saveDeviceTenantId,
+  saveDeviceUserId,
 } from './tenant-context';
 
 const PERMISSIONS_STORAGE_KEY = 'permissions';
@@ -220,16 +223,35 @@ export class AuthService {
   private clearLocalDataWhenTheShopChanged(): void {
     const tenantId = currentTenantId();
     const previous = readDeviceTenantId() ?? DEFAULT_TENANT_ID;
+    const userId = currentUserId();
+    const previousUser = readDeviceUserId();
+    const userChanged = !!userId && !!previousUser && previousUser !== userId;
 
     if (previous !== tenantId) {
       // Another shop signed in on this device: its menu, prices, images and cart must never show here.
       // Orders still waiting to sync stay queued, marked with their own shop, and only that shop's login sends them.
       void Promise.all([db.carts.clear(), db.catalog.clear(), db.images.clear()]);
       this.plans.clear();
+      this.clearProfileCache();
+      this.localDataClearedSubject.next();
+    } else if (userChanged) {
+      // Another person signed in without the last one signing out (a lapsed session): their cart, branch and branch
+      // menu stay with them. Queued orders keep their own owner and are sent only by that person.
+      void Promise.all([db.carts.clear(), db.catalog.clear()]);
+      this.clearProfileCache();
       this.localDataClearedSubject.next();
     }
 
     saveDeviceTenantId(tenantId);
+    saveDeviceUserId(userId);
+  }
+
+  private clearProfileCache(): void {
+    try {
+      localStorage.removeItem('wtf_me_cache');
+    } catch {
+      // Storage can be blocked; the profile is then fetched again anyway.
+    }
   }
 
   public logout(): void {
@@ -240,6 +262,7 @@ export class AuthService {
     this.plans.clear();
     this._isLoggedIn.next(false);
     this.rolesSubject.next([]);
+    this.clearProfileCache();
     db.carts.clear();
     this.localDataClearedSubject.next();
   }
