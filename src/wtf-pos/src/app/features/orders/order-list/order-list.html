@@ -350,8 +350,8 @@
               (keydown.enter)="pending.status !== 'syncing' && editPendingOrder(pending.localId)"
             >
               <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-semibold text-gray-900">{{ pending.localId }}</span>
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="text-sm font-semibold wrap-anywhere text-gray-900">{{ pending.localId }}</span>
                   @if (!offlineOrderService.isOwnOrder(pending)) {
                     <app-badge variant="default">Another cashier</app-badge>
                   }

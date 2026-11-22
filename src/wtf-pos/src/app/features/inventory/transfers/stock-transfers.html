@@ -3,7 +3,7 @@
     <div class="flex items-start justify-between gap-3">
       <div class="flex min-w-0 flex-col gap-1">
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Transfers</h1>
-        <p class="text-xs text-gray-500 sm:text-sm">Move stock from {{ branchService.activeLabel() || 'this branch' }} to another branch</p>
+        <p class="text-xs text-gray-500 sm:text-sm">{{ branchService.isAllSelected() ? 'Stock moves between your branches' : 'Move stock from ' + (branchService.activeLabel() || 'this branch') + ' to another branch' }}</p>
       </div>
       <div class="flex shrink-0 items-center gap-2">
         @if (canMove() && !isFormOpen()) {
