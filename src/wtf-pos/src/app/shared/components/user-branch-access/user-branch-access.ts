@@ -1,4 +1,4 @@
-import { Component, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { AlertService, BranchService } from '@core/services';
 
 @Component({
@@ -15,16 +15,31 @@ export class UserBranchAccessComponent implements OnInit {
   protected readonly selectedIds = signal<string[]>([]);
   protected readonly defaultId = signal<string | null>(null);
   protected readonly isSaving = signal(false);
+  protected readonly isLoaded = signal(false);
+  protected readonly loadFailed = signal(false);
+  protected readonly openBranches = computed(() => this.branchService.branches().filter((branch) => branch.isActive));
   protected readonly error = signal<string | null>(null);
 
   public ngOnInit(): void {
+    this.load();
+  }
+
+  protected load(): void {
+    this.loadFailed.set(false);
+    this.error.set(null);
     this.branchService.getUserAccess(this.userId()).subscribe({
       next: (access) => {
+        const closed = new Set(this.branchService.branches().filter((b) => !b.isActive).map((b) => b.id));
+
         this.isAll.set(access.isAllBranches);
-        this.selectedIds.set(access.branchIds);
-        this.defaultId.set(access.defaultBranchId);
+        this.selectedIds.set(access.branchIds.filter((id) => !closed.has(id)));
+        this.defaultId.set(access.defaultBranchId && !closed.has(access.defaultBranchId) ? access.defaultBranchId : null);
+        this.isLoaded.set(true);
       },
-      error: (err: Error) => this.error.set(err.message),
+      error: (err: Error) => {
+        this.loadFailed.set(true);
+        this.error.set(err.message);
+      },
     });
   }
 
@@ -44,6 +59,10 @@ export class UserBranchAccessComponent implements OnInit {
   }
 
   protected save(): void {
+    if (!this.isLoaded() || this.isSaving()) {
+      return;
+    }
+
     if (!this.isAll() && this.selectedIds().length === 0) {
       this.error.set('Pick at least one branch, or allow all branches.');
       return;

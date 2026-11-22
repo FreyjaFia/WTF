@@ -2,11 +2,22 @@
   <section class="bg-surface mt-6 rounded-xl p-4 shadow-lg" data-testid="user-branch-access">
     <h2 class="text-base font-semibold text-gray-900">Branch access</h2>
     <p class="mb-3 text-xs text-gray-500">Which branches this person can work in.</p>
+    @if (loadFailed()) {
+      <div class="mb-3 flex items-center gap-3">
+        <p class="text-sm text-red-600" role="alert" data-testid="branch-access-load-error">{{ error() }}</p>
+        <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="retry-branch-access" (click)="load()">
+          Try again
+        </button>
+      </div>
+    } @else if (!isLoaded()) {
+      <p class="mb-3 text-sm text-gray-500" data-testid="branch-access-loading">Loading branch access...</p>
+    }
     <label class="mb-3 flex cursor-pointer items-center gap-3">
       <input
         type="checkbox"
         class="toggle toggle-primary"
         [checked]="isAll()"
+        [disabled]="!isLoaded()"
         data-testid="branch-access-all"
         (change)="setAll($any($event.target).checked)"
       />
@@ -14,7 +25,7 @@
     </label>
     @if (!isAll()) {
       <ul class="mb-3 space-y-2">
-        @for (branch of branchService.branches(); track branch.id) {
+        @for (branch of openBranches(); track branch.id) {
           <li>
             <label class="flex cursor-pointer items-center gap-3">
               <input
@@ -36,10 +47,11 @@
     <select
       id="branch-access-default"
       class="select select-bordered mb-3 w-full"
+      [disabled]="!isLoaded()"
       (change)="chooseDefault($event)"
     >
       <option value="">Main branch</option>
-      @for (branch of branchService.branches(); track branch.id) {
+      @for (branch of openBranches(); track branch.id) {
         @if (isAll() || selectedIds().includes(branch.id)) {
           <option [value]="branch.id" [selected]="branch.id === defaultId()">
             {{ branch.name }}
@@ -47,13 +59,13 @@
         }
       }
     </select>
-    @if (error()) {
+    @if (error() && !loadFailed()) {
       <p class="mb-2 text-sm text-red-600" role="alert">{{ error() }}</p>
     }
     <button
       type="button"
       class="app-btn app-btn-primary app-btn-sm"
-      [disabled]="isSaving()"
+      [disabled]="!isLoaded() || isSaving()"
       data-testid="save-branch-access"
       (click)="save()"
     >
