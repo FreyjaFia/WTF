@@ -12,7 +12,6 @@ import { unique } from '@utils/unique';
 
 const SHOTS = process.env.E2E_SHOTS_DIR ?? 'test-results/offline-phase-7/policy';
 const POLICY_PATH = '/management/sync-policy';
-const SOLD_AT = '2026-06-10T04:00:00Z';
 
 interface SyncAnswer {
   readonly offlineLocalId: string;
@@ -49,7 +48,7 @@ async function syncOne(session: ShopSession, productId: string, quoted: number):
         bundlePromotions: [],
         seniorPwdPersons: [],
         offlineLocalId: localId,
-        createdAt: SOLD_AT,
+        createdAt: new Date().toISOString(),
         paymentMethod: 1,
         amountReceived: 1000,
       },
@@ -184,8 +183,8 @@ test.describe('Offline sync policy @orders @offline @policy', () => {
 
   test('a tolerance set on the screen turns a held price difference into a note, end to end', async ({ request, platform, browser }) => {
     const shop = await SeniorPwdShop.open(request, platform, { enabled: false, vatRegistered: false });
-    const near = await shop.product(153, unique('Near'));
-    const far = await shop.product(156, unique('Far'));
+    const near = await shop.product(147, unique('Near'));
+    const far = await shop.product(144, unique('Far'));
     const cashier = await shop.signInAs(await shop.cashier());
 
     // With the default policy every difference is held, a 3 peso one too.
