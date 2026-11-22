@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
-import { AlertService, AuthService, BranchService, ConnectivityService, KitchenService, SignalRService } from '@core/services';
+import { AlertService, AuthService, BranchService, ConnectivityService, KitchenAccessError, KitchenService, SignalRService } from '@core/services';
 import { orderNumberLabel } from '@shared/utils/order-number';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import {
@@ -73,6 +73,7 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
   protected readonly sourceFilter = signal<OrderSourceEnum | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
+  protected readonly accessMessage = signal<string | null>(null);
   protected readonly isFiltersOpen = signal(false);
   protected readonly busyIds = signal<ReadonlySet<string>>(new Set());
   protected readonly largeText = signal(readFlag(LARGE_TEXT_KEY));
@@ -348,15 +349,17 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
           this.now.set(Date.now());
           this.isLoading.set(false);
           this.loadFailed.set(false);
+          this.accessMessage.set(null);
           this.noticeNewOrders(board.orders);
         },
-        error: () => {
+        error: (err: Error) => {
           if (seq !== this.loadSeq) {
             return;
           }
 
           this.isLoading.set(false);
           this.loadFailed.set(true);
+          this.accessMessage.set(err instanceof KitchenAccessError ? err.message : null);
         },
       });
   }

@@ -13,8 +13,17 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { extractHttpErrorMessage } from './http-error-message';
 
+export class KitchenAccessError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'KitchenAccessError';
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class KitchenService {
+  public static readonly NO_ACCESS_MESSAGE = 'You do not have access to the kitchen of this branch.';
+
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
   private readonly baseUrl = `${environment.apiUrl}/kitchen/orders`;
@@ -66,6 +75,10 @@ export class KitchenService {
     const serverMessage = extractHttpErrorMessage(error);
     if (error.status === 0) {
       this.connectivity.checkNow();
+    }
+
+    if (error.status === 403) {
+      return throwError(() => new KitchenAccessError(serverMessage || KitchenService.NO_ACCESS_MESSAGE));
     }
 
     const message =

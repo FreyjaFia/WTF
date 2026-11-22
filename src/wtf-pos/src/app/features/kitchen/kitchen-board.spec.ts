@@ -1,7 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { AlertService, AuthService, ConnectivityService, KitchenService, SignalRService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  ConnectivityService,
+  KitchenAccessError,
+  KitchenService,
+  SignalRService,
+} from '@core/services';
 import { KitchenOrderDto, KitchenStateEnum, OrderSourceEnum } from '@shared/models';
 import { KitchenBoardComponent } from './kitchen-board';
 
@@ -24,9 +31,11 @@ describe('KitchenBoardComponent', () => {
   let kitchen: { getBoard: ReturnType<typeof vi.fn>; move: ReturnType<typeof vi.fn>; markChangeSeen: ReturnType<typeof vi.fn>; dismiss: ReturnType<typeof vi.fn>; clearOld: ReturnType<typeof vi.fn> };
   let alerts: { error: ReturnType<typeof vi.fn> };
 
-  function setup(orders: KitchenOrderDto[], canUpdate = true) {
+  function setup(orders: KitchenOrderDto[], canUpdate = true, boardError: Error | null = null) {
     kitchen = {
-      getBoard: vi.fn(() => of({ orders, serverTime: new Date().toISOString() })),
+      getBoard: vi.fn(() =>
+        boardError ? throwError(() => boardError) : of({ orders, serverTime: new Date().toISOString() }),
+      ),
       move: vi.fn((id: string, request: { to: KitchenStateEnum }) =>
         of({ ...orders.find((o) => o.id === id)!, kitchenStatus: request.to }),
       ),
@@ -124,5 +133,19 @@ describe('KitchenBoardComponent', () => {
     kitchen.move.mockReturnValueOnce(throwError(() => new Error('Not allowed')));
     (el.querySelector('[data-testid="kitchen-advance"]') as HTMLButtonElement).click();
     expect(alerts.error).toHaveBeenCalledWith('Not allowed');
+  });
+
+  it('says the person has no access to this branch\'s kitchen, instead of a connection problem', () => {
+    const { el } = setup([], true, new KitchenAccessError('You cannot use that branch.'));
+
+    expect(el.querySelector('[data-testid="kitchen-no-access"]')?.textContent).toContain('You cannot use that branch.');
+    expect(el.querySelector('[data-testid="kitchen-load-failed"]')).toBeNull();
+  });
+
+  it('still shows the retry notice for a failure that is not about access', () => {
+    const { el } = setup([], true, new Error('Unable to load the kitchen orders.'));
+
+    expect(el.querySelector('[data-testid="kitchen-load-failed"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="kitchen-no-access"]')).toBeNull();
   });
 });

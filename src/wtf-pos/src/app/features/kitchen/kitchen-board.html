@@ -139,9 +139,15 @@
       You are offline. These orders may be out of date. Buttons work again when the connection is back.
     </p>
   } @else if (loadFailed()) {
-    <p class="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700" role="alert" data-testid="kitchen-load-failed">
-      The orders could not be loaded. Trying again shortly.
-    </p>
+    @if (accessMessage(); as message) {
+      <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800" role="alert" data-testid="kitchen-no-access">
+        {{ message }} Pick another branch in the header, or ask the owner for access.
+      </p>
+    } @else {
+      <p class="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700" role="alert" data-testid="kitchen-load-failed">
+        The orders could not be loaded. Trying again shortly.
+      </p>
+    }
   }
 
   <div class="min-h-0 flex-1 overflow-y-auto pb-4">
