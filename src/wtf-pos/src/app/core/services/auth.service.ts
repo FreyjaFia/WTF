@@ -15,6 +15,7 @@ import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { db } from './db';
+import { announceLocalDataWiped } from './local-data-events';
 import { PlanStore } from './plan-store';
 import {
   currentTenantId,
@@ -233,17 +234,22 @@ export class AuthService {
       void Promise.all([db.carts.clear(), db.catalog.clear(), db.images.clear()]);
       this.plans.clear();
       this.clearProfileCache();
-      this.localDataClearedSubject.next();
+      this.announceLocalDataCleared();
     } else if (userChanged) {
       // Another person signed in without the last one signing out (a lapsed session): their cart, branch and branch
       // menu stay with them. Queued orders keep their own owner and are sent only by that person.
       void Promise.all([db.carts.clear(), db.catalog.clear()]);
       this.clearProfileCache();
-      this.localDataClearedSubject.next();
+      this.announceLocalDataCleared();
     }
 
     saveDeviceTenantId(tenantId);
     saveDeviceUserId(userId);
+  }
+
+  private announceLocalDataCleared(): void {
+    announceLocalDataWiped();
+    this.localDataClearedSubject.next();
   }
 
   private clearProfileCache(): void {
@@ -264,7 +270,7 @@ export class AuthService {
     this.rolesSubject.next([]);
     this.clearProfileCache();
     db.carts.clear();
-    this.localDataClearedSubject.next();
+    this.announceLocalDataCleared();
   }
 
   public getToken(): string | null {

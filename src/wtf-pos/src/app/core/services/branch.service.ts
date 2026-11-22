@@ -1,7 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { HttpErrorMessages } from '@core/messages';
-import { AuthService } from '@core/services/auth.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
@@ -16,6 +15,7 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { extractHttpErrorMessage } from './http-error-message';
+import { localDataWiped$ } from './local-data-events';
 import { currentTenantId, currentUserId } from './tenant-context';
 
 const STORAGE_KEY = 'wtf_active_branch';
@@ -26,7 +26,7 @@ const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export class BranchService {
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
-  private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly baseUrl = `${environment.apiUrl}/branches`;
 
   private readonly _mine = signal<MyBranchesDto | null>(readStoredMine());
@@ -49,7 +49,8 @@ export class BranchService {
   );
 
   constructor() {
-    this.auth.localDataCleared$.subscribe(() => this.clear());
+    const subscription = localDataWiped$.subscribe(() => this.clear());
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 
   public loadMine(): void {
