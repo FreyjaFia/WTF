@@ -70,4 +70,12 @@ public class ReorderRulesTests
         ReorderRules.DaysOfCover(-1m, 2m).ShouldBe(0m);
         ReorderRules.DaysOfCover(9m, 0m).ShouldBeNull();
     }
+
+    [Fact]
+    public void ParTotal_UsesEachBranchPar_ElseTheItemPar_ElseNothing()
+    {
+        ReorderRules.ParTotal(10m, [4m, null, null]).ShouldBe(24m);
+        ReorderRules.ParTotal(null, [4m, null]).ShouldBe(4m);
+        ReorderRules.ParTotal(null, []).ShouldBe(0m);
+    }
 }

@@ -8,6 +8,10 @@ public static class ReorderRules
     public static bool IsBelowPar(decimal? parLevel, decimal onHand, decimal onOrder) =>
         parLevel.HasValue && onHand + onOrder < parLevel.Value;
 
+    // What the branches should hold together: each branch's own par, else the item's par, else nothing.
+    public static decimal ParTotal(decimal? shopPar, IEnumerable<decimal?> branchPars) =>
+        branchPars.Sum(p => p ?? shopPar ?? 0m);
+
     // How much to order to get back up to par: par - on hand - on order, rounded up to whole packs when the supplier's
     // pack size is known. A balance below zero counts as empty, so a negative balance never inflates the order.
     public static ReorderSuggestion? Suggest(decimal? parLevel, decimal onHand, decimal onOrder, decimal? unitsPerPack)

@@ -40,7 +40,7 @@ public class GetReorderListHandler(WTFDbContext db) : IRequestHandler<GetReorder
         // The par level is what each branch should hold (its own, else the item's): working in one branch it is compared with that
         // branch, in "All branches" with the sum of the branches the person may see.
         var withPar = items.Where(i => i.HasPar)
-            .Select(i => new { i.Id, i.Name, i.UnitName, i.CurrentQuantity, ParTotal = i.BranchPars.Sum(p => p ?? i.ShopPar ?? 0m) })
+            .Select(i => new { i.Id, i.Name, i.UnitName, i.CurrentQuantity, ParTotal = ReorderRules.ParTotal(i.ShopPar, i.BranchPars) })
             .ToList();
         var ids = withPar.Select(i => i.Id).ToList();
         var since = DateTime.UtcNow.AddDays(-days);
