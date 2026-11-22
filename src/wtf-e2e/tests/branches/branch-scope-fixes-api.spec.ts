@@ -27,8 +27,6 @@ async function idsIn(world: World, branchId: string): Promise<string[]> {
   return ((await response.json()) as { items: { id: string }[] }).items.map((order) => order.id);
 }
 
-// Tests marked "(needs fix) @pending-fixes" describe behaviour that was still being fixed when they were written; they
-// fail until the fix lands. Run only them with --grep @pending-fixes.
 test.describe('branch scope hardening @branches @security', () => {
   let world: World | undefined;
 
@@ -40,7 +38,7 @@ test.describe('branch scope hardening @branches @security', () => {
     await closeWorld(world);
   });
 
-  test('junk text in X-Branch-Id is refused with 400 on read and write, for a cashier, a manager and the owner (needs fix) @pending-fixes', async () => {
+  test('junk text in X-Branch-Id is refused with 400 on read and write, for a cashier, a manager and the owner', async () => {
     const shop = world!;
     const callers = [
       (path: string, headers: Record<string, string>, body?: unknown) =>
@@ -92,7 +90,7 @@ test.describe('branch scope hardening @branches @security', () => {
     expect(await idsIn(shop, shop.branchB.id)).toEqual(before);
   });
 
-  test('a limited manager cannot see, edit, delete or give access to people who work in another branch (needs fix) @pending-fixes', async ({
+  test('a limited manager cannot see, edit, delete or give access to people who work in another branch', async ({
     api,
   }) => {
     const shop = world!;

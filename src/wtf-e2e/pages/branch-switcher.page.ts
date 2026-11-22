@@ -36,7 +36,9 @@ export class BranchSwitcherPage {
     await this.page.locator('.navbar .avatar:visible, aside.app-sidebar .avatar:visible').first().click();
     await this.page.getByText('Logout', { exact: true }).first().click();
     const confirm = this.page.getByRole('button', { name: 'Log out', exact: true });
-    if (await confirm.isVisible().catch(() => false)) {
+    // The sidebar asks first; the header signs out at once. Wait for whichever comes, never peek before the dialog is drawn.
+    await expect(confirm.or(this.page.locator('#username'))).toBeVisible();
+    if (await confirm.isVisible()) {
       await confirm.click();
     }
 

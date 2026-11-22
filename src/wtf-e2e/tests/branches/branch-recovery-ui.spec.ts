@@ -206,7 +206,7 @@ test.describe('signing out and in again @branches @security', () => {
     expect(await switcher.codes()).toEqual([shop.branchB.code]);
   });
 
-  test("the owner who signs in after a manager starts in the owner's own default branch, not the manager's (needs fix) @pending-fixes", async ({
+  test("the owner who signs in after a manager starts in the owner's own default branch, not the manager's", async ({
     api,
     newContext,
   }) => {
@@ -226,7 +226,7 @@ test.describe('signing out and in again @branches @security', () => {
     await expect.poll(() => storedBranch(page)).toBe(mine.defaultBranchId);
   });
 
-  test('signing out forgets the working branch (needs fix) @pending-fixes', async ({ api, newContext }) => {
+  test('signing out forgets the working branch', async ({ api, newContext }) => {
     const shop = world!;
     const page = await openAs(api, newContext, shop.manager, { storedBranch: shop.branchC.id });
     await go(page, ROUTES.ordersList);
@@ -236,7 +236,7 @@ test.describe('signing out and in again @branches @security', () => {
     expect(await storedBranch(page)).toBeNull();
   });
 
-  test('a closed branch is not offered and a saved closed branch is left for an open one (needs fix) @pending-fixes', async ({
+  test('a closed branch is not offered and a saved closed branch is left for an open one', async ({
     api,
     newContext,
   }) => {
