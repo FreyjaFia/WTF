@@ -28,6 +28,7 @@ public class CreateBranchHandler(
 {
     public async Task<BranchDto> Handle(CreateBranchCommand request, CancellationToken cancellationToken)
     {
+        BranchRules.EnsureWorksInEveryBranch(currentBranch);
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var (name, code, address, phone) = BranchRules.Validate(request.Name, request.Code, request.Address, request.Phone);
         await BranchRules.EnsureCodeFreeAsync(db, code, null, cancellationToken);

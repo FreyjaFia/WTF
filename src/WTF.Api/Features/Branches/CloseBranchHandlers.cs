@@ -123,9 +123,10 @@ public class ReopenBranchHandler(
 {
     public async Task<BranchDto?> Handle(ReopenBranchCommand request, CancellationToken cancellationToken)
     {
+        BranchRules.EnsureWorksInEveryBranch(currentBranch);
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var branch = await BranchRules.AllOfShop(db).FirstOrDefaultAsync(b => b.Id == request.Id, cancellationToken);
-        if (branch is null || (BranchRules.IsLimited(currentBranch) && !currentBranch.AllowedBranchIds.Contains(branch.Id)))
+        if (branch is null)
         {
             return null;
         }
@@ -164,9 +165,10 @@ public class MakeMainBranchHandler(
 {
     public async Task<BranchDto?> Handle(MakeMainBranchCommand request, CancellationToken cancellationToken)
     {
+        BranchRules.EnsureWorksInEveryBranch(currentBranch);
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var branch = await BranchRules.AllOfShop(db).FirstOrDefaultAsync(b => b.Id == request.Id, cancellationToken);
-        if (branch is null || (BranchRules.IsLimited(currentBranch) && !currentBranch.AllowedBranchIds.Contains(branch.Id)))
+        if (branch is null)
         {
             return null;
         }
@@ -219,13 +221,13 @@ internal static class BranchClosing
         }
 
         var activeCount = await BranchRules.AllOfShop(db).CountAsync(b => b.IsActive, cancellationToken);
-        var open = await BranchRules.AllOrdersOfShop(db).CountAsync(o => o.BranchId == id && BranchRules.OpenOrderStatuses.Contains(o.StatusId), cancellationToken);
+        var open = await BranchRules.AllOrdersOfShop(db).CountAsync(o => o.BranchId == id && BranchRules.OpenOrderStatuses.Contains(o.StatusId) && o.StatusId != (int)OrderStatusEnum.PendingReview, cancellationToken);
         var held = await BranchRules.AllOrdersOfShop(db).CountAsync(o => o.BranchId == id && o.StatusId == (int)OrderStatusEnum.PendingReview, cancellationToken);
         var openPurchaseOrders = await db.PurchaseOrders.IgnoreQueryFilters([WTFDbContext.BranchFilterName])
             .CountAsync(p => p.BranchId == id && (p.Status == PurchaseOrderStatuses.Sent || p.Status == PurchaseOrderStatuses.PartlyReceived), cancellationToken);
 
         var itemsWithStock = await db.ItemBranchStocks.IgnoreQueryFilters([WTFDbContext.BranchFilterName])
-            .CountAsync(s => s.BranchId == id && s.CurrentQuantity > 0m && s.Item.IsActive, cancellationToken);
+            .CountAsync(s => s.BranchId == id && s.CurrentQuantity != 0m, cancellationToken);
 
         var staff = await db.UserBranches.AsNoTracking()
             .Where(u => u.BranchId == id && u.User.IsActive)

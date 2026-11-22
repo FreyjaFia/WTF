@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Branches;
@@ -47,12 +48,21 @@ public class SaveItemBranchSettingsHandler(
             throw new InvalidOperationException("One or more branches were not found.");
         }
 
+        var requestedIds = request.Branches.Select(b => b.BranchId).ToList();
+        if (await BranchRules.AllOfShop(db).AnyAsync(b => requestedIds.Contains(b.Id) && !b.IsActive, cancellationToken))
+        {
+            throw new InvalidOperationException("A closed branch cannot be changed. Reopen it first.");
+        }
+
         if (request.Branches.Any(b => !db.MayWriteToBranch(b.BranchId)))
         {
             throw new ForbiddenActionException("You can only change the stock settings of the branches you work in.");
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+
+        // Changing a cost takes the costs key, like the item screen; without it the costs stay as they are.
+        var keepCosts = request.KeepCosts || !PermissionChecks.Has(httpContextAccessor.HttpContext!.User, "inventory.costs.write");
         var rows = await db.ItemBranchStocks
             .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
             .Where(s => s.ItemId == item.Id)
@@ -68,7 +78,7 @@ public class SaveItemBranchSettingsHandler(
                 rows[input.BranchId] = row;
             }
 
-            var cost = request.KeepCosts ? row.CostPrice : input.CostPrice;
+            var cost = keepCosts ? row.CostPrice : input.CostPrice;
             if (row.WarningQuantity == input.WarningQuantity
                 && row.CriticalQuantity == input.CriticalQuantity
                 && row.ParLevel == input.ParLevel

@@ -69,16 +69,7 @@ public static class PushNotificationEndpoints
                             .SetProperty(t => t.LastSeenAt, now), cancellationToken);
                 }
 
-                var updated = await db.PushNotificationTokens
-                    .IgnoreQueryFilters()
-                    .Where(t => t.Token == normalizedToken)
-                    .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(t => t.UserId, userId)
-                        .SetProperty(t => t.TenantId, deviceTenantId)
-                        .SetProperty(t => t.Platform, normalizedPlatform)
-                        .SetProperty(t => t.DeviceId, deviceId)
-                        .SetProperty(t => t.IsActive, true)
-                        .SetProperty(t => t.LastSeenAt, now), cancellationToken);
+                var updated = await PushTokenClaim.TakeOverAsync(db, normalizedToken, userId, deviceTenantId, normalizedPlatform, deviceId, now, cancellationToken);
 
                 if (updated == 0)
                 {
@@ -101,16 +92,10 @@ public static class PushNotificationEndpoints
                     }
                     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
                     {
-                        await db.PushNotificationTokens
-                            .IgnoreQueryFilters()
-                            .Where(t => t.Token == normalizedToken)
-                            .ExecuteUpdateAsync(setters => setters
-                                .SetProperty(t => t.UserId, userId)
-                                .SetProperty(t => t.TenantId, deviceTenantId)
-                                .SetProperty(t => t.Platform, normalizedPlatform)
-                                .SetProperty(t => t.DeviceId, deviceId)
-                                .SetProperty(t => t.IsActive, true)
-                                .SetProperty(t => t.LastSeenAt, now), cancellationToken);
+                        if (await PushTokenClaim.TakeOverAsync(db, normalizedToken, userId, deviceTenantId, normalizedPlatform, deviceId, now, cancellationToken) == 0)
+                        {
+                            return Results.Conflict("This device is registered to another shop.");
+                        }
                     }
                 }
 
@@ -157,5 +142,31 @@ public static class PushNotificationEndpoints
         }
 
         return sqlException.Number is 2601 or 2627;
+    }
+}
+
+internal static class PushTokenClaim
+{
+    // A token already registered in this shop moves to the signed-in person. A token that belongs to another shop is never
+    // touched: the shop filter stays on, so the update finds nothing.
+    public static Task<int> TakeOverAsync(
+        WTFDbContext db,
+        string token,
+        Guid userId,
+        Guid tenantId,
+        string platform,
+        string? deviceId,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        return db.PushNotificationTokens
+            .Where(t => t.Token == token)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.UserId, userId)
+                .SetProperty(t => t.TenantId, tenantId)
+                .SetProperty(t => t.Platform, platform)
+                .SetProperty(t => t.DeviceId, deviceId)
+                .SetProperty(t => t.IsActive, true)
+                .SetProperty(t => t.LastSeenAt, now), cancellationToken);
     }
 }

@@ -97,5 +97,13 @@ public static class BranchRules
 
     public static bool IsLimited(ICurrentBranch branch) => branch.WriteCheckEnabled;
 
+    public static void EnsureWorksInEveryBranch(ICurrentBranch branch)
+    {
+        if (IsLimited(branch))
+        {
+            throw new ForbiddenActionException("Only a person who works in every branch can do this.");
+        }
+    }
+
     public static BranchScopeEnum ScopeOf(User user) => (BranchScopeEnum)user.BranchScope;
 }
