@@ -6,6 +6,7 @@ using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Branches.DTOs;
 using WTF.Api.Features.Branches.Enums;
+using WTF.Api.Features.Users;
 using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -20,11 +21,11 @@ public record GetUserBranchAccessQuery(Guid UserId) : IRequest<UserBranchAccessD
 
 public record SetUserBranchAccessCommand(Guid UserId, bool IsAllBranches, List<Guid>? BranchIds, Guid? DefaultBranchId) : IRequest<UserBranchAccessDto?>;
 
-public class GetUserBranchAccessHandler(WTFDbContext db, ICurrentBranch currentBranch) : IRequestHandler<GetUserBranchAccessQuery, UserBranchAccessDto?>
+public class GetUserBranchAccessHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, ICurrentBranch currentBranch) : IRequestHandler<GetUserBranchAccessQuery, UserBranchAccessDto?>
 {
     public async Task<UserBranchAccessDto?> Handle(GetUserBranchAccessQuery request, CancellationToken cancellationToken)
     {
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
+        var user = await UserBranchVisibility.VisibleTo(db, httpContextAccessor.HttpContext!.User.GetUserId()).AsNoTracking().FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
         if (user is null)
         {
             return null;
@@ -129,7 +130,7 @@ public class SetUserBranchAccessHandler(
         }
 
         user.BranchScope = (byte)(request.IsAllBranches ? BranchScopeEnum.All : BranchScopeEnum.Selected);
-        if (request.DefaultBranchId is { } preferred && (request.IsAllBranches || finalIds.Contains(preferred)))
+        if (request.DefaultBranchId is { } preferred && (request.IsAllBranches || finalIds.Contains(preferred)) && (!limitedActor || currentBranch.AllowedBranchIds.Contains(preferred)))
         {
             user.DefaultBranchId = preferred;
         }

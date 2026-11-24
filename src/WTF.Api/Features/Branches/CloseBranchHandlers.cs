@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Auth;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
@@ -63,6 +64,11 @@ public class CloseBranchHandler(
 
             target = await BranchRules.AllOfShop(db).FirstOrDefaultAsync(b => b.Id == moveTo && b.IsActive, cancellationToken)
                 ?? throw new InvalidOperationException("The branch chosen for the staff is not open.");
+
+            if (BranchRules.IsLimited(currentBranch) && !currentBranch.AllowedBranchIds.Contains(target.Id))
+            {
+                throw new ForbiddenActionException("You can only move staff to a branch you work in.");
+            }
         }
 
         var branch = await BranchRules.AllOfShop(db).FirstAsync(b => b.Id == request.Id, cancellationToken);
