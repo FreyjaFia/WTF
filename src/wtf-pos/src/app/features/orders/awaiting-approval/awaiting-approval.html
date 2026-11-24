@@ -34,7 +34,7 @@
 
   @if (!isLoading()) {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-      <div class="pb-4" data-awaiting-approval>
+      <div data-awaiting-approval>
         @if (connectionFailed()) {
           <app-connection-error />
         } @else if (orders().length === 0) {

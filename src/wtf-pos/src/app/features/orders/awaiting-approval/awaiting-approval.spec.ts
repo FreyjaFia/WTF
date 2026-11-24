@@ -111,6 +111,15 @@ describe('AwaitingApproval', () => {
     expect(rows().map((r) => r.textContent)).toEqual([expect.stringContaining('#1'), expect.stringContaining('#2')]);
   });
 
+  it('keeps the pagination bar flush with the bottom of the scroll area like the other lists', () => {
+    orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1')]));
+    init();
+
+    const bar = el().querySelector('app-pagination') as HTMLElement;
+    expect(bar).not.toBeNull();
+    expect(bar.parentElement?.className ?? '').not.toMatch(/\bpb-/);
+  });
+
   it('says so when nothing is waiting', () => {
     init();
 

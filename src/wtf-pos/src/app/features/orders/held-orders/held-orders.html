@@ -190,7 +190,7 @@
 
   @if (!isLoading()) {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-      <div class="pb-4">
+      <div>
         @if (connectionFailed()) {
           <app-connection-error />
         } @else if (visibleOrders().length === 0) {
