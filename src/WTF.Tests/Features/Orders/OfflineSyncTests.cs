@@ -451,6 +451,29 @@ public class OfflineSyncTests
     }
 
     [Fact]
+    public async Task Sync_AnOrderAlreadySavedOnlineUnderTheSameCheckoutKey_ReturnsItWithoutADuplicate()
+    {
+        var latte = await SeedProduct("Latte", 160m);
+        const string checkoutKey = "ON-3f9a1c0d5e7b4a2c8d6e1f0a9b8c7d6e";
+
+        Guid onlineId;
+        await using (var db = TestDb.Create(_dbName))
+        {
+            var create = TestFakes.CreateOrderHandler(db, TestRequest.As(_userId, AppRoles.Admin), _audit);
+            var online = Order(checkoutKey, OrderStatusEnum.Completed, Line(latte, 1, null)) with { CreatedAt = null };
+            onlineId = (await create.Handle(online, CancellationToken.None)).Id;
+        }
+
+        var retried = await SyncOne(Order(checkoutKey, OrderStatusEnum.Completed, Line(latte, 1, 160m)));
+
+        retried.Error.ShouldBeNull();
+        retried.OrderId.ShouldBe(onlineId);
+        retried.OfflineLocalId.ShouldBe(checkoutKey);
+        await using var check = TestDb.Create(_dbName);
+        (await check.Orders.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Sync_ABadOrder_DoesNotStopTheOthers()
     {
         var latte = await SeedProduct("Latte", 150m);

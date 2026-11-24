@@ -2590,7 +2590,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
 
     if (!this.connectivity.isOnline()) {
-      this.queueOfflineOrder(command);
+      this.queueOfflineOrder(command, this.attemptedKeyFor(command));
       return;
     }
 
@@ -2615,12 +2615,29 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   private checkoutKeyFor(command: CreateOrderCommand): string {
     // A retry of the same cart reuses the key, so a response lost on the way cannot create a second order.
-    const signature = JSON.stringify(command);
+    const signature = this.checkoutSignature(command);
     if (this.checkoutAttempt?.signature !== signature) {
       this.checkoutAttempt = { key: `ON-${crypto.randomUUID().replaceAll('-', '')}`, signature };
     }
 
     return this.checkoutAttempt.key;
+  }
+
+  // The same sale sold offline after a lost online request keeps the online key, so the server answers with the order it
+  // already saved instead of making a second one.
+  private attemptedKeyFor(command: CreateOrderCommand): string | null {
+    return this.checkoutAttempt?.signature === this.checkoutSignature(command) ? this.checkoutAttempt.key : null;
+  }
+
+  // Only what makes it the same sale: the offline form adds quoted prices and the online one an expected total.
+  private checkoutSignature(command: CreateOrderCommand): string {
+    const { items: _items, bundlePromotions: _bundles, expectedTotal: _expected, ...rest } = command;
+
+    return JSON.stringify({
+      ...rest,
+      items: this.buildOrderItemsFromCart(),
+      bundlePromotions: this.buildBundlePromotionsFromCart(),
+    });
   }
 
   private showStockWarnings(order: OrderDto): void {
@@ -2629,10 +2646,11 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
   }
 
-  private queueOfflineOrder(command: CreateOrderCommand): void {
+  private queueOfflineOrder(command: CreateOrderCommand, checkoutKey: string | null): void {
     this.offlineOrder
-      .queue(command, this.cart(), this.selectedCustomerName(), this.totalPrice())
+      .queue(command, this.cart(), this.selectedCustomerName(), this.totalPrice(), checkoutKey)
       .then((localId) => {
+        this.checkoutAttempt = null;
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.cartPersistence.clear();

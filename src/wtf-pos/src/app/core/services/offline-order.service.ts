@@ -129,6 +129,7 @@ export class OfflineOrderService {
     cartSnapshot: CartItemDto[],
     customerName: string | null,
     previewTotal: number | null = null,
+    checkoutKey: string | null = null,
   ): Promise<string> {
     const branchId = this.activeBranchForSale();
 
@@ -161,6 +162,7 @@ export class OfflineOrderService {
       errorMessage: null,
       retryCount: 0,
       version: stamped.version,
+      ...(checkoutKey && { checkoutKey }),
     };
 
     await db.pendingOrders.add(pendingOrder);
@@ -664,9 +666,10 @@ export class OfflineOrderService {
     }
   }
 
-  // Queue numbers restart on every device, so the server key adds the device: two tablets cannot clash.
+  // Queue numbers restart on every device, so the server key adds the device: two tablets cannot clash. A sale that already tried
+  // online keeps that online key, so the server recognizes it.
   private serverKey(order: PendingOrder): string {
-    return `${order.localId}-${this.deviceId()}`;
+    return order.checkoutKey ?? `${order.localId}-${this.deviceId()}`;
   }
 
   // Two tabs share one counter in storage and can both take the same number, so the id also carries a random part.

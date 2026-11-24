@@ -264,6 +264,47 @@ describe('OfflineOrderService', () => {
 
       expect(await service.queue(command(), cart, null)).toMatch(idPattern(1));
     });
+
+    it('keeps the checkout key an online attempt already sent', async () => {
+      const service = await create();
+
+      await service.queue(command(), cart, null, null, 'ON-0123456789abcdef0123456789abcdef');
+
+      expect(table.rows[0].checkoutKey).toBe('ON-0123456789abcdef0123456789abcdef');
+    });
+
+    it('stores no checkout key for a sale that never tried online', async () => {
+      const service = await create();
+
+      await service.queue(command(), cart, null);
+
+      expect(table.rows[0]).not.toHaveProperty('checkoutKey');
+    });
+  });
+
+  describe('the key a queued order is sent under', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    it('is the original online key, so the server finds the order it may already have saved', async () => {
+      const service = await create([{ localId: 'OFF-250101-001-aaaaaa', checkoutKey: 'ON-0123456789abcdef0123456789abcdef' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      const sent = createBatch.mock.calls[0][0] as { offlineLocalId: string }[];
+      expect(sent[0].offlineLocalId).toBe('ON-0123456789abcdef0123456789abcdef');
+      expect(table.rows).toHaveLength(0);
+    });
+
+    it('is still the queue number plus the device for a row queued by an older app', async () => {
+      const service = await create([{ localId: 'OFF-250101-001-aaaaaa' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      const sent = createBatch.mock.calls[0][0] as { offlineLocalId: string }[];
+      expect(sent[0].offlineLocalId).toMatch(/^OFF-250101-001-aaaaaa-[0-9a-f]{8}$/);
+    });
   });
 
   describe('the branch a sale was made in', () => {

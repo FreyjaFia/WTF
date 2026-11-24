@@ -69,6 +69,8 @@ export interface PendingOrder {
   retryCount: number;
   /** 2 once the command can carry Senior / PWD persons. 3 once it also carries the catalog sync time. */
   version?: number;
+  // The key an online attempt already sent for this sale. Kept so a sale whose answer was lost, then sold again offline, reaches the server under the same key and is not saved twice. None for sales that never tried online.
+  checkoutKey?: string;
 }
 
 export type SyncOutcome = 'saved' | 'saved-with-note' | 'sent-for-review' | 'could-not-sync';

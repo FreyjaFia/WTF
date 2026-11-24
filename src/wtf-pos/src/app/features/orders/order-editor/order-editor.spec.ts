@@ -1274,6 +1274,36 @@ describe('OrderEditor', () => {
       expect(second).toBe(first);
     });
 
+    it('the same cart sold offline after a lost online request is queued under the online key', async () => {
+      await start();
+      withCart([line({ qty: 2 })]);
+      orderService['createOrder'].mockReturnValueOnce(throwError(() => new Error('Network unavailable')));
+
+      t.checkout();
+      t.onOrderConfirmed(cash);
+      const onlineKey = orderService['createOrder'].mock.calls[0][0].offlineLocalId;
+      isOnline.set(false);
+      t.checkout();
+      t.onOrderConfirmed(cash);
+
+      expect(offline['queue'].mock.calls.at(-1)?.[4]).toBe(onlineKey);
+    });
+
+    it('a different cart sold offline does not borrow the online key', async () => {
+      await start();
+      withCart([line({ qty: 2 })]);
+      orderService['createOrder'].mockReturnValueOnce(throwError(() => new Error('Network unavailable')));
+
+      t.checkout();
+      t.onOrderConfirmed(cash);
+      withCart([line({ qty: 3 })]);
+      isOnline.set(false);
+      t.checkout();
+      t.onOrderConfirmed(cash);
+
+      expect(offline['queue'].mock.calls.at(-1)?.[4]).toBeNull();
+    });
+
     it('goes on to checkout when the shop cannot be asked, because the server checks the total when the sale is saved', async () => {
       askedServer().mockReturnValue(of(percent()));
       await start();
@@ -2531,6 +2561,7 @@ describe('OrderEditor', () => {
         t.cart(),
         'Jane Doe',
         expect.any(Number),
+        null,
       );
       await settle();
       expect(alert['info']).toHaveBeenCalledWith(
