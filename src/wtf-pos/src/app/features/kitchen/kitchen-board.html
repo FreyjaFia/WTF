@@ -134,6 +134,12 @@
     </div>
   </app-side-drawer>
 
+  @if (canUpdate() && needsBranch()) {
+    <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800" role="status" data-testid="kitchen-pick-branch">
+      Pick a branch in the header to move, mark or dismiss orders. All branches is view only.
+    </p>
+  }
+
   @if (!isOnline()) {
     <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800" role="status" data-testid="kitchen-offline">
       You are offline. These orders may be out of date. Buttons work again when the connection is back.
@@ -173,7 +179,7 @@
                   <p class="text-sm font-bold tracking-wide text-red-700 uppercase">Cancelled. Stop making</p>
                   <p class="text-2xl font-extrabold text-gray-900">{{ orderLabel(order) }}</p>
                 </div>
-                @if (canUpdate()) {
+                @if (canAct()) {
                   <button
                     type="button"
                     class="app-btn app-btn-danger min-h-12 px-4"
@@ -199,7 +205,7 @@
                 {{ staleOrders().length }} order{{ staleOrders().length === 1 ? '' : 's' }} from an earlier day still open.
               </p>
             </div>
-            @if (canUpdate()) {
+            @if (canAct()) {
               <button
                 type="button"
                 class="app-btn app-btn-secondary min-h-11 px-4"
@@ -308,7 +314,7 @@
           <span class="rounded bg-amber-500 px-1.5 py-0.5 text-xs font-extrabold tracking-wide text-white uppercase">{{
             order.changeKind === ChangeKind.Added ? 'Added' : 'Changed'
           }}</span>
-          @if (canUpdate()) {
+          @if (canAct()) {
             <button
               type="button"
               class="app-btn app-btn-secondary app-btn-xs min-h-9"
@@ -361,7 +367,7 @@
       </p>
     }
 
-    @if (canUpdate()) {
+    @if (canAct()) {
       <div class="mt-3 flex flex-col gap-2">
         @if (order.kitchenStatus === States.Served) {
           <button

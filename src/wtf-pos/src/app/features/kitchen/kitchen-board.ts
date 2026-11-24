@@ -84,6 +84,10 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
 
   protected readonly canUpdate = computed(() => this.auth.canUpdateKitchen());
 
+  protected readonly needsBranch = computed(() => this.branchService.isMultiBranch() && this.branchService.isAllSelected());
+
+  protected readonly canAct = computed(() => this.canUpdate() && !this.needsBranch());
+
   protected readonly activeFilterCount = computed(() => (this.sourceFilter() === null ? 0 : 1));
 
   protected readonly staleOrders = computed(() =>

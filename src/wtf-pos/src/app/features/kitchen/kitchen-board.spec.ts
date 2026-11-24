@@ -4,12 +4,13 @@ import { Subject, of, throwError } from 'rxjs';
 import {
   AlertService,
   AuthService,
+  BranchService,
   ConnectivityService,
   KitchenAccessError,
   KitchenService,
   SignalRService,
 } from '@core/services';
-import { KitchenOrderDto, KitchenStateEnum, OrderSourceEnum } from '@shared/models';
+import { KitchenChangeKindEnum, KitchenOrderDto, KitchenStateEnum, OrderSourceEnum } from '@shared/models';
 import { KitchenBoardComponent } from './kitchen-board';
 
 function order(number: number, state: KitchenStateEnum, extra: Partial<KitchenOrderDto> = {}): KitchenOrderDto {
@@ -103,6 +104,47 @@ describe('KitchenBoardComponent', () => {
   it('hides the buttons from someone who cannot update the kitchen', () => {
     const { el } = setup([order(1, KitchenStateEnum.New)], false);
     expect(el.querySelector('[data-testid="kitchen-advance"]')).toBeNull();
+  });
+
+  describe('under All branches', () => {
+    function allBranches(): void {
+      TestBed.configureTestingModule({
+        providers: [
+          {
+            provide: BranchService,
+            useValue: { isMultiBranch: () => true, isAllSelected: () => true, activeLabel: () => 'All branches' },
+          },
+        ],
+      });
+    }
+
+    it('shows the orders but no action buttons, and says to pick a branch', () => {
+      allBranches();
+      const { el } = setup([
+        order(1, KitchenStateEnum.Ready, { changeKind: KitchenChangeKindEnum.Added, changeNote: 'Extra shot' }),
+        order(2, KitchenStateEnum.Preparing, { isStopMaking: true }),
+        order(3, KitchenStateEnum.New, { isStale: true }),
+      ]);
+
+      expect(el.querySelector('[data-testid="kitchen-card-1"]')).not.toBeNull();
+      for (const id of ['advance', 'undo', 'seen', 'dismiss', 'clear-old', 'bring-back']) {
+        expect(el.querySelector(`[data-testid="kitchen-${id}"]`)).toBeNull();
+      }
+      expect(el.querySelector('[data-testid="kitchen-pick-branch"]')?.textContent).toContain('Pick a branch');
+    });
+
+    it('shows no hint to someone who could not act anyway', () => {
+      allBranches();
+      const { el } = setup([order(1, KitchenStateEnum.New)], false);
+
+      expect(el.querySelector('[data-testid="kitchen-pick-branch"]')).toBeNull();
+    });
+  });
+
+  it('shows the buttons and no hint when a branch is picked', () => {
+    const { el } = setup([order(1, KitchenStateEnum.New)]);
+    expect(el.querySelector('[data-testid="kitchen-advance"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="kitchen-pick-branch"]')).toBeNull();
   });
 
   it('shows a stop-making card that can be dismissed, and a From yesterday strip', () => {
