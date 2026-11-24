@@ -26,7 +26,7 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
     private static readonly TimeSpan Wait = TimeSpan.FromSeconds(5);
 
     private readonly string _db = TestDb.NewName();
-    private readonly Guid _staffId = Guid.NewGuid();
+    private readonly Guid _staffId = Guid.Parse(StaffUserId);
     private readonly List<HubConnection> _connections = [];
     private WebApplication _app = null!;
     private TestServer _server = null!;
