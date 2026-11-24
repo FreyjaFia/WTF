@@ -7,6 +7,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from './db';
 import type { PendingOrder } from './db';
+import { announceLocalDataWiped, announceSignedIn } from './local-data-events';
 import { OfflineOrderService } from './offline-order.service';
 
 type Row = PendingOrder & Record<string, unknown>;
@@ -1030,6 +1031,41 @@ describe('OfflineOrderService', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       expect(createBatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('signing in without a page reload', () => {
+    const tokenFor = (tenant: string): string =>
+      `h.${btoa(JSON.stringify({ tenant_id: tenant, sub: 'u1' }))}.s`;
+
+    it('sends the waiting orders when the person signs in again while online', async () => {
+      online.set(true);
+      await create([{ localId: 'a' }]);
+      expect(createBatch).not.toHaveBeenCalled();
+
+      localStorage.setItem('token', 'tok');
+      announceSignedIn();
+      TestBed.tick();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(createBatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('lists the queue of the shop that signed in, not the one before', async () => {
+      const service = await create([{ localId: 'b', tenantId: 'shop-b' }]);
+      expect(service.pendingOrders()).toEqual([]);
+
+      localStorage.setItem('token', tokenFor('shop-b'));
+      announceSignedIn();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(service.pendingOrders().map((order) => order.localId)).toEqual(['b']);
+
+      localStorage.removeItem('token');
+      announceLocalDataWiped();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(service.pendingOrders()).toEqual([]);
     });
   });
 

@@ -1,6 +1,8 @@
 import { computed, effect, inject, Injectable, OnDestroy, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '@core/services/auth.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
+import { localDataWiped$ } from '@core/services/local-data-events';
 import { OrderService } from '@core/services/order.service';
 import { UnsyncedOrderService } from '@core/services/unsynced-order.service';
 import { OrderStatusEnum, UnsyncedOrderStatusEnum } from '@shared/models';
@@ -28,6 +30,13 @@ export class NeedsAttentionService implements OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   public constructor() {
+    // The counts belong to the person who was signed in: the next one must not see them, even for kinds they cannot open.
+    localDataWiped$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this._awaiting.set(0);
+      this._held.set(0);
+      this._unsynced.set(0);
+    });
+
     // What a person may act on is known a moment after sign-in, and the connection comes and goes: ask again at both.
     effect(() => {
       const online = this.connectivity.isOnline();

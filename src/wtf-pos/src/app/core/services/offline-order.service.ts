@@ -1,4 +1,5 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AlertService, ConnectivityService, OrderService } from '@core/services';
 import { BranchService } from '@core/services/branch.service';
 import {
@@ -7,8 +8,9 @@ import {
   OfflineSyncResultDto,
   OrderStatusEnum,
 } from '@shared/models';
-import { firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, merge, timeout } from 'rxjs';
 import { db } from './db';
+import { localDataWiped$, signedIn$ } from './local-data-events';
 import { SENIOR_PWD_ID_RETENTION_DAYS, isPastIdRetention } from './senior-pwd-retention';
 import { currentTenantId, currentUserId, tenantOfQueuedOrder } from './tenant-context';
 import type { PendingOrder, SyncOutcome, SyncResultEntry } from './db';
@@ -60,6 +62,7 @@ export class OfflineOrderService {
   private readonly _isSyncing = signal(false);
   public readonly isSyncing = this._isSyncing.asReadonly();
   private readonly _activeOfflineEdits = signal<string[]>([]);
+  private readonly sessionChanges = signal(0);
 
   private localCounter = 0;
   private syncInProgress = false;
@@ -67,6 +70,16 @@ export class OfflineOrderService {
 
   constructor() {
     void this.recoverInterruptedSync();
+
+    // The queue on screen belongs to whoever is signed in, and sign-in does not reload the page: look again when the
+    // person changes, and let the automatic sync below notice a login (the token is not a signal).
+    merge(localDataWiped$, signedIn$)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        this.sessionChanges.update((count) => count + 1);
+        void this.loadPendingOrders();
+        void this.loadSyncResults();
+      });
 
     // Automatic sync. An order that just failed must NOT start another sync by itself: marking it failed changes
     // the list, which would run this again at once and loop against a server that keeps failing (every card flickers
@@ -77,6 +90,7 @@ export class OfflineOrderService {
       const isAuthenticated = this.isAuthenticated();
       const hasActiveOfflineEdit = this._activeOfflineEdits().length > 0;
       const orders = this._pendingOrders();
+      this.sessionChanges();
       const reconnected = online && !this.wasOnline;
       this.wasOnline = online;
 

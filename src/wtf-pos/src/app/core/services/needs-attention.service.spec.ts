@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
 import { ConnectivityService } from './connectivity.service';
+import { announceLocalDataWiped } from './local-data-events';
 import { NeedsAttentionService } from './needs-attention.service';
 import { OrderService } from './order.service';
 import { UnsyncedOrderService } from './unsynced-order.service';
@@ -72,6 +73,16 @@ describe('NeedsAttentionService', () => {
     service.refresh();
 
     expect(getOrdersPaged).not.toHaveBeenCalled();
+  });
+
+  it('forgets the counts when the device stops belonging to the person who was signed in', () => {
+    const service = TestBed.inject(NeedsAttentionService);
+    service.refresh();
+    expect(service.total()).toBeGreaterThan(0);
+
+    announceLocalDataWiped();
+
+    expect(service.total()).toBe(0);
   });
 
   it('asks again every minute while something is listening, and stops when the last one leaves', async () => {

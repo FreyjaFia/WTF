@@ -15,7 +15,7 @@ import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { db } from './db';
-import { announceLocalDataWiped } from './local-data-events';
+import { announceLocalDataWiped, announceSignedIn } from './local-data-events';
 import { PlanStore } from './plan-store';
 import {
   currentTenantId,
@@ -118,6 +118,7 @@ export class AuthService {
           this._isLoggedIn.next(true);
           this.syncRolesFromToken();
           this.tokenRefreshedSubject.next();
+          announceSignedIn();
         }
       }),
       // The landing page depends on what this person may open, and a custom role has no built-in bundle to fall back on.
