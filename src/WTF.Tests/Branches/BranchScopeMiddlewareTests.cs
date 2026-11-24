@@ -186,6 +186,34 @@ public class BranchScopeMiddlewareTests
     }
 
     [Fact]
+    public async Task LimitedUserWhoseOnlyBranchHasClosed_CanReadButNotWriteWithoutAHeader()
+    {
+        var read = await SendAsync("GET", "/api/orders", BranchScopeEnum.Selected, [Closed], null);
+        read.Reached.ShouldBeTrue();
+        read.Branch.ActiveBranchId.ShouldBe(Closed);
+
+        var write = await SendAsync("POST", "/api/orders", BranchScopeEnum.Selected, [Closed], null);
+        write.Status.ShouldBe(StatusCodes.Status403Forbidden);
+        write.Reached.ShouldBeFalse();
+
+        var logout = await SendAsync("POST", "/api/auth/logout", BranchScopeEnum.Selected, [Closed], null);
+        logout.Reached.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task APersonWhoIsNoLongerInTheDatabase_NeverGetsEveryBranch()
+    {
+        var dbName = TestDb.NewName();
+        await TestDb.SaveAsync(dbName, NewBranch(Makati, "MKT", true));
+        await using var db = TestDb.Create(dbName);
+
+        var scope = await new BranchScopeCache(TimeProvider.System).GetUserAsync(db, Guid.NewGuid(), CancellationToken.None);
+
+        scope.IsAll.ShouldBeFalse();
+        scope.Assigned.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task PlatformAdmin_AndAnonymousRequests_AreNotFiltered()
     {
         var admin = await SendAsync("GET", "/api/platform/tenants", BranchScopeEnum.All, [], null, roles: ["PlatformAdmin"]);

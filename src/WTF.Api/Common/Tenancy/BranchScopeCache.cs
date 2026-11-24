@@ -36,7 +36,7 @@ public sealed class BranchScopeCache(TimeProvider clock)
             .Select(b => b.BranchId)
             .ToListAsync(cancellationToken);
 
-        var scope = new UserBranchScope(user is null || user.BranchScope == (byte)BranchScopeEnum.All, assigned.ToHashSet(), user?.DefaultBranchId);
+        var scope = new UserBranchScope(user is not null && user.BranchScope == (byte)BranchScopeEnum.All, assigned.ToHashSet(), user?.DefaultBranchId);
         _users[userId] = (scope, now.Add(Lifetime));
         return scope;
     }

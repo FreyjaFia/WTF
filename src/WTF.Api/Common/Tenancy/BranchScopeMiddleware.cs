@@ -93,6 +93,14 @@ public sealed class BranchScopeMiddleware(RequestDelegate next)
         }
         else
         {
+            // Every branch of this person has closed: they may still read, but nothing may be saved into a closed branch.
+            if (usable.Count == 0 && !isRead && !exempt)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { message = BranchNotAllowedMessage });
+                return;
+            }
+
             active = scope.DefaultBranchId is { } preferred && usable.Any(b => b.Id == preferred)
                 ? preferred
                 : (usable.FirstOrDefault(b => b.IsMain) ?? usable.FirstOrDefault() ?? allowed[0]).Id;
