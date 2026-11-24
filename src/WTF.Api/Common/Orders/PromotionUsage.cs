@@ -15,6 +15,7 @@ internal static class PromotionUsage
         OrderStatuses.PendingReview,
     ];
 
+    // A limit is one pool for the whole shop, so the count reads every branch, whichever one the person works in.
     // A bundle is used as many times as it was sold; a discount as many times as it priced an item.
     public static async Task<Dictionary<Guid, int>> CountAsync(
         WTFDbContext db,
@@ -31,6 +32,7 @@ internal static class PromotionUsage
         var ids = used.Keys.ToList();
 
         var bundles = await db.OrderBundlePromotions
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
             .Where(b => ids.Contains(b.PromotionId)
                 && CountedStatuses.Contains(b.Order.StatusId)
                 && (exceptOrderId == null || b.OrderId != exceptOrderId))
@@ -39,6 +41,7 @@ internal static class PromotionUsage
             .ToListAsync(cancellationToken);
 
         var discounts = await db.OrderItems
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
             .Where(i => i.DiscountPromotionId != null
                 && ids.Contains(i.DiscountPromotionId.Value)
                 && i.ParentOrderItemId == null
