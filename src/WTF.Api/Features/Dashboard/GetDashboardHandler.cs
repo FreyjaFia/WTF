@@ -165,7 +165,9 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var topPromotion = promotionUses.Count > 0 ? promotionUses[0] : (Name: (string?)null, Uses: 0, Revenue: 0m);
 
         var customerIds = sales.Where(o => o.CustomerId.HasValue).Select(o => o.CustomerId!.Value).Distinct().ToList();
+        // A customer is new to the shop, not to one branch, so the first sale is looked up across every branch.
         var firstSales = await db.Orders
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
             .AsNoTracking()
             .Where(o => o.CustomerId != null && customerIds.Contains(o.CustomerId.Value) && o.StatusId == OrderStatuses.Completed)
             .GroupBy(o => o.CustomerId!.Value)
