@@ -688,6 +688,8 @@
           </div>
         }
       </app-pull-to-refresh>
+    } @else if (pendingOrders().length === 0) {
+      <app-connection-error />
     }
   }
 </div>

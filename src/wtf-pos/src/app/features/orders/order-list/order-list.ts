@@ -52,6 +52,7 @@ import {
   type OrderListFilter,
 } from '@shared/calculations';
 import { ListScrollService, type ListScrollPosition } from '@core/services/list-scroll.service';
+import { ConnectionErrorComponent } from '@shared/components/connection-error/connection-error';
 import { ScrollLoaderComponent } from '@shared/components/scroll-loader/scroll-loader';
 import { orderAddressOf } from '@shared/utils/order-address';
 import type { PendingOrder, SyncOutcome, SyncResultEntry } from '@core/services/db';
@@ -93,6 +94,7 @@ interface OrderGroup {
     PullToRefreshComponent,
     SearchInputComponent,
     ScrollLoaderComponent,
+    ConnectionErrorComponent,
   ],
   templateUrl: './order-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
