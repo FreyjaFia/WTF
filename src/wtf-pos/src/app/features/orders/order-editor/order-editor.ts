@@ -1038,6 +1038,14 @@ export class OrderEditor implements OnInit, OnDestroy {
         return;
       }
 
+      // The list refuses another cashier's order, but the address can be typed or bookmarked.
+      if (!this.offlineOrder.isOwnOrder(pending)) {
+        this.alertService.warning(OfflineOrderService.NOT_YOUR_ORDER_MESSAGE);
+        this.isLoading.set(false);
+        this.router.navigateByUrl(AppRoutes.OrdersList);
+        return;
+      }
+
       this.offlineOrderStatus.set(pending.command.status);
       this.cart.set([...pending.cartSnapshot]);
       this.seniorPwd.persons.set(pending.command.seniorPwdPersons ?? []);

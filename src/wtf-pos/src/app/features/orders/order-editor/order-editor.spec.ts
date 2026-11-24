@@ -433,6 +433,7 @@ describe('OrderEditor', () => {
       error: vi.fn(),
       success: vi.fn(),
       info: vi.fn(),
+      warning: vi.fn(),
       errorUnauthorized: vi.fn(),
       successCreated: vi.fn(),
       getLoadErrorMessage: vi.fn((e: string) => `load ${e} failed`),
@@ -466,6 +467,7 @@ describe('OrderEditor', () => {
       queue: vi.fn().mockResolvedValue('OFF-1'),
       update: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue(undefined),
+      isOwnOrder: vi.fn().mockReturnValue(true),
       remove: vi.fn().mockResolvedValue(undefined),
       lockSyncForOfflineEdit: vi.fn(),
       unlockSyncForOfflineEdit: vi.fn(),
@@ -3459,6 +3461,15 @@ describe('OrderEditor', () => {
       await start();
       expect(alert['error']).toHaveBeenCalledWith('Offline order not found.');
       expect(nav).toHaveBeenCalledWith(AppRoutes.OrdersList);
+    });
+
+    it('does not open an order that another cashier queued, even by its address', async () => {
+      offline['isOwnOrder'].mockReturnValue(false);
+      await start();
+      expect(alert['warning']).toHaveBeenCalledWith(OfflineOrderService.NOT_YOUR_ORDER_MESSAGE);
+      expect(nav).toHaveBeenCalledWith(AppRoutes.OrdersList);
+      expect(t.cart()).toEqual([]);
+      expect(t.isLoading()).toBe(false);
     });
 
     it('saves updates to the queued order, completing with payment', async () => {
