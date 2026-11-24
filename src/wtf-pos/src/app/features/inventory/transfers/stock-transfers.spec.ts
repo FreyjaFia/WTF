@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AlertService, AuthService, BranchService, InventoryService, StockTransferService } from '@core/services';
+import { AlertService, AuthService, BranchService, ConnectivityService, InventoryService, StockTransferService } from '@core/services';
 import { PagedResultDto, StockTransferSummaryDto } from '@shared/models';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -47,7 +47,7 @@ interface Vm {
 }
 
 describe('StockTransfersComponent', () => {
-  function setup(options: { active?: string; canWrite?: boolean; items?: object[] } = {}) {
+  function setup(options: { active?: string; canWrite?: boolean; items?: object[]; online?: boolean } = {}) {
     const service = {
       getTransfersPaged: vi.fn().mockReturnValue(of(paged([row()]))),
       createTransfer: vi.fn().mockReturnValue(of({ summary: row(), lines: [] })),
@@ -70,6 +70,7 @@ describe('StockTransfersComponent', () => {
         { provide: AlertService, useValue: { error: vi.fn(), success: vi.fn() } },
         { provide: AuthService, useValue: { canWriteStockMovements: () => options.canWrite ?? true } },
         { provide: BranchService, useValue: branches },
+        { provide: ConnectivityService, useValue: { isOnline: signal(options.online ?? true) } },
       ],
     });
     const fixture = TestBed.createComponent(StockTransfersComponent);
@@ -111,6 +112,31 @@ describe('StockTransfersComponent', () => {
       notes: 'Weekend rush',
       lines: [{ itemId: 'i1', quantity: 250 }],
     });
+  });
+
+  it('shows no offline notice and enables Move Stock while online', () => {
+    const { fixture } = setup();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="transfers-offline"]')).toBeNull();
+    expect((fixture.nativeElement.querySelector('[data-testid="open-transfer"]') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('shows the offline notice and disables Move Stock while offline', () => {
+    const { fixture } = setup({ online: false });
+
+    expect(fixture.nativeElement.querySelector('[data-testid="transfers-offline"]')).not.toBeNull();
+    expect((fixture.nativeElement.querySelector('[data-testid="open-transfer"]') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('does not send a transfer while offline', () => {
+    const { vm, service } = setup({ online: false });
+    vm.openForm();
+    vm.form.patchValue({ toBranchId: 'b2' });
+    vm.lines.at(0).patchValue({ itemId: 'i1', quantity: 250 });
+
+    vm.submit();
+
+    expect(service.createTransfer).not.toHaveBeenCalled();
   });
 
   it('does not send a form with no destination or quantity', () => {

@@ -7,13 +7,18 @@
       </div>
       <div class="flex shrink-0 items-center gap-2">
         @if (canMove() && !isFormOpen()) {
-          <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="open-transfer" (click)="openForm()">
+          <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="open-transfer" [disabled]="!isOnline()" (click)="openForm()">
             <app-icon name="icon-plus" [class]="'h-4 w-4'" />
             Move Stock
           </button>
         }
       </div>
     </div>
+    @if (!isOnline()) {
+      <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800" role="status" data-testid="transfers-offline">
+        You are offline. Stock moves need a connection. Move Stock works again when the connection is back.
+      </p>
+    }
     @if (auth.canWriteStockMovements() && branchService.isAllSelected()) {
       <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800" data-testid="transfer-pick-branch">
         Pick a branch in the header to move stock out of it.
@@ -116,7 +121,7 @@
         <button type="button" class="app-btn app-btn-secondary app-btn-md" [disabled]="isSaving()" (click)="cancelForm()">
           Cancel
         </button>
-        <button type="submit" class="app-btn app-btn-primary app-btn-md" data-testid="submit-transfer" [disabled]="isSaving()">
+        <button type="submit" class="app-btn app-btn-primary app-btn-md" data-testid="submit-transfer" [disabled]="isSaving() || !isOnline()">
           {{ isSaving() ? 'Moving...' : 'Move Stock' }}
         </button>
       </div>

@@ -7,6 +7,7 @@ import {
   AlertService,
   AuthService,
   BranchService,
+  ConnectivityService,
   InventoryService,
   ListStateService,
   StockTransferService,
@@ -47,6 +48,9 @@ export class StockTransfersComponent implements OnInit {
   private readonly listState = inject(ListStateService);
   protected readonly auth = inject(AuthService);
   protected readonly branchService = inject(BranchService);
+  private readonly connectivity = inject(ConnectivityService);
+
+  protected readonly isOnline = this.connectivity.isOnline;
 
   protected readonly rows = signal<StockTransferSummaryDto[]>([]);
   protected readonly totalCount = signal(0);
@@ -183,7 +187,7 @@ export class StockTransfersComponent implements OnInit {
 
   protected submit(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.isSaving()) {
+    if (this.form.invalid || this.isSaving() || !this.isOnline()) {
       return;
     }
 
