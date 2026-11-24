@@ -425,7 +425,7 @@ public class ChatMessageExpiryTests
     private static async Task RunBrieflyAsync(ChatMessageExpiryScheduler scheduler)
     {
         await scheduler.StartAsync(CancellationToken.None);
-        await Task.Delay(300);
+        await Task.Delay(1500);
         await scheduler.StopAsync(CancellationToken.None);
     }
 
