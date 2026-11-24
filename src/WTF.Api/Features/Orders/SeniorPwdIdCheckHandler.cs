@@ -36,7 +36,9 @@ public class SeniorPwdIdCheckHandler(WTFDbContext db, IHttpContextAccessor httpC
         var key = SeniorPwdRules.IdKey(idNumber);
         var startOfToday = RequestTimeZone.StartOfTodayUtc(RequestTimeZone.ResolveFromRequest(httpContextAccessor), DateTime.UtcNow);
 
+        // One person gets one discount a day for the whole shop, so the check reads every branch.
         var lastOrderNumber = await db.OrderSeniorPwdDiscounts
+            .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
             .AsNoTracking()
             .Where(s => s.CreatedAt >= startOfToday
                         && s.IdNumber.ToUpper().Replace(" ", "").Replace("-", "") == key

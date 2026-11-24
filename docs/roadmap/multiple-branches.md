@@ -213,7 +213,8 @@ How it works:
 - **Data:** `OrderSeniorPwdDiscounts.BranchId` (copied from the order). The product flag `IsSeniorPwdEligible` stays shared.
 - **Same-ID warning stays shop-wide.** "This ID was already used on another order today" must also fire when the other order
   was at another branch, otherwise the warning is easy to defeat. The index stays `(TenantId, IdNumber, CreatedAt)`; the
-  warning text names the branch.
+  warning text names the branch. Built: the ID check and the offline review read every branch (branch filter ignored,
+  tenant filter kept).
 - **Report and claim export:** the Senior/PWD report gets the branch filter and a branch column; the claim export per branch
   is the useful one for the accountant (each branch files its own). Daily Close shows the day's Senior/PWD discount and
   VAT-exempt sales **per branch**.
@@ -249,6 +250,8 @@ How it works:
 
 - **Customers are shared** across branches. The quick "New customer" dialog and checkout work as planned. The order's
   address copy (`Orders.CustomerAddress`) is a copy on the order and has nothing to do with the branch, so nothing changes.
+  The dashboard's new/returning customer count looks for a customer's first sale across every branch, so someone who
+  bought at another branch before is returning, not new.
 - **Delivery:** the order belongs to the branch that took it. The branch's own address and phone print on the receipt as
   the "from" side; the customer's address is the "to" side. The delivery address search on the order list stays shop-wide
   for people who see all branches and branch-wide for the others.

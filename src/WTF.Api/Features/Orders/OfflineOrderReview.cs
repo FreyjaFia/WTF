@@ -236,6 +236,7 @@ internal static class OfflineOrderReview
         foreach (var idNumber in command.SeniorPwdPersons.Select(p => p.IdNumber?.Trim()).Where(id => !string.IsNullOrEmpty(id)).Distinct())
         {
             var earlier = await db.OrderSeniorPwdDiscounts
+                .IgnoreQueryFilters([WTFDbContext.BranchFilterName])
                 .AsNoTracking()
                 .Where(s => s.IdNumber == idNumber
                             && s.CreatedAt >= start && s.CreatedAt < end
