@@ -71,7 +71,7 @@ public sealed class StockReminderService(
 
         var rows = await db.ItemBranchStocks
             .AsNoTracking()
-            .Where(s => s.LastAlertStatus > 0 && s.Item.IsActive)
+            .Where(s => s.LastAlertStatus > 0 && s.Item.IsActive && s.Branch.IsActive)
             .Select(s => new { s.Item, s.BranchId, s.CurrentQuantity, Stock = s })
             .ToListAsync(cancellationToken);
 

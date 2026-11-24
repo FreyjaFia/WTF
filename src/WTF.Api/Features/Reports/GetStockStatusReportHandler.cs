@@ -15,7 +15,7 @@ public sealed class GetStockStatusReportHandler(WTFDbContext db) : IRequestHandl
         // One row per item and branch the person may see, so "All branches" shows each branch's stock and its own status.
         var rows = await db.ItemBranchStocks
             .AsNoTracking()
-            .Where(s => s.Item.IsActive)
+            .Where(s => s.Item.IsActive && s.Branch.IsActive)
             .Select(s => new
             {
                 s.Item,

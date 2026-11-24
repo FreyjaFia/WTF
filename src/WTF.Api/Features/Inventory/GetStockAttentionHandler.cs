@@ -17,7 +17,7 @@ public class GetStockAttentionHandler(WTFDbContext db) : IRequestHandler<GetStoc
         // One row per item and branch the person may see: Makati can be out of milk while BGC is fine.
         var items = await db.ItemBranchStocks
             .AsNoTracking()
-            .Where(s => s.Item.IsActive)
+            .Where(s => s.Item.IsActive && s.Branch.IsActive)
             .Select(s => new
             {
                 s.Item.Id,
