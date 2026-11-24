@@ -600,7 +600,7 @@ export class OrderList implements OnInit, OnDestroy {
   protected kitchenChip(order: OrderDto): { label: string; variant: BadgeVariant } | null {
     switch (order.kitchenStatus) {
       case KitchenStateEnum.New:
-        return { label: 'Kitchen: new', variant: 'default' };
+        return order.status === OrderStatusEnum.Refunded ? null : { label: 'Kitchen: new', variant: 'default' };
       case KitchenStateEnum.Preparing:
         return { label: 'Kitchen: making', variant: 'amber' };
       case KitchenStateEnum.Ready:

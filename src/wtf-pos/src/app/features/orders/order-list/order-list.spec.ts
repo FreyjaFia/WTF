@@ -15,6 +15,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import {
   CartItemDto,
   FulfillmentTypeEnum,
+  KitchenStateEnum,
   OrderDto,
   OrderSourceEnum,
   OrderStatusEnum,
@@ -934,6 +935,23 @@ describe('OrderList', () => {
       init();
       t.filterForm.controls.searchTerm.setValue('mango');
       expect(t.matchesSearchTerm(makeOrder('o14', { customerAddress: 'Mango Lane' }))).toBe(true);
+    });
+
+    it('hides the Kitchen: new chip on refunded orders only', () => {
+      orderService.getOrdersPaged.mockReturnValue(
+        of(
+          page([
+            makeOrder('o20', { orderNumber: 20, status: OrderStatusEnum.Pending, kitchenStatus: KitchenStateEnum.New }),
+            makeOrder('o21', { orderNumber: 21, status: OrderStatusEnum.Refunded, kitchenStatus: KitchenStateEnum.New }),
+          ]),
+        ),
+      );
+      init();
+      const chips = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="order-kitchen-chip"]')) as HTMLElement[];
+
+      // One open order, rendered once for the mobile row and once for the desktop column.
+      expect(chips).toHaveLength(2);
+      expect(chips.every((c) => c.textContent?.trim() === 'Kitchen: new')).toBe(true);
     });
 
     it('shows an Overridden badge only on overridden orders (mobile and desktop layouts)', () => {

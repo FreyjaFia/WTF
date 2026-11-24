@@ -14,7 +14,7 @@ import {
   SignalRService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { CartBundleItemDto, CartItemDto, DiscountedProductPromotionDto, OrderDto, OrderItemDto, FulfillmentTypeEnum, OrderSourceEnum, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum, SeniorPwdTypeEnum } from '@shared/models';
+import { CartBundleItemDto, CartItemDto, DiscountedProductPromotionDto, KitchenStateEnum, OrderDto, OrderItemDto, FulfillmentTypeEnum, OrderSourceEnum, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum, SeniorPwdTypeEnum } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderDetails } from './order-details';
@@ -216,6 +216,7 @@ describe('OrderDetails', () => {
           useValue: {
             canOverrideOrders: canOverride,
             canWriteOrders: () => canWrite,
+            canUpdateKitchen: () => true,
             canReadChat: () => true, canWriteChat: () => true,
             canReadStockMovements: () => canReadStock,
           },
@@ -1433,6 +1434,31 @@ describe('OrderDetails', () => {
 
       online$().askRejectOrder();
       expect(online$().showRejectDialog()).toBe(false);
+    });
+  });
+
+  describe('kitchen controls', () => {
+    const chip = () => fixture.nativeElement.querySelector('[data-testid="order-kitchen-chip"]') as HTMLElement | null;
+    const markServed = () => fixture.nativeElement.querySelector('[data-testid="order-mark-served"]') as HTMLElement | null;
+
+    it('shows the Kitchen: new chip and Mark served on an order still with the kitchen', async () => {
+      await create(makeOrder({ status: OrderStatusEnum.Pending, kitchenStatus: KitchenStateEnum.New }));
+
+      expect(chip()?.textContent?.trim()).toBe('Kitchen: new');
+      expect(markServed()).not.toBeNull();
+    });
+
+    it('hides the Kitchen: new chip and Mark served on a refunded order', async () => {
+      await create(makeOrder({ status: OrderStatusEnum.Refunded, kitchenStatus: KitchenStateEnum.New }));
+
+      expect(chip()).toBeNull();
+      expect(markServed()).toBeNull();
+    });
+
+    it('hides Mark served on a refunded order the kitchen is making', async () => {
+      await create(makeOrder({ status: OrderStatusEnum.Refunded, kitchenStatus: KitchenStateEnum.Preparing }));
+
+      expect(markServed()).toBeNull();
     });
   });
 });

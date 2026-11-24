@@ -836,7 +836,7 @@ export class OrderDetails implements OnInit {
   protected kitchenChipLabel(order: OrderDto): string | null {
     switch (order.kitchenStatus) {
       case KitchenStateEnum.New:
-        return 'Kitchen: new';
+        return order.status === OrderStatusEnum.Refunded ? null : 'Kitchen: new';
       case KitchenStateEnum.Preparing:
         return 'Kitchen: making';
       case KitchenStateEnum.Ready:
@@ -850,7 +850,10 @@ export class OrderDetails implements OnInit {
 
   protected canMarkServed(order: OrderDto): boolean {
     return (
-      order.kitchenStatus != null && order.kitchenStatus < KitchenStateEnum.Served && this.authService.canUpdateKitchen()
+      order.status !== OrderStatusEnum.Refunded &&
+      order.kitchenStatus != null &&
+      order.kitchenStatus < KitchenStateEnum.Served &&
+      this.authService.canUpdateKitchen()
     );
   }
 
