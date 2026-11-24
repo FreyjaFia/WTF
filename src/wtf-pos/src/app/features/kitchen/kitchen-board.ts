@@ -147,7 +147,10 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
     this.refetch$.pipe(debounceTime(250), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load());
     this.searchControl.valueChanges
       .pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.load());
+      .subscribe(() => {
+        this.forgetKnownOrders();
+        this.load();
+      });
 
     this.pollTimer = setInterval(() => this.load(), POLL_MS);
     this.tickTimer = setInterval(() => this.now.set(Date.now()), TICK_MS);
@@ -186,6 +189,7 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
     }
 
     this.view.set(view);
+    this.forgetKnownOrders();
     this.load();
   }
 
@@ -203,11 +207,13 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
 
   protected setSource(source: OrderSourceEnum | null): void {
     this.sourceFilter.set(source);
+    this.forgetKnownOrders();
     this.load();
   }
 
   protected clearFilters(): void {
     this.sourceFilter.set(null);
+    this.forgetKnownOrders();
     this.load();
   }
 
@@ -402,6 +408,11 @@ export class KitchenBoardComponent implements OnInit, OnDestroy {
 
       return next;
     });
+  }
+
+  // A different filter or view lists other orders, which are not new arrivals and must not ring the chime.
+  private forgetKnownOrders(): void {
+    this.knownIds = null;
   }
 
   private noticeNewOrders(orders: KitchenOrderDto[]): void {

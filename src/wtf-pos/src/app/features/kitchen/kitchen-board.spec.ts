@@ -148,4 +148,25 @@ describe('KitchenBoardComponent', () => {
     expect(el.querySelector('[data-testid="kitchen-load-failed"]')).not.toBeNull();
     expect(el.querySelector('[data-testid="kitchen-no-access"]')).toBeNull();
   });
+
+  it('does not ring the chime for orders that only appear because the filter changed', () => {
+    const { c } = setup([order(1, KitchenStateEnum.New)]);
+    const chime = vi.fn();
+    (c as unknown as { playChime: () => void }).playChime = chime;
+    (c as unknown as { chimeOn: { set: (on: boolean) => void } }).chimeOn.set(true);
+    kitchen.getBoard.mockReturnValue(
+      of({ orders: [order(1, KitchenStateEnum.New), order(2, KitchenStateEnum.New)], serverTime: new Date().toISOString() }),
+    );
+
+    c['setSource'](OrderSourceEnum.Pos);
+
+    expect(chime).not.toHaveBeenCalled();
+
+    kitchen.getBoard.mockReturnValue(
+      of({ orders: [order(1, KitchenStateEnum.New), order(2, KitchenStateEnum.New), order(3, KitchenStateEnum.New)], serverTime: new Date().toISOString() }),
+    );
+    c['refresh']();
+
+    expect(chime).toHaveBeenCalledTimes(1);
+  });
 });
