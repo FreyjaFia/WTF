@@ -24,7 +24,8 @@
         <button
           type="button"
           role="radio"
-          class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors duration-200 ease-out hover:bg-gray-100 active:bg-gray-200"
+          class="flex w-full cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors duration-200 ease-out hover:bg-gray-100 active:bg-gray-200"
+          [class]="theme.id === themeService.current().id ? 'border-brand bg-brand/5' : 'border-transparent'"
           [attr.aria-checked]="theme.id === themeService.current().id"
           [attr.data-testid]="'menu-style-' + theme.id"
           (click)="themeService.set(theme.id)"
