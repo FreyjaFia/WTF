@@ -18,6 +18,7 @@ update its file and the status in the table below.
 | Graceful plan-gating failures | Built on branch `graceful-plan-gating-plan` (not merged); Playwright spec to do | [graceful-plan-gating](roadmap/graceful-plan-gating.md) |
 | Senior Citizen / PWD discount | Built (phases 1-6 of the plan), accountant to confirm the rules | [senior-pwd-discount](roadmap/senior-pwd-discount.md) |
 | Cashless Payments | Planned, needs research | [cashless-payments](roadmap/cashless-payments.md) |
+| Manual GCash / Maya QR Payments | Planned, high-level plan written | [manual-qr-payments-plan](roadmap/manual-qr-payments-plan.md) |
 | Receipt and Kitchen Printing | Planned | [receipt-and-kitchen-printing](roadmap/receipt-and-kitchen-printing.md) |
 | Temperature (Hot / Iced) add-on type | First cut built on branch `temperature-addon` (not merged) | [temperature-addon](roadmap/temperature-addon.md) |
 | Setup lists (units and similar) | Setup page built; units and other lists planned | [setup-lists](roadmap/setup-lists.md) |
