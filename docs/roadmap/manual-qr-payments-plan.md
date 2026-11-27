@@ -42,6 +42,17 @@ the exact amount due = total + tip, account name and number). The cashier checks
   Reject a reference already used on another order of that tenant (duplicate check), with an Admin override that is audited.
 - **Proof photo** (optional by default, [Assumed] setting "Require proof"): a screenshot or photo of the payer's receipt,
   stored like other images. Useful for disputes, not proof (screenshots are easy to fake).
+**Two ways to pay (Pogi, 27 Nov 2026).** Customers usually either scan the QR with another phone, or save the QR image
+and upload it in their own wallet app (GCash and Maya both read a QR from a saved image). So the payment screen must:
+- show the QR image large and sharp (no compression, white margin kept so it scans), with the account name and number;
+- have a **Download QR** button that saves the original image (file name such as `gcash-<shop>.png`) so it can be shared
+  or saved to the phone gallery; on the customer link, the same image and button, so a customer on their own phone can save
+  it and upload it in the wallet app;
+- on Android (Capacitor) use the share sheet or a gallery save, since a plain browser download may not reach the gallery;
+- serve the image from the same cache used for offline so it also works with no internet, and only to signed-in staff or a
+  valid customer link (not a public URL), so the QR cannot be scraped and swapped.
+Upload on the Brand page should require a clear, square image and warn if it looks unreadable.
+
 The order is then saved as paid with these fields. New columns on `Orders` (or a small `OrderPayments` row, to match
 Phase 1 of cashless-payments so the later gateway reuses it; recommended): `Method`, `Reference`, `ProofImageId`,
 `ConfirmedByUserId`, `ConfirmedAt`, `Status` = `Unverified` / `Verified`. The customer-link GCash choice stays "pay at pickup,
@@ -103,6 +114,9 @@ describes). Nothing built here is thrown away.
 7. **Separate `OrderPayments` table now, or columns on `Orders`?** Table now (small), so the gateway phase reuses it.
 8. **Do the owners have a GCash/Maya Business or personal account?** Needs Pogi's answer; business accounts show merchant
    names on the QR and are better for BIR.
+
+9. **Is a Download QR button enough, or also a "Share" button?** Start with Download; add Share through the phone share sheet
+   on Android.
 
 ### Rough build order
 
