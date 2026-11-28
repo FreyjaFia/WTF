@@ -86,6 +86,30 @@ async Task SeedMainShopAsync()
         added.Add($"subscription on the {topPlan.Name} plan");
     }
 
+    if (topPlan is not null)
+    {
+        var planFeatures = (topPlan.Features ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        var planChanged = false;
+        if (!planFeatures.Contains("branches"))
+        {
+            planFeatures.Add("branches");
+            topPlan.Features = string.Join(",", planFeatures);
+            planChanged = true;
+        }
+
+        if (topPlan.MaxBranches is not null && topPlan.MaxBranches < 3)
+        {
+            topPlan.MaxBranches = 3;
+            planChanged = true;
+        }
+
+        if (planChanged)
+        {
+            await db.SaveChangesAsync();
+            added.Add($"branches feature on the {topPlan.Name} plan");
+        }
+    }
+
     var settings = await db.TenantSettings.FirstOrDefaultAsync(s => s.TenantId == shopId);
     if (settings is not null)
     {

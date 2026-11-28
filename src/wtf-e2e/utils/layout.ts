@@ -54,6 +54,8 @@ export interface Watcher {
   reset(): void;
 }
 
+const BACKGROUND_ORDER_REFRESH = /\/api\/orders\/[0-9a-f-]{36}$/i;
+
 export function watch(page: Page): Watcher {
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
@@ -66,6 +68,12 @@ export function watch(page: Page): Watcher {
     // A failed request to another host (Firebase, fonts) is not ours to fix; one to the app or the API is.
     const url = message.location().url;
     if (url && !url.startsWith(APP_ORIGIN) && !url.startsWith(API_ORIGIN)) {
+      return;
+    }
+
+    // The list refreshes an order when a live update arrives; another test in the same run may have removed it by then, so that 404 is not a page fault.
+    const text = message.text();
+    if ((url && BACKGROUND_ORDER_REFRESH.test(url) && text.includes('404')) || text.startsWith('Error fetching order:')) {
       return;
     }
 
