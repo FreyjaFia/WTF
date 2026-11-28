@@ -8,7 +8,7 @@
             Preview and export historical sales analytics
           </p>
           @if (branchLabel(); as branch) {
-            <app-badge class="mt-1" variant="info" data-testid="report-branch">Branch: {{ branch }}</app-badge>
+            <app-badge class="mt-2 inline-block" variant="info" data-testid="report-branch">Branch: {{ branch }}</app-badge>
           }
         </div>
       </div>
@@ -279,7 +279,7 @@
             {{ current.description }}
           </p>
           @if (branchLabel(); as branch) {
-            <app-badge variant="info" data-testid="report-branch">Branch: {{ branch }}</app-badge>
+            <app-badge class="mt-2 inline-block" variant="info" data-testid="report-branch">Branch: {{ branch }}</app-badge>
           }
         </div>
         <div class="flex shrink-0 items-center gap-1">
